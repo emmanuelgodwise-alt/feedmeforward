@@ -17,10 +17,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore, type User } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
+import { getScoreLevel, getScoreLevelBadge } from '@/types';
 import { ExploreView } from '@/components/views/explore-view';
 import { CreateLeadView } from '@/components/views/create-lead-view';
 import { CreateResponseView } from '@/components/views/create-response-view';
 import { VideoDetailView } from '@/components/views/video-detail-view';
+import { ProfileView } from '@/components/views/profile-view';
+import { LeaderboardView } from '@/components/views/leaderboard-view';
 import { Plus } from 'lucide-react';
 import {
   Eye,
@@ -58,9 +61,11 @@ import {
   Table2,
   RefreshCw,
   User as UserIcon,
+  Award,
+  CheckCircle2,
 } from 'lucide-react';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -747,7 +752,7 @@ function LoginForm({ onNavigate }: { onNavigate: (view: View) => void }) {
 }
 
 // ─── Dashboard ─────────────────────────────────────────────────────
-function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
+function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) => void; setProfileUserId: (id: string) => void }) {
   const { currentUser, logout } = useAuthStore();
 
   const handleLogout = () => {
@@ -755,7 +760,17 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
     onNavigate('landing');
   };
 
+  const handleViewProfile = () => {
+    if (currentUser && setProfileUserId) {
+      setProfileUserId(currentUser.id);
+      onNavigate('profile');
+    }
+  };
+
   if (!currentUser) return null;
+
+  const level = getScoreLevel(currentUser.memberScore);
+  const levelBadge = getScoreLevelBadge(level);
 
   const stats = [
     {
@@ -764,6 +779,7 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
       value: currentUser.memberScore.toLocaleString(),
       color: 'text-amber-500',
       bgColor: 'bg-amber-50 dark:bg-amber-950/50',
+      onClick: handleViewProfile,
     },
     {
       icon: Wallet,
@@ -771,6 +787,7 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
       value: `$${currentUser.walletBalance.toFixed(2)}`,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50 dark:bg-orange-950/50',
+      onClick: undefined,
     },
     {
       icon: Shield,
@@ -778,13 +795,15 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
       value: currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1),
       color: 'text-emerald-500',
       bgColor: 'bg-emerald-50 dark:bg-emerald-950/50',
+      onClick: undefined,
     },
     {
-      icon: BadgeCheck,
-      label: 'Verified',
-      value: currentUser.isVerified ? 'Yes' : 'Not yet',
-      color: currentUser.isVerified ? 'text-blue-500' : 'text-muted-foreground',
-      bgColor: currentUser.isVerified ? 'bg-blue-50 dark:bg-blue-950/50' : 'bg-muted',
+      icon: currentUser.isVerified ? CheckCircle2 : BadgeCheck,
+      label: currentUser.isVerified ? 'Verified ✓' : 'Not yet',
+      value: currentUser.isVerified ? 'Yes' : `${Math.max(0, 500 - currentUser.memberScore)} pts`,
+      color: currentUser.isVerified ? 'text-amber-500' : 'text-muted-foreground',
+      bgColor: currentUser.isVerified ? 'bg-amber-50 dark:bg-amber-950/50' : 'bg-muted',
+      onClick: currentUser.isVerified ? undefined : handleViewProfile,
     },
   ];
 
@@ -805,7 +824,10 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
             <img src="/logo.svg" alt="Logo" className="w-7 h-7 object-contain" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">FeedMeForward</h1>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              FeedMeForward
+              <Badge className={`text-xs ${levelBadge.className}`}>{levelBadge.label}</Badge>
+            </h1>
             <p className="text-sm text-muted-foreground">Welcome back, {currentUser.username}!</p>
           </div>
         </div>
@@ -823,7 +845,10 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
             whileHover={{ y: -2 }}
             transition={{ type: 'spring', stiffness: 300 }}
           >
-            <Card className={`${stat.bgColor} border-0 shadow-sm h-full`}>
+            <Card
+              className={`${stat.bgColor} border-0 shadow-sm h-full ${stat.onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+              onClick={stat.onClick}
+            >
               <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                 <div className={`w-10 h-10 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
                   <stat.icon className={`w-5 h-5 ${stat.color}`} />
@@ -851,6 +876,7 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Username</p>
                 <p className="font-medium flex items-center gap-2">
                   {currentUser.username}
+                  {currentUser.isVerified && <CheckCircle2 className="w-4 h-4 text-amber-500" />}
                   <Badge variant="secondary" className="text-xs">
                     {currentUser.role}
                   </Badge>
@@ -866,30 +892,66 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
       </motion.div>
 
       {/* Action Cards */}
-      <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* Database Schema Card */}
+      <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* My Profile Card */}
         <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
           <Card
             className="cursor-pointer hover:shadow-md transition-shadow border-2 border-orange-200 dark:border-orange-800/40 bg-gradient-to-br from-orange-50/80 to-amber-50/50 dark:from-orange-950/20 dark:to-amber-950/10"
-            onClick={() => onNavigate('schema')}
+            onClick={handleViewProfile}
           >
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-sm">
-                  <Database className="w-5 h-5 text-white" />
+                  <UserIcon className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Database Schema</CardTitle>
-                  <CardDescription>View all 16 data models</CardDescription>
+                  <CardTitle className="text-lg">My Profile</CardTitle>
+                  <CardDescription>View your scores</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-sm font-bold">
+                  {currentUser.username.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{currentUser.displayName || currentUser.username}</p>
+                  <p className="text-xs text-muted-foreground">@{currentUser.username}</p>
+                </div>
+                <Badge className={`text-[10px] shrink-0 ${levelBadge.className}`}>{levelBadge.label}</Badge>
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                <span className="text-sm font-medium">View Profile</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Leaderboard Card */}
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow border-2 border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/80 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/10"
+            onClick={() => onNavigate('leaderboard')}
+          >
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
+                  <Award className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Leaderboard</CardTitle>
+                  <CardDescription>Top community members</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Explore the complete database architecture including users, videos, polls, transactions, and more.
+                See the top-ranked members by Member Score. Compete with the community.
               </p>
               <div className="mt-4 flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                <span className="text-sm font-medium">View Schema</span>
+                <span className="text-sm font-medium">View Rankings</span>
                 <ChevronRight className="w-4 h-4" />
               </div>
             </CardContent>
@@ -915,7 +977,7 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Create and share engaging video polls with your community. Browse lead clips and respond with your own videos.
+                Create and share engaging video polls with your community.
               </p>
               <div className="mt-4 flex items-center gap-2 text-orange-600 dark:text-orange-400">
                 <span className="text-sm font-medium">Explore Clips</span>
@@ -944,7 +1006,7 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Share a video and attach a poll question. Get responses from your community with optional rewards.
+                Share a video and attach a poll question.
               </p>
               <div className="mt-4 flex items-center gap-2 text-orange-600 dark:text-orange-400">
                 <span className="text-sm font-medium">Create Now</span>
@@ -1298,10 +1360,25 @@ export default function Home() {
   const [parentVideoTitle, setParentVideoTitle] = useState<string>('');
   const [parentVideoCreator, setParentVideoCreator] = useState<string>('');
   const [parentVideoThumbnail, setParentVideoThumbnail] = useState<string>('');
+  const [profileUserId, setProfileUserId] = useState<string>('');
 
   const navigate = useCallback((newView: View) => {
     setView(newView);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  // Listen for video navigation from profile view
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.videoId) {
+        setVideoId(detail.videoId);
+        setView('video-detail');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+    window.addEventListener('navigate-video', handler);
+    return () => window.removeEventListener('navigate-video', handler);
   }, []);
 
   const handleVideoClick = useCallback((id: string) => {
@@ -1314,6 +1391,10 @@ export default function Home() {
     setParentVideoId(id);
   }, []);
 
+  const handleSetProfileUserId = useCallback((id: string) => {
+    setProfileUserId(id);
+  }, []);
+
   return (
     <main className="relative overflow-hidden">
       <FloatingOrbs />
@@ -1321,7 +1402,7 @@ export default function Home() {
         {view === 'landing' && <LandingPage key="landing" onNavigate={navigate} />}
         {view === 'signup' && <SignUpForm key="signup" onNavigate={navigate} />}
         {view === 'login' && <LoginForm key="login" onNavigate={navigate} />}
-        {view === 'dashboard' && <Dashboard key="dashboard" onNavigate={navigate} />}
+        {view === 'dashboard' && <Dashboard key="dashboard" onNavigate={navigate} setProfileUserId={handleSetProfileUserId} />}
         {view === 'schema' && <SchemaDashboard key="schema" onNavigate={navigate} />}
         {view === 'explore' && <ExploreView key="explore" onNavigate={navigate} setVideoId={handleVideoClick} />}
         {view === 'create-lead' && <CreateLeadView key="create-lead" onNavigate={navigate} />}
@@ -1341,6 +1422,21 @@ export default function Home() {
             onNavigate={navigate}
             videoId={videoId}
             setParentVideoId={handleSetParentVideoId}
+            setProfileUserId={handleSetProfileUserId}
+          />
+        )}
+        {view === 'profile' && profileUserId && (
+          <ProfileView
+            key={profileUserId}
+            onNavigate={navigate}
+            userId={profileUserId}
+          />
+        )}
+        {view === 'leaderboard' && (
+          <LeaderboardView
+            key="leaderboard"
+            onNavigate={navigate}
+            setProfileUserId={handleSetProfileUserId}
           />
         )}
       </AnimatePresence>

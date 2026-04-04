@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { recalculateScore } from '@/lib/score-engine';
 
 // POST /api/videos/[id]/like — Like a video
 export async function POST(
@@ -24,6 +25,9 @@ export async function POST(
     const like = await db.like.create({
       data: { userId, videoId },
     });
+
+    // Trigger score recalculation for the video creator (fire and forget)
+    recalculateScore(video.creatorId).catch((err) => console.error('Score recalc failed:', err));
 
     return NextResponse.json({ success: true, data: like });
   } catch (error: unknown) {

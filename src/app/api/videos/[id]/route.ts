@@ -13,7 +13,7 @@ export async function GET(
     const video = await db.video.findUnique({
       where: { id },
       include: {
-        creator: { select: { id: true, username: true } },
+        creator: { select: { id: true, username: true, isVerified: true } },
         polls: {
           include: {
             votes: userId ? { where: { userId } } : false,

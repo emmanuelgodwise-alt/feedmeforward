@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { recalculateScore } from '@/lib/score-engine';
 
 // GET /api/videos — List videos with filters
 export async function GET(request: NextRequest) {
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           creator: {
-            select: { id: true, username: true },
+            select: { id: true, username: true, isVerified: true },
           },
           _count: {
             select: { polls: true, likes: true, comments: true, responses: true },
@@ -112,6 +113,9 @@ export async function POST(request: NextRequest) {
         creator: { select: { id: true, username: true } },
       },
     });
+
+    // Trigger score recalculation for the creator (fire and forget)
+    recalculateScore(userId).catch((err) => console.error('Score recalc failed:', err));
 
     return NextResponse.json({ success: true, data: { ...video, tags: video.tags ? JSON.parse(video.tags) : null } }, { status: 201 });
   } catch (error) {

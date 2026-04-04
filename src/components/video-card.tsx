@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Heart, MessageCircle, Users } from 'lucide-react';
+import { Play, Heart, MessageCircle, Users, CheckCircle2 } from 'lucide-react';
 import type { Video } from '@/types';
 import { STATUS_COLORS, THUMBNAIL_GRADIENTS } from '@/types';
 
@@ -36,10 +36,18 @@ function getGradient(id: string): string {
 interface VideoCardProps {
   video: Video;
   onClick: (videoId: string) => void;
+  onCreatorClick?: (creatorId: string) => void;
 }
 
-function VideoCardComponent({ video, onClick }: VideoCardProps) {
+function VideoCardComponent({ video, onClick, onCreatorClick }: VideoCardProps) {
   const gradient = getGradient(video.id);
+
+  const handleCreatorClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onCreatorClick && video.creator?.id) {
+      onCreatorClick(video.creator.id);
+    }
+  };
 
   return (
     <motion.div
@@ -100,9 +108,17 @@ function VideoCardComponent({ video, onClick }: VideoCardProps) {
           {/* Title */}
           <h3 className="font-semibold text-sm line-clamp-2 leading-snug">{video.title}</h3>
 
-          {/* Creator */}
-          <p className="text-xs text-muted-foreground">
+          {/* Creator - Clickable */}
+          <p
+            className={`text-xs text-muted-foreground flex items-center gap-1 ${
+              onCreatorClick && video.creator?.id ? 'hover:text-orange-500 cursor-pointer transition-colors' : ''
+            }`}
+            onClick={handleCreatorClick}
+          >
             @{video.creator?.username || 'anonymous'}
+            {video.creator?.isVerified && (
+              <CheckCircle2 className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
+            )}
           </p>
 
           {/* Meta Row */}

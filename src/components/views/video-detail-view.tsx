@@ -22,6 +22,7 @@ import {
   ExternalLink,
   Copy,
   Check,
+  CheckCircle2,
 } from 'lucide-react';
 import { useVideoStore } from '@/stores/video-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -37,9 +38,10 @@ interface VideoDetailViewProps {
   onNavigate: (view: View) => void;
   videoId: string;
   setParentVideoId?: (id: string) => void;
+  setProfileUserId?: (id: string) => void;
 }
 
-export function VideoDetailView({ onNavigate, videoId, setParentVideoId }: VideoDetailViewProps) {
+export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProfileUserId }: VideoDetailViewProps) {
   const { currentVideo, isLoading, fetchVideo, likeVideo, unlikeVideo, clearCurrentVideo } = useVideoStore();
   const { currentUser } = useAuthStore();
   const { toast } = useToast();
@@ -64,6 +66,18 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId }: Video
     };
   }, [videoId, fetchVideo, clearCurrentVideo]);
 
+  const triggerScoreRecalc = (userId: string) => {
+    fetch('/api/scores/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    }).then((r) => r.json()).then((json) => {
+      if (json.scores?.[0]) {
+        useAuthStore.getState().updateUserScore(json.scores[0].score, json.scores[0].score >= 500);
+      }
+    }).catch(() => {});
+  };
+
   const handleLike = () => {
     if (!currentUser) {
       toast({ title: 'Sign in required', description: 'Please sign in to like videos', variant: 'destructive' });
@@ -74,6 +88,8 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId }: Video
     } else {
       likeVideo(videoId);
     }
+    // Fire-and-forget score recalculation
+    triggerScoreRecalc(currentUser.id);
   };
 
   const handleShare = async () => {
@@ -98,6 +114,13 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId }: Video
 
   const handleResponseClick = (responseId: string) => {
     onNavigate('video-detail');
+  };
+
+  const handleCreatorClick = () => {
+    if (setProfileUserId) {
+      setProfileUserId(video.creator.id);
+      onNavigate('profile');
+    }
   };
 
   const getEmbedUrl = (url: string): string | null => {
@@ -225,7 +248,15 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId }: Video
             <div>
               <h1 className="text-2xl font-bold leading-tight">{video.title}</h1>
               <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">@{video.creator.username}</span>
+                <button
+                  onClick={handleCreatorClick}
+                  className="font-medium text-foreground hover:text-orange-500 transition-colors flex items-center gap-1.5"
+                >
+                  @{video.creator.username}
+                  {video.creator.isVerified && (
+                    <CheckCircle2 className="w-4 h-4 text-amber-500" />
+                  )}
+                </button>
                 <span className="flex items-center gap-1">
                   <Eye className="w-4 h-4" />
                   {video.viewCount} views
@@ -427,10 +458,17 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId }: Video
           >
             <Card>
               <CardContent className="p-4 text-center">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center mx-auto mb-3 text-white text-xl font-bold">
-                  {video.creator.username.charAt(0).toUpperCase()}
-                </div>
-                <p className="font-semibold">@{video.creator.username}</p>
+                <button onClick={handleCreatorClick} className="cursor-pointer">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center mx-auto mb-3 text-white text-xl font-bold">
+                    {video.creator.username.charAt(0).toUpperCase()}
+                  </div>
+                  <p className="font-semibold flex items-center justify-center gap-1.5 hover:text-orange-500 transition-colors">
+                    @{video.creator.username}
+                    {video.creator.isVerified && (
+                      <CheckCircle2 className="w-4 h-4 text-amber-500" />
+                    )}
+                  </p>
+                </button>
                 <p className="text-xs text-muted-foreground mt-1">Creator</p>
               </CardContent>
             </Card>

@@ -20,9 +20,11 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (user: User) => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
+  updateUserScore: (score: number, isVerified: boolean) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   currentUser: null,
   isAuthenticated: false,
   login: (user: User) =>
@@ -35,4 +37,26 @@ export const useAuthStore = create<AuthState>((set) => ({
       currentUser: null,
       isAuthenticated: false,
     }),
+  refreshUser: async () => {
+    const { currentUser } = get();
+    if (!currentUser) return;
+
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { 'X-User-Id': currentUser.id },
+      });
+      const json = await res.json();
+      if (json.success && json.user) {
+        set({ currentUser: json.user });
+      }
+    } catch {
+      // Silently fail — user data remains unchanged
+    }
+  },
+  updateUserScore: (score: number, isVerified: boolean) => {
+    const current = get().currentUser;
+    if (current) {
+      set({ currentUser: { ...current, memberScore: score, isVerified } });
+    }
+  },
 }));

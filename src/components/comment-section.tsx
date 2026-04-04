@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Heart, MessageCircle, Reply, Send, Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, Reply, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useVideoStore } from '@/stores/video-store';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +46,19 @@ export function CommentSection({ videoId }: CommentSectionProps) {
     fetchComments();
   }, [videoId]);
 
+  const triggerScoreRecalc = () => {
+    if (!currentUser) return;
+    fetch('/api/scores/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUser.id }),
+    }).then((r) => r.json()).then((json) => {
+      if (json.scores?.[0]) {
+        useAuthStore.getState().updateUserScore(json.scores[0].score, json.scores[0].score >= 500);
+      }
+    }).catch(() => {});
+  };
+
   const handleSubmitComment = async () => {
     if (!currentUser) {
       toast({ title: 'Sign in required', description: 'Please sign in to comment', variant: 'destructive' });
@@ -60,6 +73,7 @@ export function CommentSection({ videoId }: CommentSectionProps) {
     if (success) {
       setNewComment('');
       fetchComments();
+      triggerScoreRecalc();
     } else {
       toast({ title: 'Failed to post comment', variant: 'destructive' });
     }
@@ -95,6 +109,9 @@ export function CommentSection({ videoId }: CommentSectionProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm">@{comment.user.username}</span>
+            {comment.user.isVerified && (
+              <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
+            )}
             <span className="text-xs text-muted-foreground">{timeAgo(comment.createdAt)}</span>
           </div>
           <p className="text-sm mt-0.5 text-foreground/90">{comment.content}</p>

@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { recalculateScore } from '@/lib/score-engine';
 
 // POST /api/polls/[id]/vote — Vote on a poll
 export async function POST(
@@ -71,6 +72,9 @@ export async function POST(
         },
       }),
     ]);
+
+    // Trigger score recalculation for the voter (fire and forget)
+    recalculateScore(userId).catch((err) => console.error('Score recalc failed:', err));
 
     return NextResponse.json({
       success: true,

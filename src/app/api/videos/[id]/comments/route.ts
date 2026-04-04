@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { recalculateScore } from '@/lib/score-engine';
 
 // GET /api/videos/[id]/comments — Get comments for a video
 export async function GET(
@@ -26,11 +27,11 @@ export async function GET(
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          user: { select: { id: true, username: true } },
+          user: { select: { id: true, username: true, isVerified: true } },
           replies: {
             orderBy: { createdAt: 'asc' },
             include: {
-              user: { select: { id: true, username: true } },
+              user: { select: { id: true, username: true, isVerified: true } },
             },
           },
           _count: { select: { likes: true } },
@@ -91,9 +92,12 @@ export async function POST(
         parentCommentId: parentCommentId || null,
       },
       include: {
-        user: { select: { id: true, username: true } },
+        user: { select: { id: true, username: true, isVerified: true } },
       },
     });
+
+    // Trigger score recalculation for the commenter (fire and forget)
+    recalculateScore(userId).catch((err) => console.error('Score recalc failed:', err));
 
     return NextResponse.json({ success: true, data: comment }, { status: 201 });
   } catch (error) {
