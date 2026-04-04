@@ -330,3 +330,182 @@ Build Phase 4 Part B UI for FeedMeForward: Profile View, enhanced Leaderboard Vi
 - Dev log shows successful compilations with no runtime errors
 - TypeScript strict typing throughout all files
 - All framer-motion animations properly keyed
+
+---
+## Task ID: 5 (Part A) - main-agent (Phase 5: Wallet & Monetization — Backend APIs)
+### Work Task
+Build Phase 5 Part A backend for FeedMeForward: wallet types, 8 wallet/poll monetization API routes, and auth store update for wallet balance.
+
+### Work Summary
+
+#### 1. Types (`src/types/index.ts`) — Modified
+- Added 4 new types at the end of the file:
+  - `TransactionItem`: id, userId, amount, type (union), status (union), description, referenceId, createdAt
+  - `WalletSummary`: balance, totalEarnings, totalTipsSent, totalDeposits, totalWithdrawals, pendingAmount
+  - `TipRequest`: recipientId, amount, videoId?, message?
+  - `WithdrawalRequest`: amount, method?
+
+#### 2. API: GET `/api/wallet` — Created
+- Header auth via `X-User-Id`
+- Returns wallet summary with 6 fields computed from user record and transaction aggregates
+- `totalEarnings`: SUM of completed 'earning' + 'reward' transactions
+- `totalTipsSent`: SUM of completed 'tip' transactions
+- `totalDeposits`: SUM of completed 'deposit' transactions
+- `totalWithdrawals`: SUM of completed 'withdrawal' transactions
+- `pendingAmount`: SUM of all pending transactions
+- All amounts rounded to 2 decimal places
+
+#### 3. API: POST `/api/wallet/deposit` — Created
+- Validates: amount > 0, amount <= 10000
+- Creates Transaction with type='deposit', status='completed' (instant sandbox)
+- Updates User.walletBalance += amount
+- Returns: `{ success, newBalance, transaction }`
+
+#### 4. API: POST `/api/wallet/withdraw` — Created
+- Validates: amount > 0, amount >= 10 (min), amount <= user's balance
+- Creates Transaction with type='withdrawal', status='completed' (sandbox instant)
+- Updates User.walletBalance -= amount
+- Supports optional `method` parameter in description
+- Returns: `{ success, newBalance, transaction }`
+
+#### 5. API: GET `/api/wallet/transactions` — Created
+- Query params: `type` (optional filter, validated against valid types), `limit` (default 20, max 100), `offset` (default 0, min 0)
+- Returns: `{ transactions: TransactionItem[], total: number }`
+- Ordered by createdAt desc
+
+#### 6. API: POST `/api/wallet/tip` — Created
+- Validates: recipientId exists, not self, amount >= 0.50, amount <= sender balance
+- Creates TWO transactions atomically:
+  1. Sender: type='tip', completed
+  2. Recipient: type='earning', description="Tip from @username", referenceId=senderTx.id, completed
+- Uses `db.$transaction` for atomic balance updates (decrement sender, increment recipient)
+- Returns sender's transaction and new balance
+
+#### 7. API: POST `/api/polls/[id]/fund` — Created
+- Validates: poll exists, isPaid=true, user is poll creator (via video), amount > 0, amount <= balance
+- Creates Transaction: type='withdrawal', description="Funded poll: {question}", referenceId=pollId
+- Uses `db.$transaction` for atomic updates to poll.totalRewardPool (increment) and user balance (decrement)
+- Returns: `{ success, newBalance, poll: { id, totalRewardPool } }`
+
+#### 8. API: POST `/api/polls/[id]/claim` — Created
+- Validates: poll exists, isPaid=true, rewardPerResponse > 0, pool has funds
+- Checks user has voted (PollVote), hasn't already claimed (no existing reward transaction with referenceId=pollVote.id)
+- Creates Transaction: type='reward', referenceId=pollVote.id
+- Uses `db.$transaction` for atomic updates to user balance (increment) and pool (decrement)
+- Returns: `{ success, newBalance, reward: { id, amount, description, createdAt } }`
+
+#### 9. API: POST `/api/wallet/revenue` — Created
+- Validates: video exists, user is creator
+- Revenue calculation:
+  - Base: viewCount × 0.01
+  - Engagement multiplier: 1 + (likes×0.1 + comments×0.2 + responses×0.3) / 100
+  - Creator bonus: 1.5 if verified, 1.0 otherwise
+  - Cap: $50 per calculation
+- If revenue > 0: creates 'earning' transaction, updates user balance
+- Returns: `{ success, revenue, newBalance, breakdown: { baseRevenue, engagementMultiplier, creatorBonus } }`
+
+#### 10. Auth Store (`src/stores/auth-store.ts`) — Modified
+- Added `updateWalletBalance(balance: number)` method to AuthState interface and implementation
+- Optimistically updates currentUser.walletBalance in Zustand state
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation and serving with no runtime errors
+- TypeScript strict typing throughout all files
+- All API routes use `X-User-Id` header for authentication
+- Atomic database operations using `db.$transaction` where needed
+
+#### Files Created/Modified
+```
+src/types/index.ts (modified - added 4 types)
+src/stores/auth-store.ts (modified - added updateWalletBalance)
+src/app/api/wallet/route.ts (created)
+src/app/api/wallet/deposit/route.ts (created)
+src/app/api/wallet/withdraw/route.ts (created)
+src/app/api/wallet/transactions/route.ts (created)
+src/app/api/wallet/tip/route.ts (created)
+src/app/api/wallet/revenue/route.ts (created)
+src/app/api/polls/[id]/fund/route.ts (created)
+src/app/api/polls/[id]/claim/route.ts (created)
+```
+
+---
+## Task ID: 5 (Part B) - main-agent (Phase 5: Wallet & Monetization — UI)
+### Work Task
+Build Phase 5 Part B UI for FeedMeForward: wallet store, tip dialog, wallet view, enhanced video detail view (tip/poll/revenue), enhanced create lead view (wallet funding), and dashboard wallet integration.
+
+### Work Summary
+
+#### 1. Wallet Store (`src/stores/wallet-store.ts`) — Created
+- Zustand store with: summary (WalletSummary), transactions (TransactionItem[]), totalTransactions, isLoading, isTransactionsLoading
+- `fetchSummary(userId)`: fetches wallet summary from GET `/api/wallet`
+- `fetchTransactions(userId, type?, limit?, offset?, append?)`: fetches paginated transactions with optional type filter and append mode
+- `clearCache()`: resets all state
+- Uses `X-User-Id` header for authentication
+
+#### 2. Tip Dialog (`src/components/tip-dialog.tsx`) — Created
+- Reusable dialog component for sending tips to creators
+- Props: recipientId, recipientUsername, videoId?, open, onOpenChange, onSuccess?
+- Preset amount chips: $1, $2, $5, $10, $25 (pink/amber gradient when selected)
+- Custom amount input with $ prefix
+- Optional message textarea
+- Current balance display
+- Validation: minimum $0.50, cannot exceed balance
+- Loading state on submit, success toast notification
+- Calls POST `/api/wallet/tip`, updates auth store balance on success
+
+#### 3. Wallet View (`src/components/views/wallet-view.tsx`) — Created
+- Full wallet management page with max-w-4xl layout
+- **Wallet Header Card**: Orange-to-amber gradient card with large balance display (text-4xl), "Available Balance" subtitle, Deposit/Withdraw/Send Tip quick action buttons
+- **Stats Grid (2×3 desktop, 1×6 mobile)**: Total Earnings (green TrendingUp), Total Tips Sent (pink Heart), Total Deposits (emerald ArrowDownCircle), Total Withdrawals (orange ArrowUpCircle), Pending (amber Clock), Transactions Count (Receipt)
+- **Transaction History**: Filter tabs (All, Deposits, Withdrawals, Tips, Earnings, Rewards), transaction rows with type-specific icons/colors, amount coloring (green=positive, red=negative), status badges (completed/pending/failed), relative time, "Load More" pagination, empty state with icon, loading skeletons
+- **Deposit Dialog**: shadcn Dialog with preset chips ($5, $10, $25, $50, $100), custom amount, current balance, max $10,000 validation
+- **Withdraw Dialog**: Amount input, min $10 validation, available balance display, AlertDialog confirmation before processing
+- **Tip Dialog**: Opens TipDialog component for sending tips
+- All operations update auth store balance and refresh wallet store data
+
+#### 4. Video Detail View (`src/components/views/video-detail-view.tsx`) — Updated
+- Added imports: DollarSign, Star, TrendingUp, Loader2, Input, Label, Dialog components, useWalletStore
+- **Tip Creator Button**: New button in action row (DollarSign + Heart icons, pink hover) opens TipDialog for the video creator (only shown when not viewing own video)
+- **Claim Reward**: For paid polls where user has voted, shows "Claim Reward (${amount})" button with Star icon that calls POST `/api/polls/[id]/claim`
+- **Fund This Poll**: For poll creators viewing their own paid polls, shows "Fund This Poll" button + pool amount badge, opens Fund Poll Dialog
+- **Earn Reward Display**: For paid polls where user hasn't voted, shows "Earn $X.XX for your response" text
+- **Ad Revenue Card**: For video creators, shows sidebar card with view/like/comment stats and "Earn Revenue" button that calls POST `/api/wallet/revenue`
+- **Fund Poll Dialog**: shadcn Dialog with fund amount input and balance display, calls POST `/api/polls/[id]/fund`
+- All wallet operations update `updateWalletBalance()` in auth store and refresh wallet store summary
+
+#### 5. Create Lead View (`src/components/views/create-lead-view.tsx`) — Updated
+- Added imports: AlertCircle, Wallet icons
+- **Wallet Balance Display**: Shows current wallet balance in paid poll settings section (orange themed)
+- **Auto-calculated Total Pool**: Shows "Total Pool Needed" = rewardPerResponse × maxResponses
+- **Insufficient Balance Warning**: Red alert box with AlertCircle icon, "Insufficient balance. Please deposit funds to your wallet." message, and "Wallet" link button to navigate to wallet view
+- **Initial Fund Amount**: Renamed "Total Reward Pool" to "Initial Fund Amount" with helper text
+- Wallet link button uses `onNavigate('wallet' as View)` for type safety
+
+#### 6. Dashboard (`src/app/page.tsx`) — Updated
+- **Wallet Balance Stat Card**: Now clickable — navigates to 'wallet' view
+- **Quick Wallet Actions Card**: New card with gradient emerald/orange border, CreditCard icon, Deposit and Send Tip quick action buttons, "Manage Wallet" link with chevron
+- Card positioned between action cards grid and footer
+
+#### 7. Page Router (`src/app/page.tsx`) — Updated
+- Added 'wallet' to View type union
+- Imported WalletView component
+- Added wallet view routing: `{view === 'wallet' && <WalletView key="wallet" onNavigate={navigate} />}`
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation with no runtime errors
+- TypeScript strict typing throughout all files
+- All wallet operations use `X-User-Id` header for authentication
+- All dialogs use shadcn Dialog and AlertDialog components
+- Warm orange/amber palette maintained throughout (no blue/indigo)
+
+#### Files Created/Modified
+```
+src/stores/wallet-store.ts (created)
+src/components/tip-dialog.tsx (created)
+src/components/views/wallet-view.tsx (created)
+src/components/views/video-detail-view.tsx (modified)
+src/components/views/create-lead-view.tsx (modified)
+src/app/page.tsx (modified)
+```

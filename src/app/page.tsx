@@ -24,6 +24,7 @@ import { CreateResponseView } from '@/components/views/create-response-view';
 import { VideoDetailView } from '@/components/views/video-detail-view';
 import { ProfileView } from '@/components/views/profile-view';
 import { LeaderboardView } from '@/components/views/leaderboard-view';
+import { WalletView } from '@/components/views/wallet-view';
 import { Plus } from 'lucide-react';
 import {
   Eye,
@@ -65,7 +66,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -787,7 +788,7 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
       value: `$${currentUser.walletBalance.toFixed(2)}`,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50 dark:bg-orange-950/50',
-      onClick: undefined,
+      onClick: () => onNavigate('wallet'),
     },
     {
       icon: Shield,
@@ -1015,6 +1016,49 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
             </CardContent>
           </Card>
         </motion.div>
+      </motion.div>
+
+      {/* Quick Wallet Actions Card */}
+      <motion.div variants={staggerItem} className="mb-8">
+        <Card className="border-2 border-emerald-200 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-50/80 to-orange-50/50 dark:from-emerald-950/20 dark:to-orange-950/10">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-orange-500 flex items-center justify-center shadow-sm">
+                <CreditCard className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Quick Wallet Actions</CardTitle>
+                <CardDescription>Deposit, send tips, and manage funds</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
+                onClick={() => onNavigate('wallet')}
+              >
+                <Plus className="w-3 h-3" />
+                Deposit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-pink-300 hover:bg-pink-50 dark:hover:bg-pink-950/30 text-pink-700 dark:text-pink-300"
+                onClick={() => onNavigate('wallet')}
+              >
+                <Send className="w-3 h-3" />
+                Send Tip
+              </Button>
+            </div>
+            <div className="mt-3 flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+              <span className="text-sm font-medium">Manage Wallet</span>
+              <ChevronRight className="w-4 h-4" />
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* Footer */}
@@ -1437,6 +1481,12 @@ export default function Home() {
             key="leaderboard"
             onNavigate={navigate}
             setProfileUserId={handleSetProfileUserId}
+          />
+        )}
+        {view === 'wallet' && (
+          <WalletView
+            key="wallet"
+            onNavigate={navigate}
           />
         )}
       </AnimatePresence>

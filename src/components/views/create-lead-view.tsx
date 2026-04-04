@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Loader2, Plus, X, Eye, DollarSign, Calendar, Users, Play, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, X, Eye, DollarSign, Calendar, Users, Play, HelpCircle, AlertCircle, Wallet } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useVideoStore } from '@/stores/video-store';
 import { useToast } from '@/hooks/use-toast';
@@ -349,6 +349,14 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
                         animate={{ opacity: 1, height: 'auto' }}
                         className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2"
                       >
+                        {/* Wallet balance display */}
+                        <div className="sm:col-span-2 flex items-center justify-between px-3 py-2 rounded-md bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/40">
+                          <div className="flex items-center gap-2">
+                            <Wallet className="w-4 h-4 text-orange-500" />
+                            <span className="text-sm font-medium">Your Balance</span>
+                          </div>
+                          <span className="text-sm font-bold text-orange-600 dark:text-orange-400">${(currentUser?.walletBalance ?? 0).toFixed(2)}</span>
+                        </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Reward per Response ($)</Label>
                           <Input
@@ -362,18 +370,6 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Total Reward Pool ($)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="50.00"
-                            value={paidPollSettings.totalRewardPool}
-                            onChange={(e) =>
-                              setPaidPollSettings((prev) => ({ ...prev, totalRewardPool: e.target.value }))
-                            }
-                          />
-                        </div>
-                        <div className="space-y-1">
                           <Label className="text-xs">Max Responses</Label>
                           <Input
                             type="number"
@@ -383,6 +379,45 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
                               setPaidPollSettings((prev) => ({ ...prev, maxResponses: e.target.value }))
                             }
                           />
+                        </div>
+                        {/* Auto-calculated Total Pool Needed */}
+                        {(parseFloat(paidPollSettings.rewardPerResponse) > 0) && (
+                          <div className="sm:col-span-2 flex items-center justify-between px-3 py-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40">
+                            <span className="text-xs text-muted-foreground">Total Pool Needed</span>
+                            <span className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                              ${((parseFloat(paidPollSettings.rewardPerResponse) || 0) * (parseInt(paidPollSettings.maxResponses) || 0)).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        {/* Insufficient balance warning */}
+                        {currentUser && (parseFloat(paidPollSettings.rewardPerResponse) || 0) * (parseInt(paidPollSettings.maxResponses) || 0) > currentUser.walletBalance && (
+                          <div className="sm:col-span-2 flex items-center gap-2 px-3 py-2 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40">
+                            <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                            <span className="text-xs text-red-700 dark:text-red-300">Insufficient balance. Please deposit funds to your wallet.</span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="ml-auto text-xs shrink-0 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/30"
+                              onClick={() => onNavigate('wallet' as View)}
+                            >
+                              <Wallet className="w-3 h-3" />
+                              Wallet
+                            </Button>
+                          </div>
+                        )}
+                        <div className="space-y-1">
+                          <Label className="text-xs">Initial Fund Amount ($)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={paidPollSettings.totalRewardPool}
+                            onChange={(e) =>
+                              setPaidPollSettings((prev) => ({ ...prev, totalRewardPool: e.target.value }))
+                            }
+                          />
+                          <p className="text-[10px] text-muted-foreground">Fund the poll after creation if needed</p>
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Close Date</Label>

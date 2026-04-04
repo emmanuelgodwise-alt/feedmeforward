@@ -3,10 +3,20 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   ArrowLeft,
   Heart,
@@ -23,7 +33,12 @@ import {
   Copy,
   Check,
   CheckCircle2,
+  DollarSign,
+  Star,
+  TrendingUp,
+  Loader2,
 } from 'lucide-react';
+import { TipDialog } from '@/components/tip-dialog';
 import { useVideoStore } from '@/stores/video-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +48,7 @@ import { timeAgo, getGradient } from '@/components/video-card';
 import type { VideoDetail, Video } from '@/types';
 import type { View } from '@/app/page';
 import { STATUS_COLORS } from '@/types';
+import { useWalletStore } from '@/stores/wallet-store';
 
 interface VideoDetailViewProps {
   onNavigate: (view: View) => void;
@@ -49,6 +65,13 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
   const [loadingResponses, setLoadingResponses] = useState(false);
   const [copied, setCopied] = useState(false);
   const [embedError, setEmbedError] = useState(false);
+  const [tipOpen, setTipOpen] = useState(false);
+  const [claimingReward, setClaimingReward] = useState<string | null>(null);
+  const [fundingPoll, setFundingPoll] = useState<string | null>(null);
+  const [fundAmount, setFundAmount] = useState('');
+  const [fundDialogOpen, setFundDialogOpen] = useState(false);
+  const [earningRevenue, setEarningRevenue] = useState(false);
+  const { updateWalletBalance } = useAuthStore();
 
   useEffect(() => {
     fetchVideo(videoId);
@@ -90,6 +113,90 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
     }
     // Fire-and-forget score recalculation
     triggerScoreRecalc(currentUser.id);
+  };
+
+  const handleClaimReward = async (pollId: string) => {
+    if (!currentUser) return;
+    setClaimingReward(pollId);
+    try {
+      const res = await fetch(`/api/polls/${pollId}/claim`, {
+        method: 'POST',
+        headers: { 'X-User-Id': currentUser.id },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast({ title: 'Claim failed', description: data.error || 'Could not claim reward', variant: 'destructive' });
+        return;
+      }
+      updateWalletBalance(data.newBalance);
+      toast({ title: 'Reward claimed! 🎉', description: `$${data.reward.amount.toFixed(2)} added to your wallet.` });
+      useWalletStore.getState().fetchSummary(currentUser.id);
+    } catch {
+      toast({ title: 'Network error', variant: 'destructive' });
+    } finally {
+      setClaimingReward(null);
+    }
+  };
+
+  const handleFundPoll = (pollId: string) => {
+    setFundingPoll(pollId);
+    setFundAmount('');
+    setFundDialogOpen(true);
+  };
+
+  const handleFundSubmit = async () => {
+    if (!currentUser || !fundingPoll) return;
+    const num = parseFloat(fundAmount);
+    if (!num || num <= 0) return;
+    setFundingPoll(null);
+    try {
+      const res = await fetch(`/api/polls/${fundingPoll}/fund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': currentUser.id },
+        body: JSON.stringify({ amount: num }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast({ title: 'Funding failed', description: data.error || 'Could not fund poll', variant: 'destructive' });
+        return;
+      }
+      updateWalletBalance(data.newBalance);
+      toast({ title: 'Poll funded! 💰', description: `$${num.toFixed(2)} added to reward pool.` });
+      fetchVideo(videoId);
+      useWalletStore.getState().fetchSummary(currentUser.id);
+    } catch {
+      toast({ title: 'Network error', variant: 'destructive' });
+    } finally {
+      setFundDialogOpen(false);
+    }
+  };
+
+  const handleEarnRevenue = async () => {
+    if (!currentUser) return;
+    setEarningRevenue(true);
+    try {
+      const res = await fetch('/api/wallet/revenue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': currentUser.id },
+        body: JSON.stringify({ videoId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast({ title: 'Revenue failed', description: data.error || 'Could not calculate revenue', variant: 'destructive' });
+        return;
+      }
+      if (data.revenue > 0) {
+        updateWalletBalance(data.newBalance);
+        toast({ title: 'Ad Revenue Earned! 💰', description: `$${data.revenue.toFixed(2)} added to your wallet.` });
+        useWalletStore.getState().fetchSummary(currentUser.id);
+      } else {
+        toast({ title: 'No revenue yet', description: 'Not enough engagement for ad revenue. Keep growing!' });
+      }
+    } catch {
+      toast({ title: 'Network error', variant: 'destructive' });
+    } finally {
+      setEarningRevenue(false);
+    }
   };
 
   const handleShare = async () => {
@@ -323,6 +430,19 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                 {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'Copied' : 'Share'}
               </Button>
+              {/* Tip Creator button */}
+              {currentUser && video.creator.id !== currentUser.id && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 hover:bg-pink-50 dark:hover:bg-pink-950/30 hover:text-pink-500 hover:border-pink-300"
+                  onClick={() => setTipOpen(true)}
+                >
+                  <DollarSign className="w-4 h-4" />
+                  <Heart className="w-3 h-3" />
+                  Tip
+                </Button>
+              )}
               {video.type === 'lead' && (
                 <Button
                   size="sm"
@@ -351,7 +471,54 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                 Polls ({video.polls.length})
               </h2>
               {video.polls.map((poll) => (
-                <PollCard key={poll.id} poll={poll} />
+                <div key={poll.id} className="space-y-2">
+                  <PollCard poll={poll} />
+                  {/* Claim reward for paid polls */}
+                  {poll.isPaid && poll.rewardPerResponse && poll.rewardPerResponse > 0 && poll.userVoted && currentUser && video.creator.id !== currentUser.id && (
+                    <div className="flex items-center gap-2 px-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-300"
+                        onClick={() => handleClaimReward(poll.id)}
+                        disabled={claimingReward === poll.id}
+                      >
+                        {claimingReward === poll.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Star className="w-4 h-4" />
+                        )}
+                        Claim Reward (${poll.rewardPerResponse.toFixed(2)})
+                      </Button>
+                    </div>
+                  )}
+                  {/* Fund poll for creator */}
+                  {poll.isPaid && currentUser && video.creator.id === currentUser.id && (
+                    <div className="flex items-center gap-2 px-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
+                        onClick={() => handleFundPoll(poll.id)}
+                      >
+                        <DollarSign className="w-4 h-4" />
+                        Fund This Poll
+                      </Button>
+                      {poll.totalRewardPool > 0 && (
+                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                          Pool: ${poll.totalRewardPool.toFixed(2)}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  {/* Reward display for paid polls */}
+                  {poll.isPaid && poll.rewardPerResponse && poll.rewardPerResponse > 0 && !poll.userVoted && currentUser && video.creator.id !== currentUser.id && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 px-1">
+                      <Star className="w-3 h-3" />
+                      Earn ${poll.rewardPerResponse.toFixed(2)} for your response
+                    </p>
+                  )}
+                </div>
               ))}
             </motion.div>
           )}
@@ -523,6 +690,39 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
             </Card>
           </motion.div>
 
+          {/* Earn Ad Revenue (for creator) */}
+          {currentUser && video.creator.id === currentUser.id && (
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-emerald-500" />
+                      <h3 className="text-sm font-semibold">Ad Revenue</h3>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 text-xs border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
+                      onClick={handleEarnRevenue}
+                      disabled={earningRevenue}
+                    >
+                      {earningRevenue ? <Loader2 className="w-3 h-3 animate-spin" /> : <DollarSign className="w-3 h-3" />}
+                      Earn Revenue
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Based on {video.viewCount} views, {video.likeCount} likes, {video.commentCount} comments
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
           {/* Poll Summary */}
           {video.polls && video.polls.length > 0 && (
             <motion.div
@@ -557,6 +757,68 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
           )}
         </div>
       </div>
+
+      {/* Tip Dialog */}
+      {currentUser && (
+        <TipDialog
+          recipientId={video.creator.id}
+          recipientUsername={video.creator.username}
+          videoId={videoId}
+          open={tipOpen}
+          onOpenChange={setTipOpen}
+          onSuccess={() => {
+            if (currentUser) useWalletStore.getState().fetchSummary(currentUser.id);
+          }}
+        />
+      )}
+
+      {/* Fund Poll Dialog */}
+      <Dialog open={fundDialogOpen} onOpenChange={(open) => {
+        if (!open) { setFundingPoll(null); setFundAmount(''); }
+        setFundDialogOpen(open);
+      }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-emerald-500" />
+              Fund Poll
+            </DialogTitle>
+            <DialogDescription>Add funds to the poll reward pool</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Fund Amount</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0.00"
+                  value={fundAmount}
+                  onChange={(e) => setFundAmount(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-sm px-3 py-2 rounded-md bg-muted/50">
+              <span className="text-muted-foreground">Your Balance</span>
+              <span className="font-semibold text-orange-600 dark:text-orange-400">${(currentUser?.walletBalance ?? 0).toFixed(2)}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFundDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleFundSubmit}
+              disabled={!parseFloat(fundAmount) || parseFloat(fundAmount) <= 0}
+              className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white gap-2"
+            >
+              <DollarSign className="w-4 h-4" />
+              Fund Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

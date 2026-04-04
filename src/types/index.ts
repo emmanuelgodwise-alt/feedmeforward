@@ -214,3 +214,37 @@ export function getPreviousLevelThreshold(score: number): number {
   if (score >= 200) return 0;
   return 0;
 }
+
+// ─── Transaction Types ─────────────────────────────────────────────
+
+export interface TransactionItem {
+  id: string;
+  userId: string;
+  amount: number;
+  type: 'tip' | 'withdrawal' | 'deposit' | 'earning' | 'reward';
+  status: 'pending' | 'completed' | 'failed';
+  description: string | null;
+  referenceId: string | null;
+  createdAt: string;
+}
+
+export interface WalletSummary {
+  balance: number;
+  totalEarnings: number;
+  totalTipsSent: number;
+  totalDeposits: number;
+  totalWithdrawals: number;
+  pendingAmount: number;
+}
+
+export interface TipRequest {
+  recipientId: string;
+  amount: number;
+  videoId?: string;
+  message?: string;
+}
+
+export interface WithdrawalRequest {
+  amount: number;
+  method?: string;
+}

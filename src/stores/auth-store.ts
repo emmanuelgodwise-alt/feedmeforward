@@ -22,6 +22,7 @@ interface AuthState {
   logout: () => void;
   refreshUser: () => Promise<void>;
   updateUserScore: (score: number, isVerified: boolean) => void;
+  updateWalletBalance: (balance: number) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -57,6 +58,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const current = get().currentUser;
     if (current) {
       set({ currentUser: { ...current, memberScore: score, isVerified } });
+    }
+  },
+  updateWalletBalance: (balance: number) => {
+    const current = get().currentUser;
+    if (current) {
+      set({ currentUser: { ...current, walletBalance: balance } });
     }
   },
 }));
