@@ -17,6 +17,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore, type User } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
+import { ExploreView } from '@/components/views/explore-view';
+import { CreateLeadView } from '@/components/views/create-lead-view';
+import { CreateResponseView } from '@/components/views/create-response-view';
+import { VideoDetailView } from '@/components/views/video-detail-view';
+import { Plus } from 'lucide-react';
 import {
   Eye,
   EyeOff,
@@ -55,7 +60,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 
-type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -893,55 +898,57 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
 
         {/* Lead Clips Card */}
         <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
-          <Card className="border-2 border-dashed border-orange-200 dark:border-orange-900/50 bg-orange-50/50 dark:bg-orange-950/20">
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow border-2 border-orange-200 dark:border-orange-800/40 bg-gradient-to-br from-orange-50/80 to-amber-50/50 dark:from-orange-950/20 dark:to-amber-950/10"
+            onClick={() => onNavigate('explore')}
+          >
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-sm">
                   <Video className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <CardTitle className="text-lg">Lead Clips</CardTitle>
-                  <CardDescription>Coming Soon</CardDescription>
+                  <CardDescription>Explore & create polls</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Create and share engaging video polls with your community. Lead Clips will let you ask questions through video and gather real-time responses.
+                Create and share engaging video polls with your community. Browse lead clips and respond with your own videos.
               </p>
-              <div className="mt-4 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-500" />
-                <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                  Under Development
-                </span>
+              <div className="mt-4 flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                <span className="text-sm font-medium">Explore Clips</span>
+                <ChevronRight className="w-4 h-4" />
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Leaderboards Card */}
+        {/* Create Lead Clip Card */}
         <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
-          <Card className="border-2 border-dashed border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20">
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow border-2 border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/80 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/10"
+            onClick={() => onNavigate('create-lead')}
+          >
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
+                  <Plus className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Leaderboards</CardTitle>
-                  <CardDescription>Coming Soon</CardDescription>
+                  <CardTitle className="text-lg">Create Lead Clip</CardTitle>
+                  <CardDescription>Start a new poll</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Compete with other creators on the leaderboard. Rise through the ranks by creating popular polls and engaging with your audience.
+                Share a video and attach a poll question. Get responses from your community with optional rewards.
               </p>
-              <div className="mt-4 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-500" />
-                <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                  Under Development
-                </span>
+              <div className="mt-4 flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                <span className="text-sm font-medium">Create Now</span>
+                <ChevronRight className="w-4 h-4" />
               </div>
             </CardContent>
           </Card>
@@ -1286,9 +1293,25 @@ function SchemaDashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
 export default function Home() {
   const { isAuthenticated } = useAuthStore();
   const [view, setView] = useState<View>(isAuthenticated ? 'dashboard' : 'landing');
+  const [videoId, setVideoId] = useState<string>('');
+  const [parentVideoId, setParentVideoId] = useState<string>('');
+  const [parentVideoTitle, setParentVideoTitle] = useState<string>('');
+  const [parentVideoCreator, setParentVideoCreator] = useState<string>('');
+  const [parentVideoThumbnail, setParentVideoThumbnail] = useState<string>('');
 
   const navigate = useCallback((newView: View) => {
     setView(newView);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleVideoClick = useCallback((id: string) => {
+    setVideoId(id);
+    setView('video-detail');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleSetParentVideoId = useCallback((id: string) => {
+    setParentVideoId(id);
   }, []);
 
   return (
@@ -1300,6 +1323,26 @@ export default function Home() {
         {view === 'login' && <LoginForm key="login" onNavigate={navigate} />}
         {view === 'dashboard' && <Dashboard key="dashboard" onNavigate={navigate} />}
         {view === 'schema' && <SchemaDashboard key="schema" onNavigate={navigate} />}
+        {view === 'explore' && <ExploreView key="explore" onNavigate={navigate} setVideoId={handleVideoClick} />}
+        {view === 'create-lead' && <CreateLeadView key="create-lead" onNavigate={navigate} />}
+        {view === 'create-response' && (
+          <CreateResponseView
+            key="create-response"
+            onNavigate={navigate}
+            parentVideoId={parentVideoId}
+            parentVideoTitle={parentVideoTitle}
+            parentVideoCreator={parentVideoCreator}
+            parentVideoThumbnail={parentVideoThumbnail}
+          />
+        )}
+        {view === 'video-detail' && (
+          <VideoDetailView
+            key={videoId}
+            onNavigate={navigate}
+            videoId={videoId}
+            setParentVideoId={handleSetParentVideoId}
+          />
+        )}
       </AnimatePresence>
     </main>
   );

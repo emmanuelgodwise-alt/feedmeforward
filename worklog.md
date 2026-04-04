@@ -109,3 +109,85 @@ Added 15 new models to `prisma/schema.prisma` while preserving the existing User
 - Schema API endpoint verified working via curl — returns correct data with all 16 models
 - TypeScript strict typing throughout
 - Fixed runtime error: `User` lucide icon conflict with auth store type — resolved by importing as `UserIcon`
+
+---
+## Task ID: 3 - main-agent (Phase 3: Core Video Polling)
+### Work Task
+Build Phase 3 of FeedMeForward: Complete video polling system with API routes, Zustand video store, and 4 new SPA views (Explore, Create Lead Clip, Create Response Clip, Video Detail) with supporting UI components.
+
+### Work Summary
+
+#### 1. Types (`src/types/index.ts`)
+- Defined `Video`, `VideoDetail`, `Poll`, `PollOption`, `CommentData`, `VideoFilters` types
+- Added `CATEGORIES` constant array (8 categories: Entertainment, Tech, Sports, Music, News, Lifestyle, Education, Other)
+- Added `STATUS_COLORS` mapping for Active/Expired/Answered status badges
+- Added `THUMBNAIL_GRADIENTS` array of 8 gradient combinations for placeholder thumbnails
+
+#### 2. API Routes (7 route files)
+- **GET/POST `/api/videos`**: List videos with filters (type, status, category, creatorId, search, pagination) and create video with auth validation and URL validation
+- **GET/PATCH/DELETE `/api/videos/[id]`**: Single video detail (with polls, vote status, like status, view count increment), update (owner-only), delete (owner-only)
+- **GET `/api/videos/[id]/responses`**: List response clips for a lead video
+- **POST `/api/polls`**: Create poll with 2-6 options, paid poll support with reward/close settings, owner validation
+- **POST `/api/polls/[id]/vote`**: Vote on poll with duplicate check, closed poll check, max responses check, transactional vote creation + count update
+- **POST/DELETE `/api/videos/[id]/like`**: Like/unlike video with unique constraint handling (P2002)
+- **GET/POST `/api/videos/[id]/comments`**: List comments with nested replies and create comment with parent comment support
+
+#### 3. Video Store (`src/stores/video-store.ts`)
+- Zustand store with: videos list, currentVideo detail, isLoading, error, filters state
+- Actions: fetchVideos (with debounce), fetchVideo, setFilters, clearCurrentVideo
+- Actions: likeVideo, unlikeVideo (optimistic local state update)
+- Actions: votePoll (transactional vote with local state update for poll results)
+- Actions: createVideo, createPoll, createComment
+- All authenticated actions use X-User-Id header from auth store
+
+#### 4. UI Components (4 new components)
+- **`src/components/video-card.tsx`**: Memoized video card with gradient thumbnail, status/type badges, like/comment/poll counts, category tag, relative time. Uses `timeAgo()` and `getGradient()` helpers exported for reuse.
+- **`src/components/filter-bar.tsx`**: Search input, expandable filter toggle, status tabs (All/Active/Expired/Answered), category dropdown select, debounced filtering
+- **`src/components/poll-card.tsx`**: Poll display with question, paid badge, close status, animated vote results (percentage bars), clickable vote options, vote count, close date
+- **`src/components/comment-section.tsx`**: Comment input with Enter-to-submit, comment list with nested replies, like button, reply button with inline input, loading skeletons, empty state
+
+#### 5. View Components (4 new views)
+- **`src/components/views/explore-view.tsx`**: Video feed with filter bar, responsive grid (1/2/3/4 cols), skeleton loading, empty state with CTA, floating action button for creating lead clips
+- **`src/components/views/create-lead-view.tsx`**: Full form with title, description, video URL (with validation), thumbnail URL, category select, tags (comma-separated with chip display), expandable poll section (question, dynamic 2-6 options, free/paid toggle, reward settings), live preview card
+- **`src/components/views/create-response-view.tsx`**: Parent video info display, simplified form (title, video URL, thumbnail, description, tags)
+- **`src/components/views/video-detail-view.tsx`**: Full video page with YouTube/Vimeo iframe embed, fallback external link, video info section with tags, action buttons (like/comment/share/respond), polls with voting UI, horizontal scrollable response clips, comment section, sidebar with creator card, stats card, poll activity summary
+
+#### 6. Dashboard Updates
+- Replaced "Lead Clips - Coming Soon" card with clickable card navigating to 'explore' view
+- Replaced "Leaderboards - Coming Soon" card with "Create Lead Clip" card navigating to 'create-lead' view
+- Both cards now have gradient borders, proper icons, and "arrow" CTAs matching existing schema card style
+
+#### 7. SPA Integration (`src/app/page.tsx`)
+- Extended View type to: `'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail'`
+- Added state management for videoId and parentVideoId (used for cross-view navigation)
+- Added smooth scroll-to-top on navigation
+- View components rendered via AnimatePresence with unique keys (videoId-based for detail view)
+- Added imports for all 4 view components
+
+#### Quality Checks
+- `bun run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation (`✓ Compiled in 137ms`) with no runtime errors
+- TypeScript strict typing throughout all files
+- Proper 'use client' directives on all client components
+- Auth validation via X-User-Id header on all protected endpoints
+
+#### File Structure Created
+```
+src/types/index.ts
+src/stores/video-store.ts
+src/components/video-card.tsx
+src/components/filter-bar.tsx
+src/components/poll-card.tsx
+src/components/comment-section.tsx
+src/components/views/explore-view.tsx
+src/components/views/create-lead-view.tsx
+src/components/views/create-response-view.tsx
+src/components/views/video-detail-view.tsx
+src/app/api/videos/route.ts
+src/app/api/videos/[id]/route.ts
+src/app/api/videos/[id]/responses/route.ts
+src/app/api/videos/[id]/like/route.ts
+src/app/api/videos/[id]/comments/route.ts
+src/app/api/polls/route.ts
+src/app/api/polls/[id]/vote/route.ts
+```
