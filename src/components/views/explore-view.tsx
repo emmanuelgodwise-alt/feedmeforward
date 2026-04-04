@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Video, RefreshCw, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Video, RefreshCw, Search } from 'lucide-react';
 import { useVideoStore } from '@/stores/video-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { VideoCard } from '@/components/video-card';
@@ -44,12 +44,17 @@ export function ExploreView({ onNavigate, setVideoId }: ExploreViewProps) {
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6"
       >
-        <div>
-          <div className="flex items-center gap-2">
-            <Video className="w-6 h-6 text-orange-500" />
-            <h1 className="text-2xl font-bold">Explore</h1>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => onNavigate('dashboard')} className="shrink-0">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-2">
+              <Video className="w-6 h-6 text-orange-500" />
+              <h1 className="text-2xl font-bold">Explore</h1>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">Discover and engage with video polls</p>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">Discover and engage with video polls</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={fetchVideos} disabled={isLoading} className="gap-2">

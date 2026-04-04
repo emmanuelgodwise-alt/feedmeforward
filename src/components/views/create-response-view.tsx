@@ -93,7 +93,7 @@ export function CreateResponseView({
     }
 
     toast({ title: 'Response created!', description: 'Your response clip has been published.' });
-    onNavigate('video-detail');
+    window.dispatchEvent(new CustomEvent('navigate-video', { detail: { videoId: parentVideoId } }));
   };
 
   const tagChips = form.tags

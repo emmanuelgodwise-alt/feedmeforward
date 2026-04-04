@@ -509,3 +509,60 @@ src/components/views/video-detail-view.tsx (modified)
 src/components/views/create-lead-view.tsx (modified)
 src/app/page.tsx (modified)
 ```
+
+---
+## Task ID: FIX - main-agent (Pre-Phase 6 UI Fixes)
+### Work Task
+Apply 5 UI fixes to FeedMeForward: Sign In button color, feature card clickability, back buttons on all views, navigation audit, and error check.
+
+### Work Summary
+
+#### FIX 1: Sign In Button Color (`src/app/page.tsx`)
+- Added `text-foreground` class to the Sign In button on the Landing Page (line 261)
+- The button uses `variant="outline"` which previously resulted in white/light text on the landing page background
+- Now uses black text in light mode via the `text-foreground` CSS variable
+
+#### FIX 2: Feature Cards Clickable (`src/app/page.tsx`)
+- Added `navigateTo` property to each feature card config: Video Polls → 'explore', Community Driven → 'leaderboard', Earn Rewards → 'wallet'
+- Added `cursor-pointer` class to Card elements
+- Added `onClick={() => onNavigate(feature.navigateTo)}` handler to each Card
+- Cards already had `whileHover` animation for visual hover state
+
+#### FIX 3: Back Buttons Added
+Verified existing back buttons (already present in):
+- ✅ SchemaDashboard → 'dashboard'
+- ✅ CreateLeadView → 'explore'
+- ✅ CreateResponseView → 'video-detail'
+- ✅ VideoDetailView → 'explore'
+- ✅ ProfileView → 'dashboard'
+- ✅ LeaderboardView → 'dashboard'
+- ✅ WalletView → 'dashboard'
+
+Added new back buttons:
+- **SignUpForm** → Added `<Button variant="ghost" size="icon">` with ArrowLeft icon, navigates to 'landing'
+- **LoginForm** → Added `<Button variant="ghost" size="icon">` with ArrowLeft icon, navigates to 'landing'
+- **ExploreView** → Added back button to existing header, navigates to 'dashboard'. Imported ArrowLeft from lucide-react.
+
+#### FIX 4: Navigation Audit & Fixes
+- **Dashboard → all pages**: All navigation links verified working ✅
+- **Explore → Video Detail**: Verified working via setVideoId ✅
+- **Video Detail → Create Response**: Verified working via setParentVideoId ✅
+- **Video Detail → Profile**: Verified working via setProfileUserId ✅
+- **Leaderboard → Profile**: Verified working via setProfileUserId ✅
+
+**Bug fix — CreateResponseView**: After successful response creation, changed from `onNavigate('video-detail')` to `window.dispatchEvent(new CustomEvent('navigate-video', { detail: { videoId: parentVideoId } }))` to ensure the parent video detail is properly reloaded with the correct videoId.
+
+**Bug fix — VideoDetailView response click**: `handleResponseClick` was calling `onNavigate('video-detail')` without updating the videoId, meaning it would just re-render the same video. Fixed to use `window.dispatchEvent(new CustomEvent('navigate-video', { detail: { videoId: responseId } }))` so clicking a response clip actually navigates to that response's detail page.
+
+#### FIX 5: Error Check
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows all successful compilations (latest: `✓ Compiled in 138ms`) with no runtime errors
+- All imports verified correct, no unused imports introduced
+
+#### Files Modified
+```
+src/app/page.tsx (FIX 1, 2, 3)
+src/components/views/explore-view.tsx (FIX 3)
+src/components/views/create-response-view.tsx (FIX 4)
+src/components/views/video-detail-view.tsx (FIX 4)
+```

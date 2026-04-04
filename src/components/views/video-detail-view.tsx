@@ -220,7 +220,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
   };
 
   const handleResponseClick = (responseId: string) => {
-    onNavigate('video-detail');
+    window.dispatchEvent(new CustomEvent('navigate-video', { detail: { videoId: responseId } }));
   };
 
   const handleCreatorClick = () => {

@@ -258,7 +258,7 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
           <Button
             size="lg"
             variant="outline"
-            className="h-12 px-8 text-base font-semibold"
+            className="h-12 px-8 text-base font-semibold text-foreground"
             onClick={() => onNavigate('login')}
           >
             Sign In
@@ -278,6 +278,7 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
             desc: 'Create engaging polls with video content that captivates your audience.',
             color: 'from-orange-400 to-orange-500',
             bgColor: 'bg-orange-50 dark:bg-orange-950/50',
+            navigateTo: 'explore' as View,
           },
           {
             icon: Users,
@@ -285,6 +286,7 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
             desc: 'Build your audience and connect with creators who share your passions.',
             color: 'from-amber-400 to-amber-500',
             bgColor: 'bg-amber-50 dark:bg-amber-950/50',
+            navigateTo: 'leaderboard' as View,
           },
           {
             icon: TrendingUp,
@@ -292,6 +294,7 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
             desc: 'Grow your member score and earn wallet rewards for your engagement.',
             color: 'from-orange-500 to-red-500',
             bgColor: 'bg-red-50 dark:bg-red-950/50',
+            navigateTo: 'wallet' as View,
           },
         ].map((feature) => (
           <motion.div
@@ -299,7 +302,7 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
             whileHover={{ y: -4, scale: 1.02 }}
             transition={{ type: 'spring', stiffness: 300 }}
           >
-            <Card className={`${feature.bgColor} border-0 shadow-md h-full`}>
+            <Card className={`${feature.bgColor} border-0 shadow-md h-full cursor-pointer`} onClick={() => onNavigate(feature.navigateTo)}>
               <CardHeader>
                 <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${feature.color} flex items-center justify-center mb-2 shadow-sm`}>
                   <feature.icon className="w-5 h-5 text-white" />
@@ -433,6 +436,11 @@ function SignUpForm({ onNavigate }: { onNavigate: (view: View) => void }) {
     >
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
+          <div className="flex justify-start mb-2">
+            <Button variant="ghost" size="icon" onClick={() => onNavigate('landing')} className="shrink-0">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </div>
           <motion.div
             className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center mx-auto mb-4 shadow-md shadow-orange-500/20"
             whileHover={{ rotate: 5, scale: 1.05 }}
@@ -663,6 +671,11 @@ function LoginForm({ onNavigate }: { onNavigate: (view: View) => void }) {
     >
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
+          <div className="flex justify-start mb-2">
+            <Button variant="ghost" size="icon" onClick={() => onNavigate('landing')} className="shrink-0">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </div>
           <motion.div
             className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center mx-auto mb-4 shadow-md shadow-orange-500/20"
             whileHover={{ rotate: 5, scale: 1.05 }}
