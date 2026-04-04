@@ -27,6 +27,8 @@ import { LeaderboardView } from '@/components/views/leaderboard-view';
 import { WalletView } from '@/components/views/wallet-view';
 import { RewardsView } from '@/components/views/rewards-view';
 import { InvitationsView } from '@/components/views/invitations-view';
+import { AudienceInsightsView } from '@/components/views/audience-insights-view';
+import { SegmentsView } from '@/components/views/segments-view';
 import { Plus } from 'lucide-react';
 import {
   Eye,
@@ -66,9 +68,10 @@ import {
   User as UserIcon,
   Award,
   CheckCircle2,
+  Target,
 } from 'lucide-react';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'audience' | 'segments';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -938,7 +941,7 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
       </motion.div>
 
       {/* Action Cards */}
-      <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {/* My Profile Card */}
         <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
           <Card
@@ -1027,6 +1030,64 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
               </p>
               <div className="mt-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                 <span className="text-sm font-medium">View Rewards</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Audience Insights Card */}
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow border-2 border-orange-200 dark:border-orange-800/40 bg-gradient-to-br from-orange-50/80 to-amber-50/50 dark:from-orange-950/20 dark:to-amber-950/10"
+            onClick={() => onNavigate('audience')}
+          >
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-sm">
+                  <BarChart3 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Audience Insights</CardTitle>
+                  <CardDescription>Platform demographics</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Explore platform demographics and audience analytics.
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                <span className="text-sm font-medium">View Insights</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Audience Segments Card */}
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow border-2 border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/80 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/10"
+            onClick={() => onNavigate('segments')}
+          >
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Segments</CardTitle>
+                  <CardDescription>Target audiences</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Create and manage audience segments for targeted polls.
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                <span className="text-sm font-medium">View Segments</span>
                 <ChevronRight className="w-4 h-4" />
               </div>
             </CardContent>
@@ -1573,6 +1634,18 @@ export default function Home() {
         {view === 'invitations' && (
           <InvitationsView
             key="invitations"
+            onNavigate={navigate}
+          />
+        )}
+        {view === 'audience' && (
+          <AudienceInsightsView
+            key="audience"
+            onNavigate={navigate}
+          />
+        )}
+        {view === 'segments' && (
+          <SegmentsView
+            key="segments"
             onNavigate={navigate}
           />
         )}

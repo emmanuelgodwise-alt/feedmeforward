@@ -9,6 +9,8 @@ import {
   UserPlus,
   Plus,
   Home,
+  BarChart3,
+  Target,
 } from 'lucide-react';
 
 interface QuickNavProps {
@@ -24,6 +26,8 @@ const NAV_ITEMS = [
   { icon: Wallet, label: 'Wallet', view: 'wallet' },
   { icon: Users, label: 'Leaderboard', view: 'leaderboard' },
   { icon: UserPlus, label: 'Invite', view: 'invitations' },
+  { icon: BarChart3, label: 'Insights', view: 'audience' },
+  { icon: Target, label: 'Segments', view: 'segments' },
 ];
 
 export function QuickNav({ onNavigate, activeView }: QuickNavProps) {

@@ -20,6 +20,12 @@ model User {
   memberScore    Int      @default(0)
   walletBalance  Float    @default(0.0)
   isVerified     Boolean  @default(false)
+  // Audience Segmentation
+  ageRange       String?
+  location       String?
+  gender         String?
+  language       String?
+  interests      String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -38,6 +44,7 @@ model User {
   circleShares      CircleVideo[]
   liveSessions      LiveSession[]   @relation("LiveSessionCreator")
   reports           Report[]        @relation("UserReports")
+  segments          AudienceSegment[] @relation("UserAudienceSegments")
 }
 
 // ─── Video Model ────────────────────────────────────────────────────
@@ -285,4 +292,18 @@ model Report {
   reporter User    @relation("UserReports", fields: [reporterId], references: [id])
   video    Video?  @relation(fields: [videoId], references: [id])
   comment  Comment? @relation(fields: [commentId], references: [id])
+}
+
+// ─── Audience Segment Model ─────────────────────────────────────────
+model AudienceSegment {
+  id          String   @id @default(cuid())
+  creatorId   String
+  name        String
+  description String?
+  criteria    String
+  userCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator User @relation("UserAudienceSegments", fields: [creatorId], references: [id])
 }

@@ -998,3 +998,258 @@ Stage Summary:
 - Files created: quick-nav.tsx, upload/route.ts, download/route.ts, uploads/videos/ directory
 - Files modified: page.tsx, 9 view components (back buttons + quick nav + upload UI)
 - Total API routes: 32 (was 30)
+
+---
+## Task ID: 7 - main-agent (Phase 7: Audience Segmentation & Targeting — Backend)
+### Work Task
+Build Phase 7 backend for FeedMeForward: Prisma schema updates for audience segmentation, user profile update API, audience segment CRUD APIs, audience match preview API, and audience insights analytics API.
+
+### Work Summary
+
+#### 1. Prisma Schema Update (`prisma/schema.prisma`) — Modified
+Added 5 new optional fields to User model after `isVerified`:
+- `ageRange` (String?): e.g. "18-24", "25-34", "35-44", "45-54", "55+"
+- `location` (String?): e.g. "Lagos, Nigeria"
+- `gender` (String?): "male", "female", "non-binary", "prefer-not-to-say"
+- `language` (String?): e.g. "en", "fr", "es", "yo"
+- `interests` (String?): JSON string array, e.g. ["tech", "music", "sports"]
+
+Added `segments` relation field to User model.
+
+Added new AudienceSegment model:
+- Fields: id, creatorId, name, description, criteria (JSON string), userCount (default 0), timestamps
+- Relation: belongs to User via "UserAudienceSegments"
+
+Successfully pushed to SQLite via `npx prisma db push`.
+
+#### 2. API: PUT `/api/users/profile/route.ts` — Created
+- Auth via `X-User-Id` header
+- Updates all user profile fields: displayName, bio, avatarUrl, ageRange, location, gender, language, interests
+- Validates: interests must be array, ageRange must be one of valid values, gender must be one of valid values
+- Returns updated user data with all fields including segmentation fields
+
+#### 3. API: POST/GET `/api/segments/route.ts` — Created
+**POST (Create Segment):**
+- Auth via `X-User-Id` header
+- Required: name (non-empty string), criteria (object)
+- Validates: allowed criteria fields only (ageRange, location, gender, language, interests, minScore), valid age ranges, valid genders, interests must be array, minScore must be non-negative number
+- Calculates initial userCount by querying matching users with Prisma where clause builder
+- Stores criteria as JSON string
+- Returns segment data (201)
+
+**GET (List Segments):**
+- Auth via `X-User-Id` header
+- Returns all segments for authenticated user, ordered by updatedAt desc
+- Supports `?search=` query param to filter by name (case-insensitive)
+
+#### 4. API: PUT/DELETE `/api/segments/[id]/route.ts` — Created
+**PUT (Update Segment):**
+- Auth via `X-User-Id` header, Next.js 15 async params pattern
+- Verifies ownership (creatorId = userId), returns 403 if not owner
+- Validates name, criteria fields same as POST
+- Recalculates userCount based on updated criteria
+- Returns updated segment
+
+**DELETE (Delete Segment):**
+- Auth via `X-User-Id` header
+- Verifies ownership before deletion
+- Returns success message
+
+#### 5. API: POST `/api/audience/match/route.ts` — Created
+- Auth via `X-User-Id` header
+- Accepts criteria object with optional fields: ageRange, location, gender, language, interests, minScore
+- Returns preview data: totalMatched count + breakdown:
+  - byAgeRange: groupBy ageRange with counts
+  - byLocation: top 10 locations by count (desc)
+  - byGender: groupBy gender with counts
+  - byLanguage: groupBy language with counts
+  - topInterests: top 20 interests parsed from user JSON data, sorted by frequency
+
+#### 6. API: GET `/api/audience/insights/route.ts` — Created
+- Auth via `X-User-Id` header
+- Platform-wide audience analytics:
+  - totalUsers, totalWithProfile, percentageWithProfile
+  - Distribution by ageRange, gender, location (top 10), language
+  - Distribution by score ranges: 0-100, 101-300, 301-500, 501-750, 751+
+  - Top 20 interests by frequency (parsed from user JSON data)
+
+#### 7. Shared Logic
+All segment and match APIs use a shared `buildUserWhereClause(criteria)` function that constructs Prisma-compatible AND conditions:
+- Exact match for ageRange, gender, language
+- Contains (substring) match for location
+- OR-based contains match for any interest in the interests array
+- gte comparison for minScore
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows all successful 200 responses, no runtime errors
+- TypeScript strict typing throughout all files
+- All API routes use `X-User-Id` header for authentication
+- Consistent `{ success, data }` / `{ success, error }` response pattern
+
+#### Files Created/Modified
+```
+prisma/schema.prisma (modified - added 5 user fields + AudienceSegment model)
+src/app/api/users/profile/route.ts (created)
+src/app/api/segments/route.ts (created)
+src/app/api/segments/[id]/route.ts (created)
+src/app/api/audience/match/route.ts (created)
+src/app/api/audience/insights/route.ts (created)
+```
+
+---
+## Task ID: 7 - main-agent (Phase 7: Audience Segmentation UI)
+### Work Task
+Build Phase 7 of FeedMeForward: Two new SPA views for audience insights and saved segment management, quick-nav updates, and page router integration.
+
+### Work Summary
+
+#### 1. AudienceInsightsView (`src/components/views/audience-insights-view.tsx`) — Created
+- **Header**: Back button to Dashboard, title with BarChart3 icon, Refresh button, QuickNav component
+- **Overview Stats (3 cards)**:
+  - Total Users (Users icon, orange bg)
+  - Profiled Users — percentage with segmentation data filled (UserPlus icon, amber bg)
+  - Avg Member Score (TrendingUp icon, emerald bg)
+- **Age Distribution Card**: Horizontal animated bar chart with proportional widths, color gradient from orange to amber, labels with count and percentage
+- **Gender Distribution Card**: 2×2 grid of colored cards (male=orange, female=amber, non-binary=yellow, prefer-not-to-say=stone), each with user count and percentage
+- **Top Locations Card**: Numbered list with MapPin icons, location names, proportional bar indicators, user counts, scrollable (max-h-96)
+- **Top Interests Card**: Tag cloud / badge grid with intensity-based coloring (orange/amber/yellow), hover scale animation, badges showing name and count
+- **Score Range Distribution Card**: 5 ranges (0-100, 101-300, 301-500, 501-750, 751+) with animated horizontal bars, gradient from stone to deep orange
+- **Loading/Empty states**: Full-page centered spinner, error state with retry button, no-data message
+- Fetches from `GET /api/audience/insights` with `X-User-Id` header
+
+#### 2. SegmentsView (`src/components/views/segments-view.tsx`) — Created
+- **Header**: Back button to Dashboard, title with Target icon, "New Segment" toggle button, QuickNav component
+- **Create/Edit Segment Form** (collapsible):
+  - Name input (required), Description input (optional)
+  - 6 criteria fields with checkbox toggles:
+    - Age Range: select dropdown (18-24, 25-34, 35-44, 45-54, 55+)
+    - Location: text input with contains matching
+    - Gender: select dropdown (male, female, non-binary, prefer-not-to-say)
+    - Language: text input (e.g. "en", "fr")
+    - Interests: comma-separated text input with live tag badges
+    - Min Score: number input (0-1000)
+  - "Preview Reach" button: POST to `/api/audience/match` → shows matched user count in orange highlight
+  - "Save Segment" button: POST/PUT to `/api/segments` (create/update based on mode)
+  - Cancel button resets form
+- **My Segments List**:
+  - Search input to filter by name (queries `/api/segments?search=...`)
+  - Each segment card shows: name, description, criteria summary badges (Age, Location, Gender, Language, Interest, Score), user count, created date
+  - Action buttons: Edit (pre-fills form), Use (navigates to create-lead), Delete (two-click confirmation)
+  - Empty state with CTA to create first segment
+  - Loading skeleton spinner
+- **Edit flow**: Clicking Edit pre-fills form with parsed JSON criteria, changes form title to "Edit Segment", saving uses PUT method
+
+#### 3. Page Router (`src/app/page.tsx`) — Updated
+- Added `'audience'` and `'segments'` to View type union
+- Added imports for `AudienceInsightsView` and `SegmentsView`
+- Added rendering blocks with proper keys:
+  - `{view === 'audience' && <AudienceInsightsView key="audience" onNavigate={navigate} />}`
+  - `{view === 'segments' && <SegmentsView key="segments" onNavigate={navigate} />}`
+
+#### 4. QuickNav (`src/components/quick-nav.tsx`) — Updated
+- Added `BarChart3` and `Target` imports from lucide-react
+- Added two new NAV_ITEMS:
+  - `{ icon: BarChart3, label: 'Insights', view: 'audience' }`
+  - `{ icon: Target, label: 'Segments', view: 'segments' }`
+
+#### 5. API Routes — Already Existed (no changes needed)
+- `GET /api/audience/insights` — platform-wide demographics
+- `POST /api/audience/match` — audience matching preview
+- `POST/GET /api/segments` — create/list saved segments
+- `PUT/DELETE /api/segments/[id]` — update/delete saved segments
+
+#### 6. Prisma Schema — Already Existed (no changes needed)
+- `AudienceSegment` model with id, creatorId, name, description, criteria (JSON), userCount, timestamps
+- User model already has audience fields: ageRange, location, gender, language, interests
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation (`✓ Compiled in 155-186ms`) with no runtime errors
+- TypeScript strict typing throughout all files
+- Warm orange/amber color theme maintained (no blue/indigo)
+- All framer-motion stagger animations applied consistently
+- Responsive design (mobile-first)
+- 'use client' directives on all new components
+
+#### Files Created/Modified
+```
+src/components/views/audience-insights-view.tsx (created)
+src/components/views/segments-view.tsx (created)
+src/app/page.tsx (modified - View type, imports, routing)
+src/components/quick-nav.tsx (modified - new nav items)
+```
+---
+## Task ID: 7B - main-agent (Phase 7B: Audience Segmentation — Profile + Dashboard Cards)
+### Work Task
+Add Audience Profile section to ProfileView, add Audience Insights and Segments cards to Dashboard, and verify quick-nav items.
+
+### Work Summary
+
+#### 1. Profile View — Audience Profile Section (`src/components/views/profile-view.tsx`)
+- Added "Audience Profile" card section AFTER the score breakdown section and BEFORE the Activity Tabs
+- Card is conditionally rendered — only shown for the user's own profile (`isOwnProfile`)
+- Uses orange/amber gradient border styling matching the app theme
+- **Form fields** (all optional):
+  - Age Range: shadcn Select dropdown with options "18-24", "25-34", "35-44", "45-54", "55+"
+  - Gender: shadcn Select dropdown with options "male", "female", "non-binary", "prefer-not-to-say"
+  - Location: text input with placeholder "e.g. Lagos, Nigeria"
+  - Language: text input with placeholder "e.g. en, fr, es"
+  - Interests: text input with placeholder "e.g. tech, music, sports (comma-separated)" + live badge chips preview
+- **Save button**: PUT to `/api/users/profile` with `X-User-Id` header
+- On save success: toast notification + `useAuthStore.getState().refreshUser()` to refresh user data
+- On save error: destructive toast with error message
+- Form state initialized from fetched profile data (ageRange, location, gender, language, interests parsed from JSON)
+- Added imports: `Input`, `Label`, `Select/SelectContent/SelectItem/SelectTrigger/SelectValue`, `useToast`, `Loader2`, `MapPin`, `Globe`, `Heart`, `Save`, `CardDescription`
+- Uses `motion` animation (fade-in, slide-up) matching other profile cards
+
+#### 2. Dashboard — Audience Insights + Segments Cards (`src/app/page.tsx`)
+- Added 2 new action cards between "Rewards" and "Lead Clips", making 7 total cards
+- **Audience Insights Card**: BarChart3 icon, "Platform demographics" description, navigates to 'audience', orange gradient
+- **Audience Segments Card**: Target icon, "Target audiences" description, navigates to 'segments', amber gradient
+- Changed action cards grid from `lg:grid-cols-5` to `lg:grid-cols-4` (7 cards in 4-col grid = 2 rows)
+- Added `Target` to lucide-react import list
+- Both cards follow exact same styling pattern as existing cards (gradient icon background, border colors, CardHeader/CardContent, chevron CTA)
+
+#### 3. Quick Nav — Verified (`src/components/quick-nav.tsx`)
+- ✅ Already has Insights item (BarChart3 icon, view: 'audience')
+- ✅ Already has Segments item (Target icon, view: 'segments')
+- No changes needed
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilations (`✓ Compiled in 136-274ms`) with no runtime errors
+- TypeScript strict typing throughout
+- No unused imports
+
+#### Files Modified
+```
+src/components/views/profile-view.tsx (modified - added Audience Profile card section)
+src/app/page.tsx (modified - added 2 dashboard cards, changed grid to 4-col)
+```
+
+---
+Task ID: phase-7
+Agent: Main Agent + 3 Subagents
+Task: Phase 7 - Audience Segmentation & Targeting
+
+Work Log:
+- Updated Prisma schema: added 5 fields to User model (ageRange, location, gender, language, interests) + AudienceSegment model
+- Created 5 API routes:
+  - PUT /api/users/profile - Update user profile with segmentation fields
+  - POST/GET /api/segments - Create & list saved audience segments
+  - PUT/DELETE /api/segments/[id] - Update & delete segments
+  - POST /api/audience/match - Preview audience reach with breakdown
+  - GET /api/audience/insights - Platform-wide audience analytics
+- Created Audience Insights view: age/gender/location/interests/score distribution charts
+- Created Segments Manager view: CRUD for saved audience segments with preview reach
+- Added Audience Profile section to ProfileView (age, gender, location, language, interests form)
+- Added Audience Insights + Segments cards to Dashboard (7 cards total)
+- Added Insights + Segments items to QuickNav bar (9 items total)
+- Build passed with zero errors, 37 total API routes
+
+Stage Summary:
+- Phase 7 complete: Audience Segmentation & Targeting fully functional
+- Files created: 5 API routes, 2 view components
+- Files modified: schema.prisma, page.tsx, quick-nav.tsx, profile-view.tsx
+- New DB fields: 5 on User + 1 AudienceSegment model

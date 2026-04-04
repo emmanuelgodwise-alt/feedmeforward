@@ -4,10 +4,20 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -23,6 +33,11 @@ import {
   BarChart3,
   UserPlus,
   Crown,
+  Loader2,
+  MapPin,
+  Globe,
+  Heart,
+  Save,
 } from 'lucide-react';
 import { VideoCard } from '@/components/video-card';
 import { QuickNav } from '@/components/quick-nav';
@@ -189,12 +204,23 @@ function ScoreBreakdownBar({
 
 export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
   const { currentUser } = useAuthStore();
+  const { toast } = useToast();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [activeTab, setActiveTab] = useState('videos');
+
+  // Audience profile form state
+  const [audienceForm, setAudienceForm] = useState({
+    ageRange: '',
+    location: '',
+    gender: '',
+    language: '',
+    interestsText: '',
+  });
+  const [savingAudience, setSavingAudience] = useState(false);
 
   const isOwnProfile = currentUser?.id === userId;
 
@@ -227,8 +253,76 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
       .finally(() => setLoadingVideos(false));
   }, [userId]);
 
+  // Fetch audience profile data when profile loads
+  useEffect(() => {
+    if (!profileData) return;
+    // Try to get audience fields from the profile data if available
+    // These fields come from the extended user API
+    fetch(`/api/users/${userId}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          const d = json.data;
+          let interestsText = '';
+          if (d.interests) {
+            try {
+              const parsed = typeof d.interests === 'string' ? JSON.parse(d.interests) : d.interests;
+              interestsText = Array.isArray(parsed) ? parsed.join(', ') : '';
+            } catch {
+              interestsText = '';
+            }
+          }
+          setAudienceForm({
+            ageRange: d.ageRange || '',
+            location: d.location || '',
+            gender: d.gender || '',
+            language: d.language || '',
+            interestsText,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [profileData, userId]);
+
+  const handleSaveAudience = async () => {
+    if (!currentUser) return;
+    setSavingAudience(true);
+    try {
+      const interestsArray = audienceForm.interestsText
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const body: Record<string, unknown> = {};
+      if (audienceForm.ageRange) body.ageRange = audienceForm.ageRange;
+      if (audienceForm.location) body.location = audienceForm.location;
+      if (audienceForm.gender) body.gender = audienceForm.gender;
+      if (audienceForm.language) body.language = audienceForm.language;
+      if (interestsArray.length > 0) body.interests = interestsArray;
+
+      const res = await fetch('/api/users/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': currentUser.id,
+        },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast({ title: 'Audience profile updated', description: 'Your preferences have been saved.' });
+        // Refresh user data
+        useAuthStore.getState().refreshUser();
+      } else {
+        toast({ title: 'Update failed', description: json.error || 'Something went wrong', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Network error', description: 'Failed to save audience profile', variant: 'destructive' });
+    } finally {
+      setSavingAudience(false);
+    }
+  };
+
   const handleVideoClick = (videoId: string) => {
-    // We'll dispatch a custom event that the parent page.tsx can listen for
     window.dispatchEvent(new CustomEvent('navigate-video', { detail: { videoId } }));
   };
 
@@ -496,6 +590,148 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Audience Profile Card (own profile only) */}
+          {isOwnProfile && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <Card className="border-2 border-orange-200 dark:border-orange-800/40 bg-gradient-to-br from-orange-50/80 to-amber-50/50 dark:from-orange-950/20 dark:to-amber-950/10">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Users className="w-5 h-5 text-orange-500" />
+                    Audience Profile
+                  </CardTitle>
+                  <CardDescription>Help us personalize your experience and show you relevant polls</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Age Range */}
+                    <div className="space-y-2">
+                      <Label className="text-sm flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                        Age Range
+                      </Label>
+                      <Select
+                        value={audienceForm.ageRange}
+                        onValueChange={(val) => setAudienceForm((f) => ({ ...f, ageRange: val }))}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select age range" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="18-24">18-24</SelectItem>
+                          <SelectItem value="25-34">25-34</SelectItem>
+                          <SelectItem value="35-44">35-44</SelectItem>
+                          <SelectItem value="45-54">45-54</SelectItem>
+                          <SelectItem value="55+">55+</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Gender */}
+                    <div className="space-y-2">
+                      <Label className="text-sm flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                        Gender
+                      </Label>
+                      <Select
+                        value={audienceForm.gender}
+                        onValueChange={(val) => setAudienceForm((f) => ({ ...f, gender: val }))}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="non-binary">Non-binary</SelectItem>
+                          <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Location */}
+                    <div className="space-y-2">
+                      <Label className="text-sm flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                        Location
+                      </Label>
+                      <Input
+                        placeholder="e.g. Lagos, Nigeria"
+                        value={audienceForm.location}
+                        onChange={(e) => setAudienceForm((f) => ({ ...f, location: e.target.value }))}
+                      />
+                    </div>
+
+                    {/* Language */}
+                    <div className="space-y-2">
+                      <Label className="text-sm flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                        Language
+                      </Label>
+                      <Input
+                        placeholder="e.g. en, fr, es"
+                        value={audienceForm.language}
+                        onChange={(e) => setAudienceForm((f) => ({ ...f, language: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Interests */}
+                  <div className="space-y-2">
+                    <Label className="text-sm flex items-center gap-1.5">
+                      <Heart className="w-3.5 h-3.5 text-muted-foreground" />
+                      Interests
+                    </Label>
+                    <Input
+                      placeholder="e.g. tech, music, sports (comma-separated)"
+                      value={audienceForm.interestsText}
+                      onChange={(e) => setAudienceForm((f) => ({ ...f, interestsText: e.target.value }))}
+                    />
+                    {audienceForm.interestsText && (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {audienceForm.interestsText
+                          .split(',')
+                          .map((s) => s.trim())
+                          .filter(Boolean)
+                          .map((interest) => (
+                            <Badge
+                              key={interest}
+                              variant="secondary"
+                              className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+                            >
+                              {interest}
+                            </Badge>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Save Button */}
+                  <Button
+                    onClick={handleSaveAudience}
+                    disabled={savingAudience}
+                    className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
+                  >
+                    {savingAudience ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Save Audience Profile
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {/* Activity Tabs */}
           <motion.div
