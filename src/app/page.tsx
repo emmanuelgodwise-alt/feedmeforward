@@ -26,6 +26,7 @@ import { ProfileView } from '@/components/views/profile-view';
 import { LeaderboardView } from '@/components/views/leaderboard-view';
 import { WalletView } from '@/components/views/wallet-view';
 import { RewardsView } from '@/components/views/rewards-view';
+import { InvitationsView } from '@/components/views/invitations-view';
 import { Plus } from 'lucide-react';
 import {
   Eye,
@@ -67,7 +68,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -1543,6 +1544,12 @@ export default function Home() {
         {view === 'rewards' && (
           <RewardsView
             key="rewards"
+            onNavigate={navigate}
+          />
+        )}
+        {view === 'invitations' && (
+          <InvitationsView
+            key="invitations"
             onNavigate={navigate}
           />
         )}

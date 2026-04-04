@@ -598,3 +598,178 @@ Stage Summary:
 - Page linking: ✅ All pages properly cross-linked
 - Error audit: ✅ Build passed with zero errors
 - Files modified: page.tsx (5 edits), rewards-view.tsx (created)
+
+---
+## Task ID: 6 (Part A) - main-agent (Phase 6: Friend Invitation System — Backend APIs)
+### Work Task
+Build Phase 6 Part A backend for FeedMeForward: 5 invitation API routes for creating, listing, accepting invitations, viewing stats, and bulk sending.
+
+### Work Summary
+
+#### 1. API: POST/GET `/api/invitations/route.ts` — Created
+**POST (Create Invitation):**
+- Auth via `X-User-Id` header
+- Required: `inviteeEmail` with regex validation
+- Optional: `videoId` (validated against existing video)
+- Daily limit: max 50 invitations per user per day (returns 429 if exceeded)
+- Duplicate check: rejects if pending invitation (status "sent" or "clicked") exists to same email (returns 409)
+- On success: increments inviter's `memberScore` by 10 and triggers `recalculateScore` (fire and forget)
+- Returns invitation data with inviter and video relations included (201)
+
+**GET (List Invitations):**
+- Auth via `X-User-Id` header
+- Query params: `type` (sent/received, default "sent"), `status` (optional filter), `page` (default 1), `limit` (default 20, max 100)
+- For "sent": filters by `inviterId = userId`
+- For "received": filters by `inviteeEmail = user.email` (fetches user's email from DB)
+- Includes inviter user data (username, displayName, avatarUrl) and video data (title, thumbnailUrl) when videoId exists
+- Paginated response with `pagination: { page, limit, total, totalPages }`
+
+#### 2. API: POST `/api/invitations/[id]/accept/route.ts` — Created
+- Auth via `X-User-Id` header, uses Next.js 15 async params pattern
+- Verifies invitation exists, inviteeEmail matches user's email (returns 403 if mismatch)
+- Rejects already-accepted invitations (status "responded") with 409
+- Updates status to "responded" and sets `respondedAt` to current time
+- If `rewardGiven` is false: runs atomic `$transaction` to:
+  - Set `rewardGiven = true`
+  - Give inviter 50 bonus score points
+  - Create a `reward` transaction ($2.00) with description referencing the accepter's email
+  - Increment inviter's `walletBalance` by $2.00
+  - Trigger `recalculateScore` for inviter (fire and forget)
+- Returns updated invitation status
+
+#### 3. API: GET `/api/invitations/stats/route.ts` — Created
+- Auth via `X-User-Id` header
+- Returns 5 stats from parallel queries:
+  - `totalSent`: all invitations by user
+  - `totalAccepted`: invitations with status "responded"
+  - `totalPending`: invitations with status in ["sent", "clicked"]
+  - `totalRewarded`: invitations where `rewardGiven = true`
+  - `totalRewardAmount`: SUM of completed reward transactions (rounded to 2 decimal places)
+
+#### 4. API: POST `/api/invitations/bulk/route.ts` — Created
+- Auth via `X-User-Id` header
+- Required: `emails` array (1-10 strings)
+- Optional: `videoId`
+- Normalizes and deduplicates emails (lowercase + trim)
+- Validates each email with regex, separates valid from invalid
+- Checks for existing pending invitations to valid emails
+- Respects remaining daily quota (50 - today's count)
+- Uses `createMany` for batch insertion of valid, non-pending emails
+- On success: increments inviter's score by (10 × createdCount) and triggers recalculation
+- Returns: `{ createdCount, skippedEmails, skippedCount, scorePointsEarned, remainingQuota }`
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows all successful 200 responses with no runtime errors
+- TypeScript strict typing throughout all files
+- All routes follow existing codebase patterns: `db` import, `X-User-Id` header auth, `{ success: true, data }` response format, try/catch error handling
+
+#### Files Created
+```
+src/app/api/invitations/route.ts (POST + GET)
+src/app/api/invitations/[id]/accept/route.ts (POST)
+src/app/api/invitations/stats/route.ts (GET)
+src/app/api/invitations/bulk/route.ts (POST)
+```
+---
+## Task ID: 6 (Part B) - main-agent (Phase 6: Friend Invitation System — UI)
+### Work Task
+Build Phase 6 Part B UI for FeedMeForward: dedicated InvitationsView component with stats, single/bulk invite forms, invitation list with filters, reward info, and SPA integration.
+
+### Work Summary
+
+#### 1. InvitationsView (`src/components/views/invitations-view.tsx`) — Created
+Full-featured invitation management page with max-w-4xl layout and warm orange/amber theme.
+
+**Section 1 — Header with Back Button:**
+- ArrowLeft back button → navigates to Dashboard
+- Title "Invite Friends" with UserPlus icon
+- Subtitle "Grow the community and earn rewards"
+
+**Section 2 — Invitation Stats Cards (4 cards in a row):**
+- Fetches from `GET /api/invitations/stats` via X-User-Id header
+- Total Sent (Mail icon, orange), Accepted (CheckCircle2 icon, emerald), Pending (Clock icon, amber), Rewards Earned (DollarSign icon, green with $ amount)
+- Loading skeleton state while fetching
+- Cards with whileHover animation (y: -2)
+
+**Section 3 — Send Invitation Form:**
+- Email input field with client-side regex validation and error messages
+- Optional Video ID field to invite to specific poll
+- "Send Invitation" button with orange gradient and loading state
+- POST to `/api/invitations` with `{ inviteeEmail, videoId? }`
+- On success: toast notification ("+10 points earned!"), clears form, refreshes stats and list
+- Toggle link to show/hide bulk invite section
+
+**Section 4 — Bulk Invite Section (expandable):**
+- Textarea for comma/newline-separated emails (up to 10)
+- Optional Video ID field
+- POST to `/api/invitations/bulk` with `{ emails, videoId? }`
+- Results display: X sent (green CheckCircle2) / Y skipped (amber AlertCircle)
+- Shows individual skipped emails as badges
+
+**Section 5 — Recent Invitations List:**
+- Fetches from `GET /api/invitations?type=sent&page=...&limit=10&status=...`
+- Tab filters: All / Pending / Accepted / Expired (with active gradient styling)
+- Each invitation row shows: email, status badge (sent=amber, clicked=sky, responded=emerald, expired=gray), video title (if linked), date sent, star icon if rewarded, $2.00 reward amount
+- Scrollable list (max-h-96 overflow-y-auto)
+- "Load More" pagination button
+- Empty state with contextual message per filter
+- Loading skeleton state
+
+**Section 6 — Reward Info Card:**
+- 3 reward info tiles in responsive grid:
+  - Send an Invite: +10 points instantly
+  - Friend Accepts: +50 points + $2.00 wallet reward
+  - Daily Limit: 50 invites per day
+- Link to Rewards page ("View Full Rewards Center")
+
+**Section 7 — Unauthenticated Users:**
+- Prompt card with gradient UserPlus icon
+- "Sign in to invite friends and earn rewards" description
+- Get Started Free / Sign In / Back to Home buttons (same pattern as rewards-view.tsx)
+
+#### 2. Page Router (`src/app/page.tsx`) — Updated
+- Added `'invitations'` to the View type union
+- Added `InvitationsView` import from `@/components/views/invitations-view`
+- Added view rendering block: `{view === 'invitations' && <InvitationsView key="invitations" onNavigate={navigate} />}`
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation (`✓ Compiled in 180ms`) with no runtime errors
+- TypeScript strict typing throughout
+- All API calls use `X-User-Id` header for authentication
+- Warm orange/amber color theme maintained (no blue/purple)
+- Framer-motion animations with stagger pattern
+
+#### Files Created/Modified
+```
+src/components/views/invitations-view.tsx (created)
+src/app/page.tsx (modified - 3 edits: import, View type, view rendering)
+```
+
+---
+Task ID: phase-6
+Agent: Main Agent + Subagents
+Task: Phase 6 - Friend Invitation System
+
+Work Log:
+- Created 4 invitation API routes:
+  - POST/GET /api/invitations/route.ts - Create & list invitations with pagination, status filter, type filter
+  - POST /api/invitations/[id]/accept/route.ts - Accept invitation, award inviter 50pts + $2
+  - GET /api/invitations/stats/route.ts - Invitation statistics (sent, accepted, pending, rewarded)
+  - POST /api/invitations/bulk/route.ts - Bulk send up to 10 invitations at once
+- Created InvitationsView component with:
+  - Stats cards (Total Sent, Accepted, Pending, Rewards Earned)
+  - Single invite form with email validation
+  - Bulk invite section (comma-separated emails, up to 10)
+  - Recent invitations list with tab filters (All/Pending/Accepted/Expired)
+  - Reward info card explaining point system
+  - Unauthenticated user prompt
+- Updated page.tsx: added 'invitations' to View type, imported InvitationsView, added rendering block
+- Build passed with zero errors, all 30 API routes compiling
+
+Stage Summary:
+- Phase 6 complete: Friend Invitation System fully functional
+- Files created: 4 API route files, 1 view component
+- Files modified: page.tsx (View type + import + rendering)
+- Total API routes: 30 (was 26)
