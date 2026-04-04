@@ -566,3 +566,35 @@ src/components/views/explore-view.tsx (FIX 3)
 src/components/views/create-response-view.tsx (FIX 4)
 src/components/views/video-detail-view.tsx (FIX 4)
 ```
+
+---
+Task ID: 5.5-bugfix
+Agent: Main Agent
+Task: Remediation pass - Fix Sign In color, Rewards tab, back buttons, page linking, and error audit
+
+Work Log:
+- Changed "Sign In" button text color on landing page from `text-foreground` to `text-black` in page.tsx
+- Verified Phase 5 was fully implemented (both parts): all wallet APIs (deposit, withdraw, tip, revenue, transactions) and WalletView exist
+- Created dedicated RewardsView component at `/src/components/views/rewards-view.tsx` with:
+  - Score overview with progress bar to next level
+  - 4 reward category cards (Engagement 300pts, Quality 400pts, Accuracy 200pts, Streak 100pts)
+  - Milestone levels (Bronze/Silver/Gold/Diamond) with unlock status
+  - Total rewards earned summary with transaction history
+  - "How to Earn" section with actionable cards
+  - Verified badge unlock progress card
+  - Back button to Dashboard
+- Added 'rewards' to the View type union in page.tsx
+- Updated "Earn Rewards" feature card on landing page to navigate to 'rewards' (was 'wallet')
+- Added Rewards card to Dashboard action cards grid (now 5 cards: Profile, Leaderboard, Rewards, Lead Clips, Create Clip)
+- Added RewardsView import and rendering in main app router
+- Verified all view components have back buttons with correct navigation targets
+- Build succeeded with zero errors
+
+Stage Summary:
+- Sign In color: ✅ Changed to black
+- Phase 5: ✅ Verified complete
+- Rewards tab: ✅ Dedicated Rewards page created and linked
+- Back buttons: ✅ All 7 view components already had back buttons
+- Page linking: ✅ All pages properly cross-linked
+- Error audit: ✅ Build passed with zero errors
+- Files modified: page.tsx (5 edits), rewards-view.tsx (created)

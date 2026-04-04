@@ -25,6 +25,7 @@ import { VideoDetailView } from '@/components/views/video-detail-view';
 import { ProfileView } from '@/components/views/profile-view';
 import { LeaderboardView } from '@/components/views/leaderboard-view';
 import { WalletView } from '@/components/views/wallet-view';
+import { RewardsView } from '@/components/views/rewards-view';
 import { Plus } from 'lucide-react';
 import {
   Eye,
@@ -66,7 +67,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -258,7 +259,7 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
           <Button
             size="lg"
             variant="outline"
-            className="h-12 px-8 text-base font-semibold text-foreground"
+            className="h-12 px-8 text-base font-semibold text-black"
             onClick={() => onNavigate('login')}
           >
             Sign In
@@ -294,7 +295,7 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
             desc: 'Grow your member score and earn wallet rewards for your engagement.',
             color: 'from-orange-500 to-red-500',
             bgColor: 'bg-red-50 dark:bg-red-950/50',
-            navigateTo: 'wallet' as View,
+            navigateTo: 'rewards' as View,
           },
         ].map((feature) => (
           <motion.div
@@ -906,7 +907,7 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
       </motion.div>
 
       {/* Action Cards */}
-      <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         {/* My Profile Card */}
         <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
           <Card
@@ -966,6 +967,35 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
               </p>
               <div className="mt-4 flex items-center gap-2 text-orange-600 dark:text-orange-400">
                 <span className="text-sm font-medium">View Rankings</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Rewards Card */}
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow border-2 border-emerald-200 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-50/80 to-orange-50/50 dark:from-emerald-950/20 dark:to-orange-950/10"
+            onClick={() => onNavigate('rewards')}
+          >
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-sm">
+                  <TrendingUp className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Rewards</CardTitle>
+                  <CardDescription>Track earnings</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                View your reward tiers, milestones, and total earnings from engagement.
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                <span className="text-sm font-medium">View Rewards</span>
                 <ChevronRight className="w-4 h-4" />
               </div>
             </CardContent>
@@ -1499,6 +1529,12 @@ export default function Home() {
         {view === 'wallet' && (
           <WalletView
             key="wallet"
+            onNavigate={navigate}
+          />
+        )}
+        {view === 'rewards' && (
+          <RewardsView
+            key="rewards"
             onNavigate={navigate}
           />
         )}
