@@ -37,8 +37,10 @@ import {
   Star,
   TrendingUp,
   Loader2,
+  Download,
 } from 'lucide-react';
 import { TipDialog } from '@/components/tip-dialog';
+import { QuickNav } from '@/components/quick-nav';
 import { useVideoStore } from '@/stores/video-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
@@ -272,7 +274,10 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
           <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Video not found</h2>
           <p className="text-muted-foreground mb-4">This video may have been removed or doesn&apos;t exist.</p>
-          <Button onClick={() => onNavigate('explore')}>Back to Explore</Button>
+          <Button variant="ghost" onClick={() => onNavigate('explore')} className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Back to Explore</span>
+          </Button>
         </div>
       </div>
     );
@@ -290,8 +295,9 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-6"
       >
-        <Button variant="ghost" size="icon" onClick={() => onNavigate('explore')} className="shrink-0">
-          <ArrowLeft className="w-5 h-5" />
+        <Button variant="ghost" onClick={() => onNavigate('explore')} className="shrink-0 gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm">Back to Explore</span>
         </Button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -304,6 +310,8 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
           </div>
         </div>
       </motion.div>
+
+      <QuickNav onNavigate={(v) => onNavigate(v as View)} activeView="video-detail" />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
@@ -344,6 +352,26 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
               )}
             </div>
           </motion.div>
+
+          {/* Download Button for local videos */}
+          {video.videoUrl.startsWith('/uploads/') && (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 }}
+              className="mt-2"
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => window.open(`/api/videos/download/${videoId}?userId=${currentUser?.id || ''}`, '_blank')}
+              >
+                <Download className="w-4 h-4" />
+                Download Video
+              </Button>
+            </motion.div>
+          )}
 
           {/* Video Info */}
           <motion.div

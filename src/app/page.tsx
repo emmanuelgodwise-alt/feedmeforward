@@ -205,6 +205,8 @@ function FloatingOrbs() {
 
 // ─── Landing Page ──────────────────────────────────────────────────
 function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
+  const { isAuthenticated } = useAuthStore();
+
   return (
     <motion.div
       variants={staggerContainer}
@@ -276,7 +278,13 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
         <motion.div
           whileHover={{ y: -4, scale: 1.02 }}
           transition={{ type: 'spring', stiffness: 300 }}
-          onClick={() => onNavigate('explore')}
+          onClick={() => {
+            if (!isAuthenticated) {
+              onNavigate('signup');
+            } else {
+              onNavigate('explore');
+            }
+          }}
         >
           <Card className="bg-orange-50 dark:bg-orange-950/50 border-0 shadow-md h-full cursor-pointer">
             <CardHeader>
@@ -293,7 +301,13 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
         <motion.div
           whileHover={{ y: -4, scale: 1.02 }}
           transition={{ type: 'spring', stiffness: 300 }}
-          onClick={() => onNavigate('leaderboard')}
+          onClick={() => {
+            if (!isAuthenticated) {
+              onNavigate('signup');
+            } else {
+              onNavigate('leaderboard');
+            }
+          }}
         >
           <Card className="bg-amber-50 dark:bg-amber-950/50 border-0 shadow-md h-full cursor-pointer">
             <CardHeader>
@@ -310,7 +324,13 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
         <motion.div
           whileHover={{ y: -4, scale: 1.02 }}
           transition={{ type: 'spring', stiffness: 300 }}
-          onClick={() => onNavigate('rewards')}
+          onClick={() => {
+            if (!isAuthenticated) {
+              onNavigate('signup');
+            } else {
+              onNavigate('rewards');
+            }
+          }}
           style={{ cursor: 'pointer' }}
         >
           <Card className="bg-red-50 dark:bg-red-950/50 border-0 shadow-md h-full">
@@ -447,8 +467,9 @@ function SignUpForm({ onNavigate }: { onNavigate: (view: View) => void }) {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <div className="flex justify-start mb-2">
-            <Button variant="ghost" size="icon" onClick={() => onNavigate('landing')} className="shrink-0">
-              <ArrowLeft className="w-5 h-5" />
+            <Button variant="ghost" onClick={() => onNavigate('landing')} className="shrink-0 gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm">Back to Home</span>
             </Button>
           </div>
           <motion.div
@@ -682,8 +703,9 @@ function LoginForm({ onNavigate }: { onNavigate: (view: View) => void }) {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <div className="flex justify-start mb-2">
-            <Button variant="ghost" size="icon" onClick={() => onNavigate('landing')} className="shrink-0">
-              <ArrowLeft className="w-5 h-5" />
+            <Button variant="ghost" onClick={() => onNavigate('landing')} className="shrink-0 gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm">Back to Home</span>
             </Button>
           </div>
           <motion.div
@@ -1178,8 +1200,9 @@ function SchemaDashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6"
       >
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => onNavigate('dashboard')} className="shrink-0">
-            <ArrowLeft className="w-5 h-5" />
+          <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0 gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Back to Dashboard</span>
           </Button>
           <div>
             <div className="flex items-center gap-2">

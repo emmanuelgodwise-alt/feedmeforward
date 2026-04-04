@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth-store';
+import { QuickNav } from '@/components/quick-nav';
 import {
   ArrowLeft,
   Trophy,
@@ -204,8 +205,9 @@ export function RewardsView({ onNavigate }: ViewProps) {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
       >
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => onNavigate('dashboard')} className="shrink-0">
-            <ArrowLeft className="w-5 h-5" />
+          <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0 gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Back to Dashboard</span>
           </Button>
           <div>
             <div className="flex items-center gap-2">
@@ -225,6 +227,8 @@ export function RewardsView({ onNavigate }: ViewProps) {
           Open Wallet
         </Button>
       </motion.div>
+
+      <QuickNav onNavigate={onNavigate} activeView="rewards" />
 
       {/* Score Overview Card */}
       <motion.div variants={staggerItem} className="mb-8">

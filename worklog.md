@@ -773,3 +773,228 @@ Stage Summary:
 - Files created: 4 API route files, 1 view component
 - Files modified: page.tsx (View type + import + rendering)
 - Total API routes: 30 (was 26)
+
+---
+## Task ID: UI-fix-back-buttons - main-agent (Replace Arrow-Only Back Buttons & Fix Landing Page Auth)
+### Work Task
+Replace all arrow-only ghost icon back buttons with labeled text buttons across all views, and fix landing page feature card auth checks so non-authenticated users are redirected to signup.
+
+### Work Summary
+
+#### Task 1: Replace Arrow-Only Back Buttons (14 locations across 10 files)
+
+All back buttons changed from:
+```tsx
+<Button variant="ghost" size="icon" onClick={...} className="shrink-0">
+  <ArrowLeft className="w-5 h-5" />
+</Button>
+```
+
+To:
+```tsx
+<Button variant="ghost" onClick={...} className="shrink-0 gap-2">
+  <ArrowLeft className="w-4 h-4" />
+  <span className="text-sm">{Contextual Label}</span>
+</Button>
+```
+
+**Files modified:**
+1. **`src/app/page.tsx`** — 3 locations:
+   - SignUpForm back button → "Back to Home" (navigates to 'landing')
+   - LoginForm back button → "Back to Home" (navigates to 'landing')
+   - SchemaDashboard back button → "Back to Dashboard" (navigates to 'dashboard')
+
+2. **`src/components/views/explore-view.tsx`** — 1 location:
+   - Header back button → "Back to Dashboard"
+
+3. **`src/components/views/create-response-view.tsx`** — 1 location:
+   - Header back button → "Back to Video" (navigates to 'video-detail')
+
+4. **`src/components/views/rewards-view.tsx`** — 1 location:
+   - Header back button → "Back to Dashboard"
+
+5. **`src/components/views/wallet-view.tsx`** — 1 location:
+   - Header back button → "Back to Dashboard"
+
+6. **`src/components/views/leaderboard-view.tsx`** — 1 location:
+   - Header back button → "Back to Dashboard"
+
+7. **`src/components/views/profile-view.tsx`** — 2 locations:
+   - Error state "Go Back" button → "Back to Dashboard" with ArrowLeft icon (ghost variant)
+   - Header back button → "Back to Dashboard"
+
+8. **`src/components/views/create-lead-view.tsx`** — 1 location:
+   - Header back button → "Back to Explore" (navigates to 'explore')
+
+9. **`src/components/views/video-detail-view.tsx`** — 2 locations:
+   - Error state "Back to Explore" button → now with ArrowLeft icon (ghost variant)
+   - Header back button → "Back to Explore"
+
+10. **`src/components/views/invitations-view.tsx`** — 1 location:
+    - Header back button → "Back to Dashboard"
+
+**Key changes applied to all:**
+- Removed `size="icon"` from Button props
+- Changed ArrowLeft icon size from `w-5 h-5` to `w-4 h-4`
+- Added `gap-2` class for icon-text spacing
+- Added descriptive `<span>` label with `text-sm` class
+- Used `variant="ghost"` consistently on error state buttons that previously used default variant
+
+#### Task 2: Fix Landing Page Feature Card Auth Checks
+
+**File: `src/app/page.tsx`**
+
+- Added `const { isAuthenticated } = useAuthStore();` inside `LandingPage` component (auth store was already imported)
+- Updated all 3 feature card onClick handlers to check auth state:
+  - **Video Polls** card: `isAuthenticated ? onNavigate('explore') : onNavigate('signup')`
+  - **Community Driven** card: `isAuthenticated ? onNavigate('leaderboard') : onNavigate('signup')`
+  - **Earn Rewards** card: `isAuthenticated ? onNavigate('rewards') : onNavigate('signup')`
+
+This prevents non-authenticated users from navigating to views that show blank pages.
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation with all 200 responses, no runtime errors
+- All 14 back button locations updated across 10 files
+
+---
+## Task ID: Video Upload & Download APIs - main-agent
+### Work Task
+Create Video Upload API endpoint and Video Download/Serving API endpoint for the FeedMeForward project.
+
+### Work Summary
+
+#### 1. Dependencies
+- `uuid` (v11.1.0) was already installed as a direct dependency
+- Installed `@types/uuid` as a dev dependency for TypeScript type support
+
+#### 2. Uploads Directory
+- Created `public/uploads/videos/` directory for storing uploaded video files
+
+#### 3. API: POST `/api/videos/upload` (`src/app/api/videos/upload/route.ts`) — Created
+- Auth via `X-User-Id` header (401 if missing)
+- Accepts multipart form data with `video` field
+- Validates file type: only MP4, WebM, MOV, AVI accepted
+- Validates file size: max 100MB
+- Creates uploads directory recursively if it doesn't exist
+- Generates unique filename: `{userId}_{timestamp}_{uuid8}.{ext}`
+- Writes file to `public/uploads/videos/`
+- Returns: `{ success, data: { videoUrl, filename, size, type } }`
+
+#### 4. API: GET `/api/videos/[id]/download` (`src/app/api/videos/[id]/download/route.ts`) — Created
+- Auth via `X-User-Id` header (401 if missing)
+- Looks up video by ID from database using `db` (project's Prisma client)
+- Rejects external URLs (only `/uploads/` prefix allowed)
+- Checks file exists on disk (404 if not found)
+- Determines Content-Type from file extension (mp4/webm/mov/avi)
+- Sanitizes title for download filename
+- Returns file as attachment with appropriate headers (Content-Type, Content-Disposition, Content-Length)
+- Uses Next.js 15 async params pattern: `{ params }: { params: Promise<{ id: string }> }`
+
+#### 5. Key Design Decisions
+- Used `import { db } from '@/lib/db'` (project's shared Prisma client) instead of `new PrismaClient()` for consistency
+- Followed existing project patterns for auth header usage and error response formatting
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- TypeScript strict typing throughout both files
+- Note: Pre-existing dev log error about missing `rewards-view` component (from a previous phase) is unrelated to these changes
+
+#### Files Created
+```
+src/app/api/videos/upload/route.ts (created)
+src/app/api/videos/[id]/download/route.ts (created)
+public/uploads/videos/ (directory created)
+```
+
+---
+## Task ID: 7 - main-agent (UI Enhancements: Quick Nav, Video Upload, Download)
+### Work Task
+Add Quick Nav Links Bar to all authenticated views, add Video Upload UI to Create Lead and Create Response views, and add Download Button to Video Detail view.
+
+### Work Summary
+
+#### 1. QuickNav Component (`src/components/quick-nav.tsx`) — Created
+- Reusable navigation bar component with 7 nav items: Home (Dashboard), Explore, Create, Rewards, Wallet, Leaderboard, Invite
+- Each item uses a lucide icon with label, horizontally scrollable with `scrollbar-none`
+- Active item styled with orange-to-amber gradient; inactive items use outline variant with hover effects
+- Props: `onNavigate` (callback) and `activeView` (string) for highlighting current page
+
+#### 2. QuickNav Added to 9 Authenticated Views
+All views received the QuickNav import and component placement after their header sections:
+- **explore-view.tsx** — `<QuickNav onNavigate={onNavigate} activeView="explore" />`
+- **create-lead-view.tsx** — `<QuickNav onNavigate={onNavigate} activeView="create-lead" />`
+- **create-response-view.tsx** — `<QuickNav onNavigate={onNavigate} activeView="create-response" />`
+- **video-detail-view.tsx** — `<QuickNav onNavigate={(v) => onNavigate(v as View)} activeView="video-detail" />`
+- **profile-view.tsx** — `<QuickNav onNavigate={onNavigate} activeView="profile" />`
+- **leaderboard-view.tsx** — `<QuickNav onNavigate={onNavigate} activeView="leaderboard" />`
+- **wallet-view.tsx** — `<QuickNav onNavigate={(v) => onNavigate(v as View)} activeView="wallet" />`
+- **rewards-view.tsx** — `<QuickNav onNavigate={onNavigate} activeView="rewards" />`
+- **invitations-view.tsx** — `<QuickNav onNavigate={onNavigate} activeView="invitations" />`
+
+Views with typed `onNavigate` (View type) use a cast wrapper; others pass the callback directly.
+
+#### 3. Video Upload UI — Create Lead View (`src/components/views/create-lead-view.tsx`) — Updated
+- Added upload state: `uploading` (boolean), `uploadedFile` (string | null)
+- `handleFileUpload(file)`: validates size (max 100MB), POSTs FormData to `/api/videos/upload` with `X-User-Id` header, auto-fills videoUrl on success
+- `handleDrop(e)`: drag-and-drop handler that accepts video files
+- `handleDragOver(e)`: prevents default for drag events
+- `handleRemoveUpload()`: clears uploaded file and videoUrl
+- UI: dashed border drop zone with 3 states — empty (Upload icon + instructions), uploading (Loader2 spinner), uploaded (CheckCircle + file name + remove button)
+- File input accepts: MP4, WebM, MOV, AVI
+- Placed ABOVE the existing "Video URL" input field
+- New icons imported: Upload, FileVideo, CheckCircle
+
+#### 4. Video Upload UI — Create Response View (`src/components/views/create-response-view.tsx`) — Updated
+- Identical upload functionality as Create Lead View (same state, handlers, UI)
+- Placed ABOVE the existing "Video URL" input field
+- Same file accept types and max size validation
+
+#### 5. Download Button — Video Detail View (`src/components/views/video-detail-view.tsx`) — Updated
+- Added `Download` icon import from lucide-react
+- Conditionally renders "Download Video" button (outline variant) below the video player area
+- Only shows when `video.videoUrl.startsWith('/uploads/')` (local uploaded files, not external URLs)
+- Opens download in new tab: `window.open('/api/videos/download/' + videoId + '?userId=' + currentUser?.id, '_blank')`
+- Animated entry with motion.div (fade + slight upward slide)
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation (`✓ Compiled in 118ms`) with no runtime errors
+- TypeScript strict typing throughout all modified files
+- All new imports verified correct, no unused imports
+
+#### Files Created/Modified
+```
+src/components/quick-nav.tsx (created)
+src/components/views/explore-view.tsx (modified - import + QuickNav)
+src/components/views/create-lead-view.tsx (modified - import + QuickNav + upload UI)
+src/components/views/create-response-view.tsx (modified - import + QuickNav + upload UI)
+src/components/views/video-detail-view.tsx (modified - import + QuickNav + download button)
+src/components/views/profile-view.tsx (modified - import + QuickNav)
+src/components/views/leaderboard-view.tsx (modified - import + QuickNav)
+src/components/views/wallet-view.tsx (modified - import + QuickNav)
+src/components/views/rewards-view.tsx (modified - import + QuickNav)
+src/components/views/invitations-view.tsx (modified - import + QuickNav)
+```
+
+---
+Task ID: pre-phase-7-perfection
+Agent: Main Agent + 3 Subagents
+Task: UI perfection - back buttons, navigation, video upload/download
+
+Work Log:
+- Fixed Video Polls card on landing: non-authenticated users now redirect to signup instead of blank explore
+- Replaced ALL 14 arrow-only back buttons across 10 files with labeled text buttons (e.g. "Back to Dashboard", "Back to Home", "Back to Explore", "Back to Video")
+- Created reusable QuickNav component with 7 navigation items (Home, Explore, Create, Rewards, Wallet, Leaderboard, Invite)
+- Added QuickNav bar to all 9 authenticated view components with active state highlighting
+- Created video upload API: POST /api/videos/upload (MP4/WebM/MOV/AVI, max 100MB, saves to public/uploads/videos/)
+- Created video download API: GET /api/videos/[id]/download (serves local files as attachments)
+- Added drag & drop video upload UI to Create Lead Clip and Create Response views
+- Added conditional Download Video button to Video Detail view (only for uploaded videos)
+- Build passed with zero errors, 32 total API routes
+
+Stage Summary:
+- All 4 user concerns resolved
+- Files created: quick-nav.tsx, upload/route.ts, download/route.ts, uploads/videos/ directory
+- Files modified: page.tsx, 9 view components (back buttons + quick nav + upload UI)
+- Total API routes: 32 (was 30)

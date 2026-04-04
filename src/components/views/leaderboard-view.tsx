@@ -30,6 +30,7 @@ import {
 import type { LeaderboardEntry } from '@/types';
 import type { View } from '@/app/page';
 import { useAuthStore } from '@/stores/auth-store';
+import { QuickNav } from '@/components/quick-nav';
 
 interface LeaderboardViewProps {
   onNavigate: (view: View) => void;
@@ -264,8 +265,9 @@ export function LeaderboardView({ onNavigate, setProfileUserId }: LeaderboardVie
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-6"
       >
-        <Button variant="ghost" size="icon" onClick={() => onNavigate('dashboard')} className="shrink-0">
-          <ArrowLeft className="w-5 h-5" />
+        <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0 gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm">Back to Dashboard</span>
         </Button>
         <div>
           <div className="flex items-center gap-2">
@@ -275,6 +277,8 @@ export function LeaderboardView({ onNavigate, setProfileUserId }: LeaderboardVie
           <p className="text-sm text-muted-foreground">Top community members ranked by Member Score</p>
         </div>
       </motion.div>
+
+      <QuickNav onNavigate={onNavigate} activeView="leaderboard" />
 
       {/* Category Tabs */}
       <motion.div

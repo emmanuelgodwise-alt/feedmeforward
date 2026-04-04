@@ -9,6 +9,7 @@ import { useVideoStore } from '@/stores/video-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { VideoCard } from '@/components/video-card';
 import { FilterBar } from '@/components/filter-bar';
+import { QuickNav } from '@/components/quick-nav';
 
 interface ExploreViewProps {
   onNavigate: (view: string) => void;
@@ -45,8 +46,9 @@ export function ExploreView({ onNavigate, setVideoId }: ExploreViewProps) {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6"
       >
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => onNavigate('dashboard')} className="shrink-0">
-            <ArrowLeft className="w-5 h-5" />
+          <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0 gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Back to Dashboard</span>
           </Button>
           <div>
             <div className="flex items-center gap-2">
@@ -73,6 +75,9 @@ export function ExploreView({ onNavigate, setVideoId }: ExploreViewProps) {
           )}
         </div>
       </motion.div>
+
+      {/* Quick Nav */}
+      <QuickNav onNavigate={onNavigate} activeView="explore" />
 
       {/* Filter Bar */}
       <motion.div

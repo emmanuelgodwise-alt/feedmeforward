@@ -25,6 +25,7 @@ import {
   Crown,
 } from 'lucide-react';
 import { VideoCard } from '@/components/video-card';
+import { QuickNav } from '@/components/quick-nav';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   getScoreLevel,
@@ -258,7 +259,10 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
           <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Profile not found</h2>
           <p className="text-muted-foreground mb-4">{error || 'This user profile is unavailable.'}</p>
-          <Button onClick={() => onNavigate('dashboard')}>Go Back</Button>
+          <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Back to Dashboard</span>
+          </Button>
         </div>
       </div>
     );
@@ -285,11 +289,14 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-6"
       >
-        <Button variant="ghost" size="icon" onClick={() => onNavigate('dashboard')} className="shrink-0">
-          <ArrowLeft className="w-5 h-5" />
+        <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0 gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm">Back to Dashboard</span>
         </Button>
         <h1 className="text-2xl font-bold">Profile</h1>
       </motion.div>
+
+      <QuickNav onNavigate={onNavigate} activeView="profile" />
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Profile Header */}

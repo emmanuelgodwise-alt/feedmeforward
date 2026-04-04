@@ -48,6 +48,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useWalletStore } from '@/stores/wallet-store';
 import { useToast } from '@/hooks/use-toast';
 import { TipDialog } from '@/components/tip-dialog';
+import { QuickNav } from '@/components/quick-nav';
 import type { View } from '@/app/page';
 import type { TransactionItem } from '@/types';
 
@@ -257,8 +258,9 @@ export function WalletView({ onNavigate }: WalletViewProps) {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-6"
       >
-        <Button variant="ghost" size="icon" onClick={() => onNavigate('dashboard')} className="shrink-0">
-          <ArrowLeft className="w-5 h-5" />
+        <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0 gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm">Back to Dashboard</span>
         </Button>
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -268,6 +270,8 @@ export function WalletView({ onNavigate }: WalletViewProps) {
           <p className="text-sm text-muted-foreground">Manage your funds, tips, and earnings</p>
         </div>
       </motion.div>
+
+      <QuickNav onNavigate={(v) => onNavigate(v as View)} activeView="wallet" />
 
       {/* Wallet Header Card */}
       <motion.div variants={staggerItem} initial="initial" animate="animate">
