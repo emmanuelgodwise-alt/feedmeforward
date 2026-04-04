@@ -87,7 +87,48 @@ export function RewardsView({ onNavigate }: ViewProps) {
     }
   }, [currentUser, fetchRewards]);
 
-  if (!currentUser) return null;
+  if (!currentUser) {
+    return (
+      <motion.div
+        variants={staggerContainer}
+        initial="initial"
+        animate="animate"
+        className="min-h-screen flex items-center justify-center px-4 py-12"
+      >
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="text-center">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center mx-auto mb-4 shadow-md shadow-emerald-500/20">
+              <Gift className="w-7 h-7 text-white" />
+            </div>
+            <CardTitle className="text-2xl font-bold">Rewards Center</CardTitle>
+            <CardDescription>Sign in to track your rewards and earnings</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <Button
+              className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md"
+              onClick={() => onNavigate('signup')}
+            >
+              Get Started Free
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full bg-black hover:bg-gray-800 text-white"
+              onClick={() => onNavigate('login')}
+            >
+              Sign In
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={() => onNavigate('landing')}
+            >
+              Back to Home
+            </Button>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
 
   const level = getScoreLevel(currentUser.memberScore);
   const levelBadge = getScoreLevelBadge(level);

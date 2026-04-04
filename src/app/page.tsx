@@ -258,8 +258,7 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
           </Button>
           <Button
             size="lg"
-            variant="outline"
-            className="h-12 px-8 text-base font-semibold text-black"
+            className="bg-black hover:bg-gray-800 text-white shadow-lg shadow-black/25 h-12 px-8 text-base font-semibold"
             onClick={() => onNavigate('login')}
           >
             Sign In
@@ -272,48 +271,57 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
         variants={staggerItem}
         className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto w-full"
       >
-        {[
-          {
-            icon: Video,
-            title: 'Video Polls',
-            desc: 'Create engaging polls with video content that captivates your audience.',
-            color: 'from-orange-400 to-orange-500',
-            bgColor: 'bg-orange-50 dark:bg-orange-950/50',
-            navigateTo: 'explore' as View,
-          },
-          {
-            icon: Users,
-            title: 'Community Driven',
-            desc: 'Build your audience and connect with creators who share your passions.',
-            color: 'from-amber-400 to-amber-500',
-            bgColor: 'bg-amber-50 dark:bg-amber-950/50',
-            navigateTo: 'leaderboard' as View,
-          },
-          {
-            icon: TrendingUp,
-            title: 'Earn Rewards',
-            desc: 'Grow your member score and earn wallet rewards for your engagement.',
-            color: 'from-orange-500 to-red-500',
-            bgColor: 'bg-red-50 dark:bg-red-950/50',
-            navigateTo: 'rewards' as View,
-          },
-        ].map((feature) => (
-          <motion.div
-            key={feature.title}
-            whileHover={{ y: -4, scale: 1.02 }}
-            transition={{ type: 'spring', stiffness: 300 }}
-          >
-            <Card className={`${feature.bgColor} border-0 shadow-md h-full cursor-pointer`} onClick={() => onNavigate(feature.navigateTo)}>
-              <CardHeader>
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${feature.color} flex items-center justify-center mb-2 shadow-sm`}>
-                  <feature.icon className="w-5 h-5 text-white" />
-                </div>
-                <CardTitle className="text-lg">{feature.title}</CardTitle>
-                <CardDescription className="text-sm leading-relaxed">{feature.desc}</CardDescription>
-              </CardHeader>
-            </Card>
-          </motion.div>
-        ))}
+        {/* Video Polls Card */}
+        <motion.div
+          whileHover={{ y: -4, scale: 1.02 }}
+          transition={{ type: 'spring', stiffness: 300 }}
+          onClick={() => onNavigate('explore')}
+        >
+          <Card className="bg-orange-50 dark:bg-orange-950/50 border-0 shadow-md h-full cursor-pointer">
+            <CardHeader>
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center mb-2 shadow-sm">
+                <Video className="w-5 h-5 text-white" />
+              </div>
+              <CardTitle className="text-lg">Video Polls</CardTitle>
+              <CardDescription className="text-sm leading-relaxed">Create engaging polls with video content that captivates your audience.</CardDescription>
+            </CardHeader>
+          </Card>
+        </motion.div>
+
+        {/* Community Driven Card */}
+        <motion.div
+          whileHover={{ y: -4, scale: 1.02 }}
+          transition={{ type: 'spring', stiffness: 300 }}
+          onClick={() => onNavigate('leaderboard')}
+        >
+          <Card className="bg-amber-50 dark:bg-amber-950/50 border-0 shadow-md h-full cursor-pointer">
+            <CardHeader>
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center mb-2 shadow-sm">
+                <Users className="w-5 h-5 text-white" />
+              </div>
+              <CardTitle className="text-lg">Community Driven</CardTitle>
+              <CardDescription className="text-sm leading-relaxed">Build your audience and connect with creators who share your passions.</CardDescription>
+            </CardHeader>
+          </Card>
+        </motion.div>
+
+        {/* Earn Rewards Card */}
+        <motion.div
+          whileHover={{ y: -4, scale: 1.02 }}
+          transition={{ type: 'spring', stiffness: 300 }}
+          onClick={() => onNavigate('rewards')}
+          style={{ cursor: 'pointer' }}
+        >
+          <Card className="bg-red-50 dark:bg-red-950/50 border-0 shadow-md h-full">
+            <CardHeader>
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center mb-2 shadow-sm">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <CardTitle className="text-lg">Earn Rewards</CardTitle>
+              <CardDescription className="text-sm leading-relaxed">Grow your member score and earn wallet rewards for your engagement.</CardDescription>
+            </CardHeader>
+          </Card>
+        </motion.div>
       </motion.div>
 
       {/* Bottom Social Proof */}
