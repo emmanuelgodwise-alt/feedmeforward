@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,9 +33,131 @@ import {
   Users,
   TrendingUp,
   ChevronRight,
+  ArrowLeft,
+  Database,
+  BarChart3,
+  UserPlus,
+  MessageSquare,
+  Heart,
+  ThumbsUp,
+  CreditCard,
+  Send,
+  Circle as CircleIcon,
+  Share2,
+  Radio,
+  BarChart2,
+  Flag,
+  Hash,
+  Vote,
+  KeyRound,
+  Table2,
+  RefreshCw,
+  User as UserIcon,
 } from 'lucide-react';
 
-type View = 'landing' | 'signup' | 'login' | 'dashboard';
+type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema';
+
+// ─── Types for Schema API ──────────────────────────────────────────
+interface SchemaField {
+  name: string;
+  type: string;
+  required: boolean;
+  isUnique?: boolean;
+  isId?: boolean;
+  defaultVal?: string;
+}
+
+interface SchemaModel {
+  name: string;
+  icon: string;
+  category: string;
+  description: string;
+  fields: SchemaField[];
+  recordCount: number;
+}
+
+interface SchemaData {
+  summary: {
+    totalModels: number;
+    totalFields: number;
+    totalRecords: number;
+    categories: Record<string, string[]>;
+  };
+  models: SchemaModel[];
+}
+
+// ─── Icon Map ───────────────────────────────────────────────────────
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  User: UserIcon,
+  Video,
+  BarChart3,
+  Vote: Hash,
+  UserPlus,
+  MessageSquare,
+  Heart,
+  ThumbsUp,
+  CreditCard,
+  Send,
+  Circle: CircleIcon,
+  Users,
+  Share2,
+  Radio,
+  BarChart2,
+  Flag,
+};
+
+// ─── Category Colors ───────────────────────────────────────────────
+const CATEGORY_COLORS: Record<string, {
+  border: string;
+  bg: string;
+  badge: string;
+  headerBg: string;
+  iconBg: string;
+}> = {
+  core: {
+    border: 'border-orange-200 dark:border-orange-800/50',
+    bg: 'bg-orange-50/80 dark:bg-orange-950/30',
+    badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+    headerBg: 'bg-gradient-to-r from-orange-500 to-orange-600',
+    iconBg: 'from-orange-400 to-amber-500',
+  },
+  social: {
+    border: 'border-amber-200 dark:border-amber-800/50',
+    bg: 'bg-amber-50/80 dark:bg-amber-950/30',
+    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+    headerBg: 'bg-gradient-to-r from-amber-500 to-amber-600',
+    iconBg: 'from-amber-400 to-orange-500',
+  },
+  monetization: {
+    border: 'border-emerald-200 dark:border-emerald-800/50',
+    bg: 'bg-emerald-50/80 dark:bg-emerald-950/30',
+    badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+    headerBg: 'bg-gradient-to-r from-emerald-500 to-emerald-600',
+    iconBg: 'from-emerald-400 to-green-500',
+  },
+  community: {
+    border: 'border-sky-200 dark:border-sky-800/50',
+    bg: 'bg-sky-50/80 dark:bg-sky-950/30',
+    badge: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+    headerBg: 'bg-gradient-to-r from-sky-500 to-sky-600',
+    iconBg: 'from-sky-400 to-blue-500',
+  },
+  live: {
+    border: 'border-rose-200 dark:border-rose-800/50',
+    bg: 'bg-rose-50/80 dark:bg-rose-950/30',
+    badge: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+    headerBg: 'bg-gradient-to-r from-rose-500 to-rose-600',
+    iconBg: 'from-rose-400 to-pink-500',
+  },
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  core: 'Core',
+  social: 'Social',
+  monetization: 'Monetization',
+  community: 'Community',
+  live: 'Live',
+};
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -46,7 +168,7 @@ const pageVariants = {
 const staggerContainer = {
   animate: {
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.06,
     },
   },
 };
@@ -738,8 +860,38 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
         </Card>
       </motion.div>
 
-      {/* Coming Soon Section */}
-      <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      {/* Action Cards */}
+      <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Database Schema Card */}
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow border-2 border-orange-200 dark:border-orange-800/40 bg-gradient-to-br from-orange-50/80 to-amber-50/50 dark:from-orange-950/20 dark:to-amber-950/10"
+            onClick={() => onNavigate('schema')}
+          >
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-sm">
+                  <Database className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Database Schema</CardTitle>
+                  <CardDescription>View all 16 data models</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Explore the complete database architecture including users, videos, polls, transactions, and more.
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                <span className="text-sm font-medium">View Schema</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Lead Clips Card */}
         <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
           <Card className="border-2 border-dashed border-orange-200 dark:border-orange-900/50 bg-orange-50/50 dark:bg-orange-950/20">
             <CardHeader>
@@ -767,6 +919,7 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
           </Card>
         </motion.div>
 
+        {/* Leaderboards Card */}
         <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
           <Card className="border-2 border-dashed border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20">
             <CardHeader>
@@ -805,6 +958,330 @@ function Dashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
   );
 }
 
+// ─── Schema Dashboard ───────────────────────────────────────────────
+function SchemaDashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
+  const [schemaData, setSchemaData] = useState<SchemaData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedModel, setExpandedModel] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+
+  const fetchSchema = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/schema');
+      const json = await res.json();
+      if (json.success && json.data) {
+        setSchemaData(json.data as SchemaData);
+      } else {
+        setError(json.error || 'Failed to load schema');
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSchema();
+  }, [fetchSchema]);
+
+  const filteredModels = schemaData?.models.filter(
+    (m) => filterCategory === 'all' || m.category === filterCategory
+  ) ?? [];
+
+  const categoryCounts = schemaData
+    ? Object.entries(schemaData.summary.categories).map(([key, models]) => ({
+        key,
+        label: CATEGORY_LABELS[key] || key,
+        count: models.length,
+      }))
+    : [];
+
+  return (
+    <motion.div
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+      className="min-h-screen px-4 py-8 max-w-6xl mx-auto"
+    >
+      {/* Header */}
+      <motion.div
+        variants={staggerItem}
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6"
+      >
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => onNavigate('dashboard')} className="shrink-0">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-2">
+              <Database className="w-6 h-6 text-orange-500" />
+              <h1 className="text-2xl font-bold">Database Schema</h1>
+            </div>
+            <p className="text-sm text-muted-foreground">FeedMeForward data architecture overview</p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchSchema}
+          disabled={loading}
+          className="gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </motion.div>
+
+      {/* Summary Stats */}
+      {schemaData && (
+        <motion.div variants={staggerItem} className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          {[
+            {
+              icon: Table2,
+              label: 'Total Models',
+              value: schemaData.summary.totalModels,
+              color: 'text-orange-500',
+              bgColor: 'bg-orange-50 dark:bg-orange-950/50',
+            },
+            {
+              icon: KeyRound,
+              label: 'Total Fields',
+              value: schemaData.summary.totalFields,
+              color: 'text-amber-500',
+              bgColor: 'bg-amber-50 dark:bg-amber-950/50',
+            },
+            {
+              icon: Database,
+              label: 'Total Records',
+              value: schemaData.summary.totalRecords,
+              color: 'text-emerald-500',
+              bgColor: 'bg-emerald-50 dark:bg-emerald-950/50',
+            },
+            {
+              icon: Users,
+              label: 'Categories',
+              value: categoryCounts.length,
+              color: 'text-sky-500',
+              bgColor: 'bg-sky-50 dark:bg-sky-950/50',
+            },
+          ].map((stat) => (
+            <Card key={stat.label} className={`${stat.bgColor} border-0 shadow-sm`}>
+              <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                <div className={`w-9 h-9 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
+                  <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  <p className="text-xl font-bold">{stat.value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </motion.div>
+      )}
+
+      {/* Category Filter */}
+      {schemaData && (
+        <motion.div variants={staggerItem} className="flex flex-wrap gap-2 mb-6">
+          <Button
+            variant={filterCategory === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilterCategory('all')}
+            className={filterCategory === 'all' ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm' : ''}
+          >
+            All ({schemaData.summary.totalModels})
+          </Button>
+          {categoryCounts.map((cat) => {
+            const colors = CATEGORY_COLORS[cat.key];
+            const isActive = filterCategory === cat.key;
+            return (
+              <Button
+                key={cat.key}
+                variant={isActive ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilterCategory(cat.key)}
+                className={
+                  isActive
+                    ? `bg-gradient-to-r ${CATEGORY_COLORS[cat.key]?.headerBg} text-white shadow-sm`
+                    : ''
+                }
+              >
+                {cat.label} ({cat.count})
+              </Button>
+            );
+          })}
+        </motion.div>
+      )}
+
+      {/* Loading State */}
+      {loading && !schemaData && (
+        <motion.div variants={staggerItem} className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-orange-500 mb-4" />
+          <p className="text-muted-foreground">Loading schema data...</p>
+        </motion.div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <motion.div variants={staggerItem}>
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="p-6 text-center">
+              <p className="text-destructive font-medium mb-2">Failed to load schema</p>
+              <p className="text-sm text-muted-foreground mb-4">{error}</p>
+              <Button variant="outline" onClick={fetchSchema} className="gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Schema Model Cards Grid */}
+      {schemaData && (
+        <motion.div
+          variants={staggerItem}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+        >
+          {filteredModels.map((model, index) => {
+            const colors = CATEGORY_COLORS[model.category] || CATEGORY_COLORS.core;
+            const IconComponent = ICON_MAP[model.icon] || Database;
+            const isExpanded = expandedModel === model.name;
+
+            return (
+              <motion.div
+                key={model.name}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.04, type: 'spring', stiffness: 300 }}
+                whileHover={{ y: -2 }}
+              >
+                <Card
+                  className={`${colors.border} ${colors.bg} cursor-pointer transition-all hover:shadow-md`}
+                  onClick={() => setExpandedModel(isExpanded ? null : model.name)}
+                >
+                  {/* Card Header */}
+                  <div className={`${colors.headerBg} px-4 py-3 rounded-t-lg`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <IconComponent className="w-4 h-4 text-white/90" />
+                        <h3 className="text-sm font-semibold text-white truncate">{model.name}</h3>
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-white/20 text-white border-0 hover:bg-white/30">
+                        {CATEGORY_LABELS[model.category] || model.category}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <CardContent className="p-4">
+                    {/* Description */}
+                    <p className="text-xs text-muted-foreground mb-3 leading-relaxed line-clamp-2">
+                      {model.description}
+                    </p>
+
+                    {/* Record Count */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-1.5">
+                        <Database className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          {model.recordCount} record{model.recordCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <KeyRound className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          {model.fields.length} field{model.fields.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Fields List */}
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        transition={{ duration: 0.2 }}
+                        className="border-t border-border/50 pt-3 mt-1"
+                      >
+                        <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
+                          {model.fields.map((field) => (
+                            <div
+                              key={field.name}
+                              className="flex items-center justify-between text-xs py-1 px-2 rounded-md bg-background/50 hover:bg-background/80 transition-colors"
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                {field.isId && (
+                                  <KeyRound className="w-3 h-3 text-amber-500 shrink-0" />
+                                )}
+                                {field.isUnique && !field.isId && (
+                                  <BadgeCheck className="w-3 h-3 text-sky-500 shrink-0" />
+                                )}
+                                <span className={`truncate ${field.isId ? 'font-semibold text-amber-700 dark:text-amber-300' : field.isUnique ? 'font-medium text-sky-700 dark:text-sky-300' : ''}`}>
+                                  {field.name}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] px-1.5 py-0 font-mono"
+                                >
+                                  {field.type}
+                                </Badge>
+                                {!field.required && (
+                                  <span className="text-[10px] text-muted-foreground">?</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* Expand indicator */}
+                    <div className="flex items-center justify-center pt-2">
+                      <motion.div
+                        animate={{ rotate: isExpanded ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </motion.div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      )}
+
+      {/* Empty Filter State */}
+      {schemaData && filteredModels.length === 0 && (
+        <motion.div variants={staggerItem}>
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Database className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No models found for this category</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Footer */}
+      {schemaData && (
+        <motion.div variants={staggerItem} className="text-center py-8">
+          <p className="text-xs text-muted-foreground">
+            FeedMeForward Schema &mdash; {schemaData.summary.totalModels} models &middot; {schemaData.summary.totalFields} fields &middot; SQLite
+          </p>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
 // ─── Main App ──────────────────────────────────────────────────────
 export default function Home() {
   const { isAuthenticated } = useAuthStore();
@@ -822,6 +1299,7 @@ export default function Home() {
         {view === 'signup' && <SignUpForm key="signup" onNavigate={navigate} />}
         {view === 'login' && <LoginForm key="login" onNavigate={navigate} />}
         {view === 'dashboard' && <Dashboard key="dashboard" onNavigate={navigate} />}
+        {view === 'schema' && <SchemaDashboard key="schema" onNavigate={navigate} />}
       </AnimatePresence>
     </main>
   );

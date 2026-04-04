@@ -49,3 +49,63 @@ Build Phase 1 of FeedMeForward: project foundation including Prisma schema, auth
 - `bun run lint` passes with zero errors
 - Dev log shows all successful 200 responses with no runtime errors
 - TypeScript strict typing throughout
+
+---
+## Task ID: 2 - main-agent (Phase 2: Database Schema — Core Entities)
+### Work Task
+Build Phase 2 of FeedMeForward: Complete database schema with 16 models, schema verification API, and visual schema dashboard in the SPA.
+
+### Work Summary
+
+#### 1. Prisma Schema Update
+Added 15 new models to `prisma/schema.prisma` while preserving the existing User model. All models use `String` type for JSON data (no list primitives). Total: **16 models, 129 fields**.
+
+**Models created:**
+- **Core (4):** User (updated with relations), Video, Poll, PollVote
+- **Social (6):** Follow, Comment, CommentLike, Like, Invitation, Report
+- **Monetization (1):** Transaction
+- **Community (3):** Circle, CircleMember, CircleVideo
+- **Live (2):** LiveSession, LivePoll
+
+**Key schema features:**
+- User model has 16 relation fields to all other models
+- Video model has self-referential relation for response clips (parentVideoId/responses)
+- Comment model has self-referential relation for nested replies
+- Unique constraints: `@@unique([pollId, userId])`, `@@unique([followerId, followingId])`, `@@unique([userId, videoId])`, `@@unique([commentId, userId])`, `@@unique([circleId, userId])`, `@@unique([circleId, videoId])`
+- Cascade deletes on child relations (Poll→Video, Comment→Video, CircleMember→Circle, etc.)
+- JSON fields stored as `String`: tags, options, targetingCriteria, juryVotes
+
+**Schema fix:** Added missing opposite relation fields on Video (invitations, circleShares) and Comment (reports) to satisfy Prisma validation.
+
+#### 2. Database Push & Client Generation
+- Successfully pushed schema to SQLite via `bun run db:push`
+- Prisma Client auto-generated during push (v6.19.2)
+
+#### 3. Schema Verification API
+- Created `src/app/api/admin/schema/route.ts` — GET endpoint
+- Returns: summary stats (totalModels, totalFields, totalRecords), category breakdown, and per-model data with field definitions and record counts
+- Fetches live record counts using dynamic Prisma model access
+- Also extracts actual DMMF schema definitions from Prisma client
+- Comprehensive model metadata: icon mapping, category classification, field details with types/defaults/uniqueness
+
+#### 4. Visual Schema Dashboard (SPA View)
+- Added `"schema"` view to the SPA view type in `src/app/page.tsx`
+- **SchemaDashboard component features:**
+  - Summary header: 4 stat cards (Total Models: 16, Total Fields: 129, Total Records, Categories: 5)
+  - Category filter buttons (All, Core, Social, Monetization, Community, Live) with counts
+  - Responsive grid: 1 col mobile, 2 cols tablet, 3 cols medium desktop, 4 cols large desktop
+  - Each model card shows: colored header with icon + name, description, record count, field count
+  - Expandable field list with scrollable area (max-h-64), showing field name, type badge, required indicator
+  - Color coding per category: orange=Core, amber=Social, emerald=Monetization, sky=Community, rose=Live
+  - Key/unique field indicators (KeyRound icon for IDs, BadgeCheck for unique)
+  - Loading skeleton, error state with retry, empty filter state
+  - Refresh button to re-fetch schema data
+- **Dashboard update:** Added "Database Schema" card with gradient border, Database icon, and "View Schema" link
+- **Navigation:** Back arrow button from schema view to dashboard
+
+#### Quality Checks
+- `bun run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation (`✓ Compiled in 143ms`) after fix
+- Schema API endpoint verified working via curl — returns correct data with all 16 models
+- TypeScript strict typing throughout
+- Fixed runtime error: `User` lucide icon conflict with auth store type — resolved by importing as `UserIcon`

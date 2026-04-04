@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Core User Model ───────────────────────────────────────────────
 model User {
   id             String   @id @default(cuid())
   username       String   @unique
@@ -21,4 +22,267 @@ model User {
   isVerified     Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  // Relations
+  videos            Video[]         @relation("UserVideos")
+  pollVotes         PollVote[]      @relation("UserPollVotes")
+  followers         Follow[]        @relation("UserFollowers")
+  following         Follow[]        @relation("UserFollowing")
+  transactions      Transaction[]   @relation("UserTransactions")
+  comments          Comment[]
+  commentLikes      CommentLike[]   @relation("UserCommentLikes")
+  likes             Like[]          @relation("UserLikes")
+  invitations       Invitation[]    @relation("UserInvitations")
+  createdCircles    Circle[]        @relation("CircleCreator")
+  circleMemberships CircleMember[]  @relation("UserCircleMemberships")
+  circleShares      CircleVideo[]
+  liveSessions      LiveSession[]   @relation("LiveSessionCreator")
+  reports           Report[]        @relation("UserReports")
+}
+
+// ─── Video Model ────────────────────────────────────────────────────
+model Video {
+  id           String   @id @default(cuid())
+  creatorId    String
+  type         String   @default("lead") // "lead" or "response"
+  title        String
+  description  String?
+  videoUrl     String
+  thumbnailUrl String?
+  category     String?
+  tags         String?  // JSON string of tags array
+  status       String   @default("active") // "active", "expired", "answered"
+  duration     Int?     // video duration in seconds
+  viewCount    Int      @default(0)
+  isPublic     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  creator      User       @relation("UserVideos", fields: [creatorId], references: [id])
+  polls        Poll[]
+  comments     Comment[]
+  likes        Like[]
+  reports      Report[]
+  invitations  Invitation[]
+  circleShares CircleVideo[]
+
+  // Self-referential for response clips
+  parentVideoId String?
+  parentVideo   Video?    @relation("VideoResponses", fields: [parentVideoId], references: [id])
+  responses     Video[]   @relation("VideoResponses")
+}
+
+// ─── Poll Model ─────────────────────────────────────────────────────
+model Poll {
+  id                 String    @id @default(cuid())
+  videoId            String
+  question           String
+  options            String    // JSON string: [{id, text, voteCount}]
+  targetingCriteria  String?   // JSON string: {age, location, gender, language, minScore, etc.}
+  isPaid             Boolean   @default(false)
+  rewardPerResponse  Float?    // payment per response for paid polls
+  totalRewardPool    Float?
+  maxResponses       Int?
+  responseCount      Int       @default(0)
+  closesAt           DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  video Video       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  votes PollVote[]
+}
+
+// ─── PollVote Model ─────────────────────────────────────────────────
+model PollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  userId    String
+  optionId  String   // the selected option ID
+  createdAt DateTime @default(now())
+
+  poll Poll @relation(fields: [pollId], references: [id])
+  user User @relation("UserPollVotes", fields: [userId], references: [id])
+
+  @@unique([pollId, userId]) // one vote per user per poll
+}
+
+// ─── Follow Model ───────────────────────────────────────────────────
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+}
+
+// ─── Transaction Model ──────────────────────────────────────────────
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Float
+  type        String   // "tip", "withdrawal", "deposit", "earning", "reward"
+  status      String   @default("pending") // "pending", "completed", "failed"
+  description String?
+  referenceId String?  // ID of related entity (video, poll, etc.)
+  createdAt   DateTime @default(now())
+
+  user User @relation("UserTransactions", fields: [userId], references: [id])
+}
+
+// ─── Comment Model ──────────────────────────────────────────────────
+model Comment {
+  id              String   @id @default(cuid())
+  userId          String
+  videoId         String
+  content         String
+  parentCommentId String?  // for nested replies
+  isVideoReply    Boolean  @default(false) // video reply to comment
+  videoReplyUrl   String?  // URL of the video reply
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id])
+  video         Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  parentComment Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
+  replies       Comment[] @relation("CommentReplies")
+  likes         CommentLike[]
+  reports       Report[]
+}
+
+// ─── CommentLike Model ──────────────────────────────────────────────
+model CommentLike {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User     @relation("UserCommentLikes", fields: [userId], references: [id])
+
+  @@unique([commentId, userId])
+}
+
+// ─── Like Model (Video Likes) ───────────────────────────────────────
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  videoId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation("UserLikes", fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+}
+
+// ─── Invitation Model ───────────────────────────────────────────────
+model Invitation {
+  id           String    @id @default(cuid())
+  inviterId    String
+  inviteeEmail String
+  videoId      String?
+  status       String    @default("sent") // "sent", "clicked", "responded", "expired"
+  rewardGiven  Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  respondedAt  DateTime?
+
+  inviter User  @relation("UserInvitations", fields: [inviterId], references: [id])
+  video  Video? @relation(fields: [videoId], references: [id])
+}
+
+// ─── Circle Model ───────────────────────────────────────────────────
+model Circle {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  coverUrl    String?
+  creatorId   String
+  isPublic    Boolean  @default(true)
+  memberCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator User          @relation("CircleCreator", fields: [creatorId], references: [id])
+  members CircleMember[]
+  videos  CircleVideo[]
+}
+
+// ─── CircleMember Model ─────────────────────────────────────────────
+model CircleMember {
+  id       String   @id @default(cuid())
+  circleId String
+  userId   String
+  role     String   @default("member") // "member", "moderator", "admin"
+  joinedAt DateTime @default(now())
+
+  circle Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserCircleMemberships", fields: [userId], references: [id])
+
+  @@unique([circleId, userId])
+}
+
+// ─── CircleVideo Model ──────────────────────────────────────────────
+model CircleVideo {
+  id        String   @id @default(cuid())
+  circleId  String
+  videoId   String
+  sharedBy  String
+  createdAt DateTime @default(now())
+
+  circle Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  video  Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [sharedBy], references: [id])
+
+  @@unique([circleId, videoId])
+}
+
+// ─── LiveSession Model ──────────────────────────────────────────────
+model LiveSession {
+  id          String    @id @default(cuid())
+  creatorId   String
+  title       String
+  description String?
+  status      String    @default("scheduled") // "scheduled", "live", "ended"
+  startedAt   DateTime?
+  endedAt     DateTime?
+  viewerCount Int       @default(0)
+  peakViewers Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  creator User       @relation("LiveSessionCreator", fields: [creatorId], references: [id])
+  polls   LivePoll[]
+}
+
+// ─── LivePoll Model ─────────────────────────────────────────────────
+model LivePoll {
+  id        String   @id @default(cuid())
+  sessionId String
+  question  String
+  options   String   // JSON string of options
+  createdAt DateTime @default(now())
+
+  session LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+// ─── Report Model ───────────────────────────────────────────────────
+model Report {
+  id          String    @id @default(cuid())
+  reporterId  String
+  videoId     String?
+  commentId   String?
+  reason      String    // "offensive", "spam", "misleading", "other"
+  description String?
+  status      String    @default("pending") // "pending", "reviewing", "resolved", "dismissed"
+  juryVotes   String?   // JSON string: [{userId, vote, createdAt}]
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+
+  reporter User    @relation("UserReports", fields: [reporterId], references: [id])
+  video    Video?  @relation(fields: [videoId], references: [id])
+  comment  Comment? @relation(fields: [commentId], references: [id])
 }
