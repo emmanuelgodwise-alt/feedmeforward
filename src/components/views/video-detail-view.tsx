@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,6 +75,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
   const [earningRevenue, setEarningRevenue] = useState(false);
   const [videoVersion, setVideoVersion] = useState(0);
   const { updateWalletBalance } = useAuthStore();
+  const pollRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     fetchVideo(videoId);
@@ -91,6 +92,32 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
       clearCurrentVideo();
     };
   }, [videoId, videoVersion, fetchVideo, clearCurrentVideo]);
+
+  // ─── Auto-refresh poll results every 15s for active polls ─────────
+  useEffect(() => {
+    if (!currentVideo?.polls?.some((p) => p.status === 'active')) {
+      if (pollRefreshRef.current) {
+        clearInterval(pollRefreshRef.current);
+        pollRefreshRef.current = null;
+      }
+      return;
+    }
+
+    if (pollRefreshRef.current) {
+      clearInterval(pollRefreshRef.current);
+    }
+
+    pollRefreshRef.current = setInterval(() => {
+      fetchVideo(videoId);
+    }, 15000);
+
+    return () => {
+      if (pollRefreshRef.current) {
+        clearInterval(pollRefreshRef.current);
+        pollRefreshRef.current = null;
+      }
+    };
+  }, [currentVideo?.polls, videoId, fetchVideo]);
 
   const triggerScoreRecalc = (userId: string) => {
     fetch('/api/scores/calculate', {
@@ -508,7 +535,19 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
               </h2>
               {video.polls.map((poll) => (
                 <div key={poll.id} className="space-y-2">
-                  <PollCard poll={poll} />
+                  <div className="flex items-center gap-2">
+                    <PollCard poll={poll} />
+                    {/* Live badge for active polls */}
+                    {poll.status === 'active' && (
+                      <motion.span
+                        animate={{ opacity: [1, 0.4, 1] }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                        className="text-xs font-bold text-rose-500 bg-rose-100 dark:bg-rose-950/50 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                      >
+                        LIVE
+                      </motion.span>
+                    )}
+                  </div>
                   {/* Claim reward for paid polls */}
                   {poll.isPaid && poll.rewardPerResponse && poll.rewardPerResponse > 0 && poll.userVoted && currentUser && video.creator.id !== currentUser.id && (
                     <div className="flex items-center gap-2 px-1">

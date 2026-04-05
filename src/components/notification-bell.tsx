@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/stores/auth-store';
+import { useRealtimeStore } from '@/stores/realtime-store';
 
 interface NotificationBellProps {
   onNavigate: (view: string) => void;
@@ -11,6 +12,7 @@ interface NotificationBellProps {
 
 export function NotificationBell({ onNavigate }: NotificationBellProps) {
   const { currentUser } = useAuthStore();
+  const { pendingNotifications, clearPendingNotifications } = useRealtimeStore();
   const [unreadCount, setUnreadCount] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -48,10 +50,12 @@ export function NotificationBell({ onNavigate }: NotificationBellProps) {
   }, [currentUser]);
 
   const handleClick = () => {
+    clearPendingNotifications();
     onNavigate('notifications');
   };
 
-  const displayCount = unreadCount > 9 ? '9+' : unreadCount;
+  const totalCount = unreadCount + pendingNotifications;
+  const displayCount = totalCount > 9 ? '9+' : totalCount;
 
   return (
     <button
@@ -60,7 +64,7 @@ export function NotificationBell({ onNavigate }: NotificationBellProps) {
       title="Notifications"
     >
       <AnimatePresence>
-        {unreadCount > 0 && (
+        {totalCount > 0 && (
           <motion.div
             initial={{ scale: 1.3 }}
             animate={{ scale: 1 }}
@@ -71,12 +75,12 @@ export function NotificationBell({ onNavigate }: NotificationBellProps) {
         )}
       </AnimatePresence>
 
-      {unreadCount === 0 && (
+      {totalCount === 0 && (
         <Bell className="w-[18px] h-[18px] text-muted-foreground group-hover:text-orange-500" />
       )}
 
       {/* Pulse ring when unread */}
-      {unreadCount > 0 && (
+      {totalCount > 0 && (
         <motion.span
           className="absolute inset-0 rounded-full border-2 border-orange-400"
           animate={{
@@ -93,7 +97,7 @@ export function NotificationBell({ onNavigate }: NotificationBellProps) {
 
       {/* Red badge */}
       <AnimatePresence>
-        {unreadCount > 0 && (
+        {totalCount > 0 && (
           <motion.span
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}

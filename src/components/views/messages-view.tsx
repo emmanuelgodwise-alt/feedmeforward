@@ -39,6 +39,8 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useRealtimeStore } from '@/stores/realtime-store';
+import { useRealtime } from '@/hooks/use-realtime';
 import { QuickNav } from '@/components/quick-nav';
 import { FollowButton } from '@/components/follow-button';
 import { useToast } from '@/hooks/use-toast';
@@ -214,6 +216,10 @@ const chatPanelVariants = {
 export function MessagesView({ onNavigate, setProfileUserId }: MessagesViewProps) {
   const { currentUser } = useAuthStore();
   const { toast } = useToast();
+  const { isConnected, pendingMessages, clearPendingMessages } = useRealtimeStore();
+
+  // Establish global SSE connection
+  useRealtime();
 
   // Conversation list state
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
@@ -339,7 +345,7 @@ export function MessagesView({ onNavigate, setProfileUserId }: MessagesViewProps
       // Also refresh conversations to update unread counts
       fetchConversations();
       fetchUnreadCount();
-    }, 10000);
+    }, 5000); // 5s when conversation is active
 
     return () => {
       if (pollingRef.current) {
@@ -372,6 +378,17 @@ export function MessagesView({ onNavigate, setProfileUserId }: MessagesViewProps
     return () => clearTimeout(timer);
   }, [messages, selectedUserId, isLoadingMessages]);
 
+  // ─── Auto-refresh current conversation on realtime message event ───
+  useEffect(() => {
+    if (!selectedUserId || !currentUser) return;
+    const pending = pendingMessages[selectedUserId] || 0;
+    if (pending > 0) {
+      // Refresh messages for the active conversation
+      fetchMessages(selectedUserId);
+      clearPendingMessages(selectedUserId);
+    }
+  }, [pendingMessages, selectedUserId, currentUser, fetchMessages, clearPendingMessages]);
+
   // ─── Auto-resize textarea ───────────────────────────────────────
 
   useEffect(() => {
@@ -389,8 +406,10 @@ export function MessagesView({ onNavigate, setProfileUserId }: MessagesViewProps
       setSelectedUser(user);
       setMobileShowChat(true);
       setMessageInput('');
+      // Clear pending message count for this conversation
+      clearPendingMessages(userId);
     },
-    []
+    [clearPendingMessages]
   );
 
   // ─── Back to conversation list (mobile) ─────────────────────────
@@ -638,6 +657,13 @@ export function MessagesView({ onNavigate, setProfileUserId }: MessagesViewProps
                   {unreadCount}
                 </Badge>
               )}
+              {/* Live indicator */}
+              <span className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]' : 'bg-gray-300'}`} />
+                <span className={`text-[11px] font-medium ${isConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                  {isConnected ? 'Live' : 'Offline'}
+                </span>
+              </span>
             </h1>
             <p className="text-sm text-muted-foreground">
               Direct messages with other users
@@ -735,6 +761,8 @@ export function MessagesView({ onNavigate, setProfileUserId }: MessagesViewProps
                 {filteredConversations.map((conv) => {
                   const isActive = selectedUserId === conv.otherUser.id;
                   const isUnread = conv.unreadCount > 0;
+                  const realtimePending = pendingMessages[conv.otherUser.id] || 0;
+                  const showNewIndicator = realtimePending > 0 && !isActive;
 
                   return (
                     <motion.button
@@ -788,9 +816,9 @@ export function MessagesView({ onNavigate, setProfileUserId }: MessagesViewProps
                           >
                             {truncate(conv.lastMessage.content, 40)}
                           </p>
-                          {isUnread && (
-                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold shrink-0">
-                              {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                          {(isUnread || showNewIndicator) && (
+                            <span className="flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold shrink-0">
+                              {((isUnread ? conv.unreadCount : 0) + realtimePending) > 99 ? '99+' : (isUnread ? conv.unreadCount : 0) + realtimePending}
                             </span>
                           )}
                         </div>

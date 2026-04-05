@@ -53,6 +53,7 @@ import { VideoCard } from '@/components/video-card';
 import { FollowButton } from '@/components/follow-button';
 import { QuickNav } from '@/components/quick-nav';
 import { useAuthStore } from '@/stores/auth-store';
+import { useOnlinePresence } from '@/hooks/use-online-presence';
 import {
   getScoreLevel,
   getScoreLevelColor,
@@ -248,6 +249,10 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
   const [savingAudience, setSavingAudience] = useState(false);
 
   const isOwnProfile = currentUser?.id === userId;
+
+  // Online presence for other users' profiles
+  const { isUserOnline } = useOnlinePresence(isOwnProfile ? [] : [userId]);
+  const isOnline = !isOwnProfile && isUserOnline(userId);
 
   // Populate edit form when profile data loads
   useEffect(() => {
@@ -549,7 +554,16 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                   <CheckCircle2 className="w-5 h-5 text-amber-500 fill-amber-500" />
                 )}
               </h2>
-              <p className="text-sm text-muted-foreground mt-0.5">@{profileData.username}</p>
+              <p className="text-sm text-muted-foreground mt-0.5 flex items-center justify-center gap-1.5">
+                @{profileData.username}
+                {/* Online presence indicator */}
+                {!isOwnProfile && (
+                  <span className={`inline-flex items-center gap-1.5 text-xs ${isOnline ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                    <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`} />
+                    {isOnline ? 'Online now' : 'Offline'}
+                  </span>
+                )}
+              </p>
 
               {/* Bio */}
               {profileData.bio && (

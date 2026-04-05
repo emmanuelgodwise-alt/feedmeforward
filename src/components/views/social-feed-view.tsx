@@ -21,6 +21,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useRealtimeStore } from '@/stores/realtime-store';
 import { VideoCard } from '@/components/video-card';
 import { QuickNav } from '@/components/quick-nav';
 import type { Video } from '@/types';
@@ -103,6 +104,8 @@ export function SocialFeedView({
   const [feedTotalPages, setFeedTotalPages] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(Date.now());
+  const { lastEventAt } = useRealtimeStore();
 
   // Suggested users state
   const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
@@ -120,6 +123,7 @@ export function SocialFeedView({
         setIsLoadingMore(true);
       }
       setFeedError(null);
+      setLastFetchTime(Date.now());
 
       try {
         const res = await fetch(
@@ -248,6 +252,13 @@ export function SocialFeedView({
       setIsLoadingSuggestions(false);
     }
   }, [currentUser]);
+
+  // ─── Auto-refresh when realtime event is newer than last fetch ───
+  useEffect(() => {
+    if (lastEventAt && lastFetchTime && lastEventAt > lastFetchTime) {
+      // Don't auto-refresh, just let the banner show
+    }
+  }, [lastEventAt, lastFetchTime]);
 
   // ─── Initial Load ───────────────────────────────────────────────
 
@@ -384,6 +395,30 @@ export function SocialFeedView({
 
       {/* Quick Nav */}
       <QuickNav onNavigate={onNavigate} activeView="social-feed" />
+
+      {/* New content available banner */}
+      {lastEventAt && lastFetchTime && lastEventAt > lastFetchTime && !isLoadingFeed && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/20 border border-orange-200 dark:border-orange-800/40"
+        >
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 text-orange-500" />
+            <span className="text-sm font-medium text-orange-700 dark:text-orange-300">New content available</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="gap-1.5 text-xs border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-950/40 text-orange-600 dark:text-orange-400"
+          >
+            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </motion.div>
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="following" className="mt-4">

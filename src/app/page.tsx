@@ -35,6 +35,7 @@ import { UsersListView } from '@/components/views/users-list-view';
 import { MessagesView } from '@/components/views/messages-view';
 import { GlobalSearch } from '@/components/global-search';
 import { NotificationBell } from '@/components/notification-bell';
+import { useRealtime } from '@/hooks/use-realtime';
 import { Plus } from 'lucide-react';
 import {
   Eye,
@@ -1634,6 +1635,10 @@ function SchemaDashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
 // ─── Main App ──────────────────────────────────────────────────────
 export default function Home() {
   const { isAuthenticated } = useAuthStore();
+
+  // Establish global real-time SSE connection for all views
+  useRealtime();
+
   const [view, setView] = useState<View>(isAuthenticated ? 'dashboard' : 'landing');
   const [videoId, setVideoId] = useState<string>('');
   const [parentVideoId, setParentVideoId] = useState<string>('');
