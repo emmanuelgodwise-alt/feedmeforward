@@ -102,7 +102,10 @@ export async function POST(request: NextRequest) {
           id: user.id,
           username: user.username,
           email: user.email,
-          role: user.role,
+          role: user.role || 'member',
+          memberScore: user.memberScore ?? 0,
+          walletBalance: user.walletBalance ?? 0,
+          isVerified: user.isVerified ?? false,
         },
       },
       { status: 201 }

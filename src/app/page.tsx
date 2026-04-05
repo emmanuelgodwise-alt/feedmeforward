@@ -818,14 +818,19 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
 
   if (!currentUser) return null;
 
-  const level = getScoreLevel(currentUser.memberScore);
+  const score = currentUser.memberScore ?? 0;
+  const balance = currentUser.walletBalance ?? 0;
+  const verified = currentUser.isVerified ?? false;
+  const role = currentUser.role || 'member';
+
+  const level = getScoreLevel(score);
   const levelBadge = getScoreLevelBadge(level);
 
   const stats = [
     {
       icon: Trophy,
       label: 'Member Score',
-      value: currentUser.memberScore.toLocaleString(),
+      value: score.toLocaleString(),
       color: 'text-amber-500',
       bgColor: 'bg-amber-50 dark:bg-amber-950/50',
       onClick: handleViewProfile,
@@ -833,7 +838,7 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
     {
       icon: Wallet,
       label: 'Wallet Balance',
-      value: `$${currentUser.walletBalance.toFixed(2)}`,
+      value: `$${balance.toFixed(2)}`,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50 dark:bg-orange-950/50',
       onClick: () => onNavigate('wallet'),
@@ -841,18 +846,18 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
     {
       icon: Shield,
       label: 'Role',
-      value: currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1),
+      value: role.charAt(0).toUpperCase() + role.slice(1),
       color: 'text-emerald-500',
       bgColor: 'bg-emerald-50 dark:bg-emerald-950/50',
       onClick: undefined,
     },
     {
-      icon: currentUser.isVerified ? CheckCircle2 : BadgeCheck,
-      label: currentUser.isVerified ? 'Verified ✓' : 'Not yet',
-      value: currentUser.isVerified ? 'Yes' : `${Math.max(0, 500 - currentUser.memberScore)} pts`,
-      color: currentUser.isVerified ? 'text-amber-500' : 'text-muted-foreground',
-      bgColor: currentUser.isVerified ? 'bg-amber-50 dark:bg-amber-950/50' : 'bg-muted',
-      onClick: currentUser.isVerified ? undefined : handleViewProfile,
+      icon: verified ? CheckCircle2 : BadgeCheck,
+      label: verified ? 'Verified ✓' : 'Not yet',
+      value: verified ? 'Yes' : `${Math.max(0, 500 - score)} pts`,
+      color: verified ? 'text-amber-500' : 'text-muted-foreground',
+      bgColor: verified ? 'bg-amber-50 dark:bg-amber-950/50' : 'bg-muted',
+      onClick: verified ? undefined : handleViewProfile,
     },
   ];
 
@@ -925,9 +930,9 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Username</p>
                 <p className="font-medium flex items-center gap-2">
                   {currentUser.username}
-                  {currentUser.isVerified && <CheckCircle2 className="w-4 h-4 text-amber-500" />}
+                  {verified && <CheckCircle2 className="w-4 h-4 text-amber-500" />}
                   <Badge variant="secondary" className="text-xs">
-                    {currentUser.role}
+                    {role}
                   </Badge>
                 </p>
               </div>

@@ -54,10 +54,10 @@ export async function POST(request: NextRequest) {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role,
-        memberScore: user.memberScore,
-        walletBalance: user.walletBalance,
-        isVerified: user.isVerified,
+        role: user.role || 'member',
+        memberScore: user.memberScore ?? 0,
+        walletBalance: user.walletBalance ?? 0,
+        isVerified: user.isVerified ?? false,
       },
     });
   } catch (error) {

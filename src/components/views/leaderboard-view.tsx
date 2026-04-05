@@ -336,7 +336,7 @@ export function LeaderboardView({ onNavigate, setProfileUserId }: LeaderboardVie
                 <div className="flex items-center gap-3">
                   {badge && <Badge className={`text-xs ${badge.className}`}>{badge.label}</Badge>}
                   <div className="text-right">
-                    <p className="text-lg font-bold">{currentUser.memberScore} pts</p>
+                    <p className="text-lg font-bold">{currentUser.memberScore ?? 0} pts</p>
                     <p className="text-xs text-muted-foreground">Level {badge?.label}</p>
                   </div>
                 </div>
@@ -345,15 +345,16 @@ export function LeaderboardView({ onNavigate, setProfileUserId }: LeaderboardVie
               {level && (
                 <div className="mt-3">
                   {(() => {
-                    const nextT = getNextLevelThreshold(currentUser.memberScore);
-                    const prevT = getPreviousLevelThreshold(currentUser.memberScore);
+                    const myScore = currentUser.memberScore ?? 0;
+                    const nextT = getNextLevelThreshold(myScore);
+                    const prevT = getPreviousLevelThreshold(myScore);
                     if (nextT !== null) {
-                      const pct = ((currentUser.memberScore - prevT) / (nextT - prevT)) * 100;
+                      const pct = ((myScore - prevT) / (nextT - prevT)) * 100;
                       return (
                         <>
                           <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                            <span>{getScoreLevelBadge(getScoreLevel(currentUser.memberScore)).label}</span>
-                            <span>{currentUser.memberScore}/{nextT} to {getScoreLevelBadge(getScoreLevel(nextT - 1)).label}</span>
+                            <span>{getScoreLevelBadge(getScoreLevel(myScore)).label}</span>
+                            <span>{myScore}/{nextT} to {getScoreLevelBadge(getScoreLevel(nextT - 1)).label}</span>
                           </div>
                           <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                             <div

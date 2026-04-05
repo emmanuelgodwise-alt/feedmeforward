@@ -131,13 +131,13 @@ export function RewardsView({ onNavigate }: ViewProps) {
     );
   }
 
-  const level = getScoreLevel(currentUser.memberScore);
+  const score = currentUser.memberScore ?? 0;
+  const level = getScoreLevel(score);
   const levelBadge = getScoreLevelBadge(level);
   const levelInfo = getScoreLevelInfo(level);
-  const nextThreshold = getNextLevelThreshold(currentUser.memberScore);
-  const prevThreshold = getPreviousLevelThreshold(currentUser.memberScore);
+  const nextThreshold = getNextLevelThreshold(score);
+  const prevThreshold = getPreviousLevelThreshold(score);
 
-  const score = currentUser.memberScore;
   const progressToNext = nextThreshold
     ? Math.round(((score - prevThreshold) / (nextThreshold - prevThreshold)) * 100)
     : 100;
@@ -279,7 +279,7 @@ export function RewardsView({ onNavigate }: ViewProps) {
                 <span className="text-sm text-muted-foreground">Wallet Balance</span>
               </div>
               <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                ${currentUser.walletBalance.toFixed(2)}
+                ${(currentUser.walletBalance ?? 0).toFixed(2)}
               </span>
             </div>
           </CardContent>
