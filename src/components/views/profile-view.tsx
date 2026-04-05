@@ -51,6 +51,7 @@ import {
 } from 'lucide-react';
 import { VideoCard } from '@/components/video-card';
 import { FollowButton } from '@/components/follow-button';
+import { UserBlockButton } from '@/components/user-block-button';
 import { QuickNav } from '@/components/quick-nav';
 import { useAuthStore } from '@/stores/auth-store';
 import { useOnlinePresence } from '@/hooks/use-online-presence';
@@ -634,13 +635,18 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
 
               {/* Follow Button (for other profiles) */}
               {!isOwnProfile && currentUser && (
-                <div className="w-full mt-4">
+                <div className="w-full mt-4 space-y-2">
                   <FollowButton
                     targetUserId={userId}
                     targetUsername={profileData.username}
                     size="lg"
                     variant="full"
                     className="w-full"
+                  />
+                  <UserBlockButton
+                    targetUserId={userId}
+                    targetUsername={profileData.username}
+                    size="sm"
                   />
                 </div>
               )}

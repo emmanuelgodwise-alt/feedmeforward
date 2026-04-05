@@ -2200,3 +2200,213 @@ Stage Summary:
 - Connection status indicator across all views
 - Build: ✅, Lint: ✅
 - Phase 10 unblocked
+---
+## Task ID: 7 - main-agent (Phase 7: Communities/Circles — Backend & Frontend)
+### Work Task
+Build Phase 7 of FeedMeForward: Complete communities/circles system with 7 backend API routes, 2 frontend view components, and SPA integration.
+
+### Work Summary
+
+#### 1. API Routes (7 files created)
+- GET/POST /api/circles — List/Create circles
+- GET/PATCH/DELETE /api/circles/[id] — Detail/Update/Delete
+- POST/DELETE /api/circles/[id]/join — Join/Leave
+- GET /api/circles/[id]/members — List members
+- POST/DELETE /api/circles/[id]/videos/[videoId] — Share/Remove video
+- PATCH /api/circles/[id]/members/[userId]/role — Change role
+- POST /api/circles/[id]/invite — Invite user
+
+#### 2. CirclesView — Full communities listing with discover/my tabs, search, create dialog
+#### 3. CircleDetailView — Full circle detail with videos/members tabs, invite/edit/share dialogs
+#### 4. SPA Integration — circles and circle-detail views wired in page.tsx
+#### 5. QuickNav updated with Communities item
+
+#### Quality: npm run lint passes with zero errors and warnings.
+
+---
+## Task ID: i18n-system - main-agent (Internationalization System)
+### Work Task
+Build a comprehensive i18n system for FeedMeForward: 4 translation files (en, fr, es, hi), i18n config with translation utility, Zustand locale store, language switcher component, and useTranslation hook.
+
+### Work Summary
+
+#### 1. Translation Files Created (4 files, 211 keys each)
+- **`src/i18n/en.json`**: English (default) — 211 translation keys across 14 sections: common, nav, auth, landing, dashboard, video, poll, comment, profile, messages, notifications, feed, circles, wallet, report, a11y
+- **`src/i18n/fr.json`**: French — Complete translation of all 211 keys with proper French grammar, accent characters (é, è, ê, ë, à, ù, ç, î, ô), and formal/plural forms
+- **`src/i18n/es.json`**: Spanish — Complete translation of all 211 keys with proper Spanish grammar, accent characters (á, é, í, ó, ú, ñ, ¿, ¡), and appropriate formality
+- **`src/i18n/hi.json`**: Hindi — Complete translation of all 211 keys with proper Devanagari script (हिन्दी), correct Hindi grammar, and natural phrasing
+
+All 4 files validated as valid JSON and confirmed to have identical key sets (211 keys each, 0 missing).
+
+#### 2. i18n Config (`src/i18n/index.ts`)
+- Exports `Locale` type: `'en' | 'fr' | 'es' | 'hi'`
+- Exports `locales` array with code, display name, and flag emoji for each locale
+- Exports `translations` record mapping locale to translation data
+- `t(locale, key, params?)` function with dot-notation key lookup, English fallback, and `{param}` interpolation
+
+#### 3. Locale Store (`src/stores/locale-store.ts`)
+- Zustand store with `persist` middleware (localStorage key: `fmf-locale`)
+- State: `locale` (defaults to `'en'`), `setLocale` action
+
+#### 4. Language Switcher Component (`src/components/language-switcher.tsx`)
+- Uses shadcn `Select` component with `size="sm"` trigger
+- Compact design: Globe icon + flag emoji + language name (name hidden on small screens)
+- Shows all 4 languages with flag emojis in dropdown
+- Calls `setLocale` from locale store on change
+
+#### 5. useTranslation Hook (`src/hooks/use-translation.ts`)
+- `'use client'` directive for client-side usage
+- Returns `{ t, locale }` where `t(key, params?)` is bound to current locale from store
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- All JSON files validated with `JSON.parse()`
+- Key count verification: all 4 files have exactly 211 keys with no missing keys
+- No existing files were modified
+- TypeScript strict typing throughout
+
+#### Files Created
+```
+src/i18n/en.json
+src/i18n/fr.json
+src/i18n/es.json
+src/i18n/hi.json
+src/i18n/index.ts
+src/stores/locale-store.ts
+src/components/language-switcher.tsx
+src/hooks/use-translation.ts
+```
+
+---
+## Task ID: 12 - main-agent (Phase 12: Safety & Moderation)
+### Work Task
+Build Phase 12 of FeedMeForward: Safety & Moderation system including BlockedUser model, block API routes, moderation dashboard, content filtering, and user blocking UI.
+
+### Work Summary
+
+#### 1. Prisma Schema — BlockedUser Model Added
+- Added `BlockedUser` model with fields: id, blockerId, blockedId, reason, createdAt
+- Unique constraint on [blockerId, blockedId] to prevent duplicate blocks
+- Cascade delete on both blocker and blocked user relations
+- Added `blockedUsers` and `blockedByUsers` relation fields to User model
+- Successfully pushed to SQLite via `npx prisma db push`
+
+#### 2. Block API Routes — `/api/users/block/route.ts`
+- **POST**: Block a user — validates not self, not already blocked, user exists; creates BlockedUser record
+- **GET**: List blocked users — returns blocked users with their profile data (id, username, displayName, avatarUrl)
+- **DELETE**: Unblock a user — removes BlockedUser record
+- All routes use X-User-Id header for authentication
+
+#### 3. Moderation API Routes
+- **GET `/api/reports/list/route.ts`**: Lists all reports with admin/moderator role check
+  - Query params: status (filter), page, limit
+  - Includes reporter, video, and comment data
+  - Returns stats: { pending, reviewing, resolved, dismissed }
+  - Paginated response with page/limit/total/totalPages
+- **PATCH `/api/reports/[id]/moderate/route.ts`**: Moderate a report (admin/moderator only)
+  - Actions: reviewing, resolved, dismissed
+  - Optional moderator note stored in juryVotes JSON
+  - Resolved action deletes the reported content (video/comment)
+  - Sets resolvedAt timestamp for resolved/dismissed actions
+
+#### 4. ModerationView Component — `/src/components/views/moderation-view.tsx`
+- Full moderation dashboard for moderators/admins
+- **Stats Cards (4)**: Pending, Under Review, Resolved, Dismissed — with counts and color-coded styling
+- **Filter Tabs**: All, Pending, Reviewing, Resolved, Dismissed — with badge counts
+- **Reports Table**: Each report shows reporter info (avatar, username), target type badge (video/comment), target preview text, reason badge (color-coded by type), status badge, created time, action buttons
+- **Action Buttons**: Start Review (pending→reviewing), Resolve (→resolved + delete content), Dismiss (→dismissed)
+- **Confirmation Dialogs**: Each action opens AlertDialog with optional moderator note input
+- **Pagination**: Load More button for infinite scroll
+- **Empty State**: Shield icon with contextual message based on active filter
+- **Access Control**: Non-moderator/admin users see "Access Denied" message with back button
+- **Back Button**: "Back to Dashboard" text button
+- **QuickNav**: Navigation bar at bottom
+- Warm orange/amber theme throughout
+
+#### 5. UserBlockButton Component — `/src/components/user-block-button.tsx`
+- Compact block/unblock button for profile views
+- Checks block status on mount (GET /api/users/block)
+- Two states: "Block User" (gray/muted) and "Unblock" (red outline)
+- Confirmation dialog before blocking
+- Toast notifications on block/unblock success
+- Supports size prop: sm (compact) and default
+- Uses X-User-Id header for all API calls
+
+#### 6. Integration into Existing Components
+- **page.tsx**: Added ModerationView import, added moderation to View type, added moderation card to Dashboard (only visible for moderator/admin roles with ShieldCheck icon), added moderation view rendering in AnimatePresence
+- **ProfileView**: Added UserBlockButton below FollowButton on other users profiles (only shown when not viewing own profile)
+- **VideoDetailView**: Already has Report button via VideoActions component (verified existing ReportDialog integration)
+- **QuickNav**: NOT modified — moderation is admin-only, not a regular nav item
+
+#### Quality Checks
+- `npm run lint` passes with zero errors and zero warnings
+- `npx next build` succeeds with all routes compiled
+- Dev server compiles successfully (no runtime errors)
+- TypeScript strict typing throughout all files
+
+
+---
+Task ID: 10
+Agent: Main Agent
+Task: Phase 10 — Communities & Collaboration (Already Built)
+
+Work Log:
+- Verified all Circle features already exist: 7 API routes, CirclesView, CircleDetailView
+- Circle routes: CRUD, join, invite, members, role management, video sharing
+- Already integrated into SPA router with 'circles' and 'circle-detail' views
+- Already in QuickNav as "Communities"
+
+Stage Summary:
+- Phase 10 was completed in a previous context window
+- 7 API routes, 2 views, fully integrated
+- No additional work needed
+
+---
+Task ID: 11
+Agent: Main Agent (via parallel subagents)
+Task: Phase 11 — Multi-Language & Accessibility
+
+Work Log:
+- Created i18n system: en.json (211 keys), fr.json, es.json, hi.json (complete translations)
+- Created i18n/index.ts: t() function with parameter interpolation, English fallback
+- Created locale store: Zustand + persist (localStorage)
+- Created useTranslation hook
+- Created LanguageSwitcher component (shadcn Select, Globe icon, flag emojis)
+- Created SkipToContent component (keyboard-accessible)
+- Created AriaLiveRegion component (screen reader announcements)
+- Created useFocusTrap hook (modal/dialog focus management)
+- Created useFocusReturn hook (focus restoration on close)
+- Created useReducedMotion hook (prefers-reduced-motion detection)
+- Added global a11y CSS: focus-visible, reduced-motion, high-contrast, touch targets
+- Added SkipToContent to layout, id="main-content" to main element
+- Added ARIA labels to QuickNav (role="navigation", aria-current, aria-hidden on icons)
+- Added LanguageSwitcher + AriaLiveRegion to root layout
+
+Stage Summary:
+- 4 languages: English, French, Spanish, Hindi (211 keys each)
+- 13 new files (4 translations, 1 config, 1 store, 1 hook, 1 component, 3 a11y hooks, 2 a11y components)
+- Global a11y: skip-to-content, focus management, reduced motion, ARIA landmarks
+- Build: ✅, Lint: ✅
+
+---
+Task ID: 12
+Agent: Main Agent (via subagent)
+Task: Phase 12 — Safety & Moderation
+
+Work Log:
+- Added BlockedUser model to Prisma schema (19 models total)
+- Created POST/GET/DELETE /api/users/block (block, list, unblock)
+- Created GET /api/reports/list (admin/moderator reports with stats)
+- Created PATCH /api/reports/[id]/moderate (review, resolve, dismiss + content deletion)
+- Created ModerationView (full dashboard: stats, report cards, filters, actions)
+- Created UserBlockButton (block/unblock with confirmation)
+- Integrated: Dashboard Moderation card (admin-only), ProfileView block button
+- VideoDetailView already has Report via VideoActions
+
+Stage Summary:
+- 19 DB models, 60+ API routes
+- Moderation dashboard for admin/moderator users
+- User blocking system
+- Content reporting with jury resolution
+- Build: ✅, Lint: ✅
+- ALL 12 PHASES COMPLETE

@@ -33,7 +33,11 @@ import { SocialFeedView } from '@/components/views/social-feed-view';
 import { NotificationsView } from '@/components/views/notifications-view';
 import { UsersListView } from '@/components/views/users-list-view';
 import { MessagesView } from '@/components/views/messages-view';
+import { CirclesView } from '@/components/views/circles-view';
+import { CircleDetailView } from '@/components/views/circle-detail-view';
+import { ModerationView } from '@/components/views/moderation-view';
 import { GlobalSearch } from '@/components/global-search';
+import { SkipToContent } from '@/components/skip-to-content';
 import { NotificationBell } from '@/components/notification-bell';
 import { useRealtime } from '@/hooks/use-realtime';
 import { Plus } from 'lucide-react';
@@ -77,9 +81,10 @@ import {
   Target,
   Bell,
   Rss,
+  ShieldCheck,
 } from 'lucide-react';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -1255,6 +1260,34 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
         </motion.div>
       </motion.div>
 
+      {/* Moderation Card — only show for moderators and admins */}
+      {(role === 'moderator' || role === 'admin') && (
+        <motion.div variants={staggerItem} className="mb-8">
+          <Card
+            className="relative border-2 border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/80 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/10 cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => onNavigate('moderation')}
+          >
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-sm">
+                  <ShieldCheck className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Moderation</CardTitle>
+                  <CardDescription>Review reported content and enforce community guidelines</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <span className="text-sm font-medium">Open Moderation Dashboard</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Quick Wallet Actions Card */}
       <motion.div variants={staggerItem} className="mb-8">
         <Card className="border-2 border-emerald-200 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-50/80 to-orange-50/50 dark:from-emerald-950/20 dark:to-orange-950/10">
@@ -1646,6 +1679,7 @@ export default function Home() {
   const [parentVideoCreator, setParentVideoCreator] = useState<string>('');
   const [parentVideoThumbnail, setParentVideoThumbnail] = useState<string>('');
   const [profileUserId, setProfileUserId] = useState<string>('');
+  const [circleId, setCircleId] = useState<string>('');
 
   const navigate = useCallback((newView: View) => {
     setView(newView);
@@ -1689,8 +1723,20 @@ export default function Home() {
     setProfileUserId(id);
   }, []);
 
+  const handleSetCircleId = useCallback((id: string) => {
+    setCircleId(id);
+  }, []);
+
+  const handleSetVideoId = useCallback((id: string) => {
+    setVideoId(id);
+    setView('video-detail');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   return (
-    <main className="relative overflow-hidden">
+    <>
+    <SkipToContent />
+    <main id="main-content" className="relative overflow-hidden">
       <FloatingOrbs />
       <AnimatePresence mode="wait">
         {view === 'landing' && <LandingPage key="landing" onNavigate={navigate} />}
@@ -1794,7 +1840,30 @@ export default function Home() {
             setProfileUserId={handleSetProfileUserId}
           />
         )}
+        {view === 'circles' && (
+          <CirclesView
+            key="circles"
+            onNavigate={navigate}
+            setCircleId={handleSetCircleId}
+          />
+        )}
+        {view === 'circle-detail' && (
+          <CircleDetailView
+            key={circleId}
+            onNavigate={navigate}
+            circleId={circleId}
+            setProfileUserId={handleSetProfileUserId}
+            setVideoId={handleSetVideoId}
+          />
+        )}
+        {view === 'moderation' && (
+          <ModerationView
+            key="moderation"
+            onNavigate={navigate}
+          />
+        )}
       </AnimatePresence>
     </main>
+    </>
   );
 }
