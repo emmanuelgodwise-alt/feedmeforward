@@ -140,7 +140,10 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
     if (!form.videoUrl.trim()) newErrors.videoUrl = 'Video URL is required';
     else {
       try {
-        new URL(form.videoUrl);
+        // Accept both full URLs and relative upload paths (e.g. /uploads/videos/...)
+        if (!form.videoUrl.startsWith('/')) {
+          new URL(form.videoUrl);
+        }
       } catch {
         newErrors.videoUrl = 'Please enter a valid URL';
       }

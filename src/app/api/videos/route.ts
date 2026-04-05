@@ -83,7 +83,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Video URL is required' }, { status: 400 });
     }
     try {
-      new URL(videoUrl);
+      // Accept both full URLs and relative upload paths (e.g. /uploads/videos/...)
+      if (!videoUrl.startsWith('/')) {
+        new URL(videoUrl);
+      }
     } catch {
       return NextResponse.json({ success: false, error: 'Video URL must be a valid URL' }, { status: 400 });
     }
