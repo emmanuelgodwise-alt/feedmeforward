@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Heart, MessageCircle, Reply, Send, Loader2, CheckCircle2 } from 'lucide-react';
+import { Heart, MessageCircle, Reply, Send, Loader2, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useVideoStore } from '@/stores/video-store';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +27,10 @@ export function CommentSection({ videoId }: CommentSectionProps) {
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   const fetchComments = async () => {
     setLoading(true);
@@ -79,6 +84,80 @@ export function CommentSection({ videoId }: CommentSectionProps) {
     }
   };
 
+  const handleEditComment = (comment: CommentData) => {
+    setEditingCommentId(comment.id);
+    setEditContent(comment.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditContent('');
+  };
+
+  const handleSaveEdit = async (commentId: string) => {
+    if (!currentUser || !editContent.trim()) return;
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/comments/${commentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': currentUser.id,
+        },
+        body: JSON.stringify({ content: editContent.trim() }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setComments((prev) =>
+          prev.map((c) =>
+            c.id === commentId
+              ? { ...c, content: editContent.trim() }
+              : {
+                  ...c,
+                  replies: c.replies?.map((r) =>
+                    r.id === commentId ? { ...r, content: editContent.trim() } : r
+                  ),
+                }
+          )
+        );
+        toast({ title: 'Comment updated', description: 'Your comment has been updated.' });
+        setEditingCommentId(null);
+        setEditContent('');
+      } else {
+        toast({ title: 'Update failed', description: json.error || 'Could not update comment', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Network error', description: 'Failed to update comment', variant: 'destructive' });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!currentUser) return;
+    setDeletingCommentId(null);
+    try {
+      const res = await fetch(`/api/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { 'X-User-Id': currentUser.id },
+      });
+      const json = await res.json();
+      if (json.success) {
+        setComments((prev) =>
+          prev.filter((c) => c.id !== commentId).map((c) => ({
+            ...c,
+            replies: c.replies?.filter((r) => r.id !== commentId) || [],
+          }))
+        );
+        toast({ title: 'Comment deleted', description: 'Your comment has been removed.' });
+      } else {
+        toast({ title: 'Delete failed', description: json.error || 'Could not delete comment', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Network error', description: 'Failed to delete comment', variant: 'destructive' });
+    }
+  };
+
   const handleSubmitReply = async (parentCommentId: string) => {
     if (!currentUser || !replyText.trim()) return;
 
@@ -114,7 +193,41 @@ export function CommentSection({ videoId }: CommentSectionProps) {
             )}
             <span className="text-xs text-muted-foreground">{timeAgo(comment.createdAt)}</span>
           </div>
-          <p className="text-sm mt-0.5 text-foreground/90">{comment.content}</p>
+
+          {/* Edit mode */}
+          {editingCommentId === comment.id ? (
+            <div className="mt-2 space-y-2">
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                rows={3}
+                className="resize-none text-sm"
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="gap-1 h-7 text-xs bg-gradient-to-r from-orange-500 to-amber-500 text-white"
+                  onClick={() => handleSaveEdit(comment.id)}
+                  disabled={savingEdit || !editContent.trim()}
+                >
+                  {savingEdit ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                  Save
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={handleCancelEdit}
+                  disabled={savingEdit}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm mt-0.5 text-foreground/90">{comment.content}</p>
+          )}
+
           <div className="flex items-center gap-3 mt-1">
             <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-rose-500 transition-colors">
               <Heart className="w-3 h-3" />
@@ -128,6 +241,39 @@ export function CommentSection({ videoId }: CommentSectionProps) {
                 <Reply className="w-3 h-3" />
                 Reply
               </button>
+            )}
+            {/* Edit & Delete for own comments */}
+            {currentUser && currentUser.id === comment.user.id && editingCommentId !== comment.id && (
+              <>
+                <button
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-orange-500 transition-colors"
+                  onClick={() => handleEditComment(comment)}
+                >
+                  <Pencil className="w-3 h-3" />
+                  Edit
+                </button>
+                {deletingCommentId === comment.id ? (
+                  <span className="text-xs text-red-500 flex items-center gap-1">
+                    Delete?
+                    <button
+                      className="underline hover:text-red-700"
+                      onClick={() => handleDeleteComment(comment.id)}
+                    >Yes</button>
+                    <button
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => setDeletingCommentId(null)}
+                    >No</button>
+                  </span>
+                ) : (
+                  <button
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                    onClick={() => setDeletingCommentId(comment.id)}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Delete
+                  </button>
+                )}
+              </>
             )}
           </div>
 

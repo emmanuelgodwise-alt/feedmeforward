@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -17,6 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
   CheckCircle2,
@@ -37,6 +46,8 @@ import {
   Globe,
   Heart,
   Save,
+  Pencil,
+  X,
 } from 'lucide-react';
 import { VideoCard } from '@/components/video-card';
 import { FollowButton } from '@/components/follow-button';
@@ -212,6 +223,20 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [activeTab, setActiveTab] = useState('videos');
 
+  // Edit profile dialog state
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    displayName: '',
+    bio: '',
+    avatarUrl: '',
+    interestsText: '',
+    ageRange: '',
+    location: '',
+    gender: '',
+    language: '',
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
+
   // Audience profile form state
   const [audienceForm, setAudienceForm] = useState({
     ageRange: '',
@@ -223,6 +248,103 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
   const [savingAudience, setSavingAudience] = useState(false);
 
   const isOwnProfile = currentUser?.id === userId;
+
+  // Populate edit form when profile data loads
+  useEffect(() => {
+    if (profileData) {
+      let interestsText = '';
+      if ((profileData as Record<string, unknown>).interests) {
+        try {
+          const raw = (profileData as Record<string, unknown>).interests;
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          interestsText = Array.isArray(parsed) ? parsed.join(', ') : '';
+        } catch {
+          interestsText = '';
+        }
+      }
+      setEditForm({
+        displayName: profileData.displayName || '',
+        bio: profileData.bio || '',
+        avatarUrl: profileData.avatarUrl || '',
+        interestsText,
+        ageRange: audienceForm.ageRange || '',
+        location: audienceForm.location || '',
+        gender: audienceForm.gender || '',
+        language: audienceForm.language || '',
+      });
+    }
+  }, [profileData, audienceForm.ageRange, audienceForm.location, audienceForm.gender, audienceForm.language]);
+
+  const handleEditProfileOpen = (open: boolean) => {
+    if (open && profileData) {
+      let interestsText = '';
+      if ((profileData as Record<string, unknown>).interests) {
+        try {
+          const raw = (profileData as Record<string, unknown>).interests;
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          interestsText = Array.isArray(parsed) ? parsed.join(', ') : '';
+        } catch {
+          interestsText = '';
+        }
+      }
+      setEditForm({
+        displayName: profileData.displayName || '',
+        bio: profileData.bio || '',
+        avatarUrl: profileData.avatarUrl || '',
+        interestsText,
+        ageRange: audienceForm.ageRange || '',
+        location: audienceForm.location || '',
+        gender: audienceForm.gender || '',
+        language: audienceForm.language || '',
+      });
+    }
+    setEditProfileOpen(open);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!currentUser) return;
+    setSavingProfile(true);
+    try {
+      const interestsArray = editForm.interestsText
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const body: Record<string, unknown> = {
+        displayName: editForm.displayName,
+        bio: editForm.bio,
+        avatarUrl: editForm.avatarUrl,
+        ageRange: editForm.ageRange,
+        location: editForm.location,
+        gender: editForm.gender,
+        language: editForm.language,
+        interests: interestsArray,
+      };
+      const res = await fetch('/api/users/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': currentUser.id },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast({ title: 'Profile updated!', description: 'Your profile has been saved.' });
+        useAuthStore.getState().refreshUser();
+        // Refresh profile data
+        setLoading(true);
+        fetch(`/api/users/${userId}`)
+          .then((r) => r.json())
+          .then((j) => { if (j.success) setProfileData(j.data); })
+          .catch(() => {})
+          .finally(() => setLoading(false));
+        setEditProfileOpen(false);
+      } else {
+        toast({ title: 'Update failed', description: json.error || 'Something went wrong', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Network error', description: 'Failed to save profile', variant: 'destructive' });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -435,10 +557,21 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
               )}
 
               {/* Role Badge */}
-              <div className="mt-3">
+              <div className="mt-3 flex items-center justify-center gap-2">
                 <Badge className={`text-xs ${roleBadge.className}`}>
                   {roleBadge.label}
                 </Badge>
+                {isOwnProfile && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-7 text-xs border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-950/30 text-orange-600 dark:text-orange-400"
+                    onClick={() => handleEditProfileOpen(true)}
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Edit Profile
+                  </Button>
+                )}
               </div>
 
               {/* Joined */}
@@ -499,6 +632,169 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
               )}
             </CardContent>
           </Card>
+
+          {/* Edit Profile Dialog */}
+          <Dialog open={editProfileOpen} onOpenChange={handleEditProfileOpen}>
+            <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Pencil className="w-5 h-5 text-orange-500" />
+                  Edit Profile
+                </DialogTitle>
+                <DialogDescription>Update your profile information below.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                {/* Display Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit-display-name">Display Name</Label>
+                  <Input
+                    id="edit-display-name"
+                    placeholder="Your display name"
+                    value={editForm.displayName}
+                    onChange={(e) => setEditForm((f) => ({ ...f, displayName: e.target.value }))}
+                  />
+                </div>
+
+                {/* Bio */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit-bio">Bio</Label>
+                  <Textarea
+                    id="edit-bio"
+                    placeholder="Tell us about yourself..."
+                    value={editForm.bio}
+                    onChange={(e) => setEditForm((f) => ({ ...f, bio: e.target.value.slice(0, 200) }))}
+                    rows={3}
+                    className="resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground text-right">{editForm.bio.length}/200</p>
+                </div>
+
+                {/* Avatar URL */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit-avatar-url">Avatar URL</Label>
+                  <Input
+                    id="edit-avatar-url"
+                    placeholder="https://example.com/avatar.jpg"
+                    value={editForm.avatarUrl}
+                    onChange={(e) => setEditForm((f) => ({ ...f, avatarUrl: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">Paste a link to an image for your profile picture.</p>
+                </div>
+
+                {/* Interests */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit-interests">Interests</Label>
+                  <Input
+                    id="edit-interests"
+                    placeholder="e.g. tech, music, sports (comma-separated)"
+                    value={editForm.interestsText}
+                    onChange={(e) => setEditForm((f) => ({ ...f, interestsText: e.target.value }))}
+                  />
+                  {editForm.interestsText && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {editForm.interestsText.split(',').map((s) => s.trim()).filter(Boolean).map((interest) => (
+                        <Badge
+                          key={interest}
+                          variant="secondary"
+                          className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+                        >
+                          {interest}
+                          <button
+                            type="button"
+                            onClick={() => setEditForm((f) => ({
+                              ...f,
+                              interestsText: f.interestsText
+                                .split(',')
+                                .filter((t) => t.trim() !== interest)
+                                .join(', '),
+                            }))}
+                            className="ml-1 hover:text-orange-900 dark:hover:text-orange-100"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Age Range & Gender */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Age Range</Label>
+                    <Select
+                      value={editForm.ageRange}
+                      onValueChange={(val) => setEditForm((f) => ({ ...f, ageRange: val }))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select age range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="18-24">18-24</SelectItem>
+                        <SelectItem value="25-34">25-34</SelectItem>
+                        <SelectItem value="35-44">35-44</SelectItem>
+                        <SelectItem value="45-54">45-54</SelectItem>
+                        <SelectItem value="55+">55+</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Gender</Label>
+                    <Select
+                      value={editForm.gender}
+                      onValueChange={(val) => setEditForm((f) => ({ ...f, gender: val }))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="non-binary">Non-binary</SelectItem>
+                        <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Location & Language */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-location">Location</Label>
+                    <Input
+                      id="edit-location"
+                      placeholder="e.g. Lagos, Nigeria"
+                      value={editForm.location}
+                      onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-language">Language</Label>
+                    <Input
+                      id="edit-language"
+                      placeholder="e.g. en, fr, es"
+                      value={editForm.language}
+                      onChange={(e) => setEditForm((f) => ({ ...f, language: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => handleEditProfileOpen(false)} disabled={savingProfile}>Cancel</Button>
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={savingProfile}
+                  className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white gap-2"
+                >
+                  {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Profile
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </motion.div>
 
         {/* Score & Activity */}

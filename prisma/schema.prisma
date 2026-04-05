@@ -47,6 +47,8 @@ model User {
   segments          AudienceSegment[] @relation("UserAudienceSegments")
   notifications     Notification[]  @relation("UserNotifications")
   sentNotifications Notification[]  @relation("NotificationSender")
+  sentMessages      Message[]       @relation("SentMessages")
+  receivedMessages  Message[]       @relation("ReceivedMessages")
 }
 
 // ─── Video Model ────────────────────────────────────────────────────
@@ -315,6 +317,22 @@ model Notification {
   video    Video?   @relation("NotificationVideo", fields: [videoId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+}
+
+// ─── Message Model (Direct Messages) ──────────────────────────────
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  receiverId  String
+  content     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, isRead])
 }
 
 // ─── Audience Segment Model ─────────────────────────────────────────

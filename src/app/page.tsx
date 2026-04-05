@@ -32,6 +32,9 @@ import { SegmentsView } from '@/components/views/segments-view';
 import { SocialFeedView } from '@/components/views/social-feed-view';
 import { NotificationsView } from '@/components/views/notifications-view';
 import { UsersListView } from '@/components/views/users-list-view';
+import { MessagesView } from '@/components/views/messages-view';
+import { GlobalSearch } from '@/components/global-search';
+import { NotificationBell } from '@/components/notification-bell';
 import { Plus } from 'lucide-react';
 import {
   Eye,
@@ -75,7 +78,7 @@ import {
   Rss,
 } from 'lucide-react';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -875,7 +878,7 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
         variants={staggerItem}
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-md shadow-orange-500/20">
             <img src="/logo.svg" alt="Logo" className="w-7 h-7 object-contain" />
           </div>
@@ -887,10 +890,14 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
             <p className="text-sm text-muted-foreground">Welcome back, {currentUser.username}!</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
-          <LogOut className="w-4 h-4" />
-          Sign Out
-        </Button>
+        <div className="flex items-center gap-2">
+          <GlobalSearch onNavigate={(v) => onNavigate(v as View)} setProfileUserId={setProfileUserId} />
+          <NotificationBell onNavigate={(v) => onNavigate(v as View)} />
+          <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </Button>
+        </div>
       </motion.div>
 
       {/* Stats Grid */}
@@ -1153,6 +1160,35 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
               </p>
               <div className="mt-4 flex items-center gap-2 text-rose-600 dark:text-rose-400">
                 <span className="text-sm font-medium">View Notifications</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Messages Card */}
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow border-2 border-cyan-200 dark:border-cyan-800/40 bg-gradient-to-br from-cyan-50/80 to-blue-50/50 dark:from-cyan-950/20 dark:to-blue-950/10"
+            onClick={() => onNavigate('messages')}
+          >
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-sm">
+                  <MessageSquare className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Messages</CardTitle>
+                  <CardDescription>Direct messaging</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Chat with other creators, share ideas, and build connections.
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-cyan-600 dark:text-cyan-400">
+                <span className="text-sm font-medium">Open Messages</span>
                 <ChevronRight className="w-4 h-4" />
               </div>
             </CardContent>
@@ -1744,6 +1780,13 @@ export default function Home() {
             onNavigate={navigate}
             setProfileUserId={handleSetProfileUserId}
             targetUserId={profileUserId}
+          />
+        )}
+        {view === 'messages' && (
+          <MessagesView
+            key="messages"
+            onNavigate={navigate}
+            setProfileUserId={handleSetProfileUserId}
           />
         )}
       </AnimatePresence>

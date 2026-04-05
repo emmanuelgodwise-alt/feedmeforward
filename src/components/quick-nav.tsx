@@ -13,6 +13,7 @@ import {
   Target,
   Rss,
   Bell,
+  MessageSquare,
 } from 'lucide-react';
 
 interface QuickNavProps {
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { icon: Rss, label: 'Feed', view: 'feed' },
   { icon: Video, label: 'Explore', view: 'explore' },
   { icon: Plus, label: 'Create', view: 'create-lead' },
+  { icon: MessageSquare, label: 'Messages', view: 'messages' },
   { icon: Bell, label: 'Alerts', view: 'notifications' },
   { icon: TrendingUp, label: 'Rewards', view: 'rewards' },
   { icon: Wallet, label: 'Wallet', view: 'wallet' },

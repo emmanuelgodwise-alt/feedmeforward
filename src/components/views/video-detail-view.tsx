@@ -39,6 +39,7 @@ import {
   Download,
 } from 'lucide-react';
 import { TipDialog } from '@/components/tip-dialog';
+import { VideoActions } from '@/components/video-actions';
 import { QuickNav } from '@/components/quick-nav';
 import { useVideoStore } from '@/stores/video-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -72,6 +73,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
   const [fundAmount, setFundAmount] = useState('');
   const [fundDialogOpen, setFundDialogOpen] = useState(false);
   const [earningRevenue, setEarningRevenue] = useState(false);
+  const [videoVersion, setVideoVersion] = useState(0);
   const { updateWalletBalance } = useAuthStore();
 
   useEffect(() => {
@@ -88,7 +90,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
     return () => {
       clearCurrentVideo();
     };
-  }, [videoId, fetchVideo, clearCurrentVideo]);
+  }, [videoId, videoVersion, fetchVideo, clearCurrentVideo]);
 
   const triggerScoreRecalc = (userId: string) => {
     fetch('/api/scores/calculate', {
@@ -424,7 +426,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
             ) : null}
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant={video.isLiked ? 'default' : 'outline'}
                 size="sm"
@@ -455,6 +457,15 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                 {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'Copied' : 'Share'}
               </Button>
+              {/* Video Actions (edit/delete/report/share) */}
+              <VideoActions
+                videoId={videoId}
+                creatorId={video.creator.id}
+                title={video.title}
+                currentUserId={currentUser?.id}
+                onVideoUpdated={() => setVideoVersion((v) => v + 1)}
+              />
+
               {/* Tip Creator button */}
               {currentUser && video.creator.id !== currentUser.id && (
                 <Button
