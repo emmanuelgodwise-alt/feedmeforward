@@ -36,6 +36,7 @@ import { MessagesView } from '@/components/views/messages-view';
 import { CirclesView } from '@/components/views/circles-view';
 import { CircleDetailView } from '@/components/views/circle-detail-view';
 import { ModerationView } from '@/components/views/moderation-view';
+import { OnboardingView } from '@/components/views/onboarding-view';
 import { GlobalSearch } from '@/components/global-search';
 import { SkipToContent } from '@/components/skip-to-content';
 import { NotificationBell } from '@/components/notification-bell';
@@ -84,7 +85,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -448,7 +449,7 @@ function SignUpForm({ onNavigate }: { onNavigate: (view: View) => void }) {
       });
 
       login(data.user);
-      onNavigate('explore');
+      onNavigate('onboarding');
     } catch {
       toast({
         title: 'Network error',
@@ -683,7 +684,7 @@ function LoginForm({ onNavigate }: { onNavigate: (view: View) => void }) {
       });
 
       login(data.user);
-      onNavigate('explore');
+      onNavigate(data.user.onboardingCompleted ? 'explore' : 'onboarding');
     } catch {
       toast({
         title: 'Network error',
@@ -1672,7 +1673,7 @@ export default function Home() {
   // Establish global real-time SSE connection for all views
   useRealtime();
 
-  const [view, setView] = useState<View>(isAuthenticated ? 'explore' : 'landing');
+  const [view, setView] = useState<View>(isAuthenticated && !currentUser?.onboardingCompleted ? 'onboarding' : isAuthenticated ? 'explore' : 'landing');
   const [videoId, setVideoId] = useState<string>('');
   const [parentVideoId, setParentVideoId] = useState<string>('');
   const [parentVideoTitle, setParentVideoTitle] = useState<string>('');
@@ -1859,6 +1860,13 @@ export default function Home() {
         {view === 'moderation' && (
           <ModerationView
             key="moderation"
+            onNavigate={navigate}
+          />
+        )}
+        {view === 'onboarding' && (
+          <OnboardingView
+            key="onboarding"
+            onComplete={() => setView('explore')}
             onNavigate={navigate}
           />
         )}

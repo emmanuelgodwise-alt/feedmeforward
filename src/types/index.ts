@@ -163,9 +163,10 @@ export interface UserProfileData {
   breakdown: ScoreBreakdown;
 }
 
-export type ScoreLevel = 'bronze' | 'silver' | 'gold' | 'diamond';
+export type ScoreLevel = 'bronze' | 'silver' | 'gold' | 'diamond' | 'elite';
 
 export function getScoreLevel(score: number): ScoreLevel {
+  if (score >= 900) return 'elite';
   if (score >= 750) return 'diamond';
   if (score >= 500) return 'gold';
   if (score >= 200) return 'silver';
@@ -174,6 +175,7 @@ export function getScoreLevel(score: number): ScoreLevel {
 
 export function getScoreLevelInfo(level: ScoreLevel): { label: string; color: string; gradient: string; minScore: number } {
   switch (level) {
+    case 'elite': return { label: 'Elite', color: 'text-rose-600 dark:text-rose-400', gradient: 'from-rose-500 to-amber-400', minScore: 900 };
     case 'diamond': return { label: 'Diamond', color: 'text-cyan-600 dark:text-cyan-400', gradient: 'from-cyan-400 to-purple-500', minScore: 750 };
     case 'gold': return { label: 'Gold', color: 'text-amber-600 dark:text-amber-400', gradient: 'from-amber-400 to-yellow-500', minScore: 500 };
     case 'silver': return { label: 'Silver', color: 'text-gray-600 dark:text-gray-300', gradient: 'from-gray-300 to-gray-400', minScore: 200 };
@@ -183,6 +185,7 @@ export function getScoreLevelInfo(level: ScoreLevel): { label: string; color: st
 
 export function getScoreLevelColor(level: ScoreLevel): string {
   switch (level) {
+    case 'elite': return 'from-rose-500 to-amber-400';
     case 'diamond': return 'from-cyan-400 to-purple-500';
     case 'gold': return 'from-amber-400 to-yellow-500';
     case 'silver': return 'from-gray-300 to-gray-400';
@@ -192,6 +195,8 @@ export function getScoreLevelColor(level: ScoreLevel): string {
 
 export function getScoreLevelBadge(level: ScoreLevel): { label: string; className: string } {
   switch (level) {
+    case 'elite':
+      return { label: 'Elite', className: 'bg-gradient-to-r from-rose-100 to-amber-100 text-rose-700 dark:from-rose-900/40 dark:to-amber-900/40 dark:text-rose-300' };
     case 'diamond':
       return { label: 'Diamond', className: 'bg-gradient-to-r from-cyan-100 to-purple-100 text-cyan-700 dark:from-cyan-900/40 dark:to-purple-900/40 dark:text-cyan-300' };
     case 'gold':
@@ -204,13 +209,15 @@ export function getScoreLevelBadge(level: ScoreLevel): { label: string; classNam
 }
 
 export function getNextLevelThreshold(score: number): number | null {
-  if (score >= 750) return null; // Already max
+  if (score >= 900) return null; // Already max
+  if (score >= 750) return 900;
   if (score >= 500) return 750;
   if (score >= 200) return 500;
   return 200;
 }
 
 export function getPreviousLevelThreshold(score: number): number {
+  if (score >= 900) return 750;
   if (score >= 750) return 500;
   if (score >= 500) return 200;
   if (score >= 200) return 0;

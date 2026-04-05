@@ -8,6 +8,7 @@ export interface User {
   memberScore: number;
   walletBalance: number;
   isVerified: boolean;
+  onboardingCompleted?: boolean;
   displayName?: string | null;
   bio?: string | null;
   avatarUrl?: string | null;

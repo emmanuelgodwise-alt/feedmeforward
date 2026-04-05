@@ -2716,3 +2716,71 @@ Stage Summary:
 - New file: src/components/poll-analytics.tsx
 - Modified: src/components/views/video-detail-view.tsx (added analyticsPollId state, PollAnalytics import, Analytics button + panel)
 - All 3 features build successfully
+
+---
+Task ID: 3-a
+Agent: Main
+Task: Feature 4 — Enhanced Auto-Scoring System
+
+Work Log:
+- Rewrote src/lib/score-engine.ts with v2 scoring algorithm
+- Video responses now earn 6x points vs 1x for text-only (was same before)
+- Lead clips earn 3pts (up from 2)
+- Paid poll participation bonus: +3 per paid poll voted, +4 in accuracy
+- Response quality scoring: measures likes/comments received on user's video responses
+- Description quality bonus: +3 per response with 50+ char description (cap 30)
+- Comment engagement demoted from 1pt to 0.5pt to emphasize video
+- New output metrics: rating label, influencerScore (0-100), videoResponseRatio (%)
+- Added Elite level (900-1000) to types/index.ts, updated all level functions
+- Influencer Score composite: video ratio (40) + response quality (30) + engagement (30)
+
+Stage Summary:
+- Modified: src/lib/score-engine.ts (complete rewrite)
+- Modified: src/types/index.ts (added elite level, updated all level functions)
+
+---
+Task ID: 3-b
+Agent: Main
+Task: Feature 5 — Paid Polls for Businesses
+
+Work Log:
+- Audited existing paid poll infrastructure: already complete
+- Fund Poll API: companies fund polls from wallet, atomic transaction
+- Claim Reward API: participants claim rewards after voting
+- Wallet Deposit/Withdraw: sandbox instant mode
+- Transaction types: 'tip', 'withdrawal', 'deposit', 'earning', 'reward'
+- Payment flow verified: Company → Wallet → Fund Poll → Participants vote → Claim Reward → Withdraw
+- No changes needed — infrastructure was already built in earlier phases
+
+Stage Summary:
+- Feature was already properly implemented in earlier phases
+- Key routes: POST /api/polls/[id]/fund, POST /api/polls/[id]/claim, POST /api/wallet/deposit, POST /api/wallet/withdraw
+
+---
+Task ID: 3-c
+Agent: Main
+Task: Feature 6 — Onboarding System
+
+Work Log:
+- Added onboardingCompleted boolean field to User model in Prisma schema
+- Ran prisma db push to apply migration
+- Added onboardingCompleted to User interface in auth store
+- Created POST /api/onboarding API to mark onboarding complete
+- Built comprehensive 6-step OnboardingView component:
+  Step 1 (Welcome): Platform overview with 3 value props
+  Step 2 (Video Power): Why video responses matter (trust, 6x points, engagement)
+  Step 3 (Influencer Path): Score tiers Bronze→Elite, influencer score, paid poll eligibility
+  Step 4 (Making Videos): Tips (lighting, audio, focused, authentic), auto-format info, 4 tutorial links
+  Step 5 (Getting Paid): 5-step payment flow diagram, earning potential explanation
+  Step 6 (Ready): Action cards for first steps
+- Progress bar with skip-for-now option
+- Integrated into page.tsx: signup redirects to onboarding, login checks onboardingCompleted
+- Initial view state routes to onboarding if !onboardingCompleted
+- Added 'onboarding' to View type union and AnimatePresence render block
+
+Stage Summary:
+- Modified: prisma/schema.prisma (added onboardingCompleted field)
+- New file: src/app/api/onboarding/route.ts
+- New file: src/components/views/onboarding-view.tsx
+- Modified: src/stores/auth-store.ts (added onboardingCompleted to User)
+- Modified: src/app/page.tsx (View type, initial state, signup/login redirects, render block)

@@ -20,6 +20,7 @@ model User {
   memberScore    Int      @default(0)
   walletBalance  Float    @default(0.0)
   isVerified     Boolean  @default(false)
+  onboardingCompleted Boolean @default(false)
   // Audience Segmentation
   ageRange       String?
   location       String?
