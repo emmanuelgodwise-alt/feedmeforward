@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Plus, Video, RefreshCw, Search } from 'lucide-react';
+import { Plus, Video, RefreshCw, Search } from 'lucide-react';
 import { useVideoStore } from '@/stores/video-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { VideoCard } from '@/components/video-card';
@@ -46,8 +46,7 @@ export function ExploreView({ onNavigate, setVideoId }: ExploreViewProps) {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6"
       >
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0 gap-2">
-            <ArrowLeft className="w-4 h-4" />
+          <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0">
             <span className="text-sm">Back to Dashboard</span>
           </Button>
           <div>

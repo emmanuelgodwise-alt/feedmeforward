@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import {
-  ArrowLeft,
   CheckCircle2,
   Calendar,
   Video,
@@ -40,6 +39,7 @@ import {
   Save,
 } from 'lucide-react';
 import { VideoCard } from '@/components/video-card';
+import { FollowButton } from '@/components/follow-button';
 import { QuickNav } from '@/components/quick-nav';
 import { useAuthStore } from '@/stores/auth-store';
 import {
@@ -353,8 +353,7 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
           <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Profile not found</h2>
           <p className="text-muted-foreground mb-4">{error || 'This user profile is unavailable.'}</p>
-          <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="gap-2">
-            <ArrowLeft className="w-4 h-4" />
+          <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0">
             <span className="text-sm">Back to Dashboard</span>
           </Button>
         </div>
@@ -383,8 +382,7 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-6"
       >
-        <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0 gap-2">
-          <ArrowLeft className="w-4 h-4" />
+        <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0">
           <span className="text-sm">Back to Dashboard</span>
         </Button>
         <h1 className="text-2xl font-bold">Profile</h1>
@@ -461,11 +459,27 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                   <p className="text-lg font-bold">{profileData.responseCount}</p>
                   <p className="text-xs text-muted-foreground">Responses</p>
                 </div>
-                <div className="text-center">
+                <div
+                  className="text-center cursor-pointer hover:text-orange-500 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.dispatchEvent(new CustomEvent('navigate-users-list', {
+                      detail: { userId: profileData.id, tab: 'followers' },
+                    }));
+                  }}
+                >
                   <p className="text-lg font-bold">{profileData.followerCount}</p>
                   <p className="text-xs text-muted-foreground">Followers</p>
                 </div>
-                <div className="text-center">
+                <div
+                  className="text-center cursor-pointer hover:text-orange-500 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.dispatchEvent(new CustomEvent('navigate-users-list', {
+                      detail: { userId: profileData.id, tab: 'following' },
+                    }));
+                  }}
+                >
                   <p className="text-lg font-bold">{profileData.followingCount}</p>
                   <p className="text-xs text-muted-foreground">Following</p>
                 </div>
@@ -473,12 +487,15 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
 
               {/* Follow Button (for other profiles) */}
               {!isOwnProfile && currentUser && (
-                <Button
-                  className="w-full mt-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
-                >
-                  <UserPlus className="w-4 h-4 mr-1" />
-                  Follow
-                </Button>
+                <div className="w-full mt-4">
+                  <FollowButton
+                    targetUserId={userId}
+                    targetUsername={profileData.username}
+                    size="lg"
+                    variant="full"
+                    className="w-full"
+                  />
+                </div>
               )}
             </CardContent>
           </Card>

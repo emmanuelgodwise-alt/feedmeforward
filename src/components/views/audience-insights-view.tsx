@@ -15,7 +15,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import { QuickNav } from '@/components/quick-nav';
 import {
-  ArrowLeft,
   BarChart3,
   Users,
   UserPlus,
@@ -142,7 +141,6 @@ export function AudienceInsightsView({ onNavigate }: ViewProps) {
       {/* Header */}
       <motion.div variants={staggerItem} className="flex items-center gap-3 mb-4">
         <Button variant="ghost" size="sm" onClick={() => onNavigate('dashboard')} className="gap-2">
-          <ArrowLeft className="w-4 h-4" />
           <span className="text-sm">Back to Dashboard</span>
         </Button>
       </motion.div>

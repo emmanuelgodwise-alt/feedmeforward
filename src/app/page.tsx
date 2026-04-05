@@ -29,6 +29,9 @@ import { RewardsView } from '@/components/views/rewards-view';
 import { InvitationsView } from '@/components/views/invitations-view';
 import { AudienceInsightsView } from '@/components/views/audience-insights-view';
 import { SegmentsView } from '@/components/views/segments-view';
+import { SocialFeedView } from '@/components/views/social-feed-view';
+import { NotificationsView } from '@/components/views/notifications-view';
+import { UsersListView } from '@/components/views/users-list-view';
 import { Plus } from 'lucide-react';
 import {
   Eye,
@@ -46,7 +49,6 @@ import {
   Users,
   TrendingUp,
   ChevronRight,
-  ArrowLeft,
   Database,
   BarChart3,
   UserPlus,
@@ -69,9 +71,11 @@ import {
   Award,
   CheckCircle2,
   Target,
+  Bell,
+  Rss,
 } from 'lucide-react';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'audience' | 'segments';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -470,8 +474,7 @@ function SignUpForm({ onNavigate }: { onNavigate: (view: View) => void }) {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <div className="flex justify-start mb-2">
-            <Button variant="ghost" onClick={() => onNavigate('landing')} className="shrink-0 gap-2">
-              <ArrowLeft className="w-4 h-4" />
+            <Button variant="ghost" onClick={() => onNavigate('landing')} className="shrink-0">
               <span className="text-sm">Back to Home</span>
             </Button>
           </div>
@@ -706,8 +709,7 @@ function LoginForm({ onNavigate }: { onNavigate: (view: View) => void }) {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <div className="flex justify-start mb-2">
-            <Button variant="ghost" onClick={() => onNavigate('landing')} className="shrink-0 gap-2">
-              <ArrowLeft className="w-4 h-4" />
+            <Button variant="ghost" onClick={() => onNavigate('landing')} className="shrink-0">
               <span className="text-sm">Back to Home</span>
             </Button>
           </div>
@@ -1099,6 +1101,64 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
           </Card>
         </motion.div>
 
+        {/* Social Feed Card */}
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow border-2 border-blue-200 dark:border-blue-800/40 bg-gradient-to-br from-blue-50/80 to-orange-50/50 dark:from-blue-950/20 dark:to-orange-950/10"
+            onClick={() => onNavigate('feed')}
+          >
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-sm">
+                  <Rss className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Social Feed</CardTitle>
+                  <CardDescription>Personalized content</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                See videos from creators you follow, discover new content, and stay connected.
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                <span className="text-sm font-medium">View Feed</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Notifications Card */}
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow border-2 border-rose-200 dark:border-rose-800/40 bg-gradient-to-br from-rose-50/80 to-orange-50/50 dark:from-rose-950/20 dark:to-orange-950/10"
+            onClick={() => onNavigate('notifications')}
+          >
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center shadow-sm">
+                  <Bell className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Notifications</CardTitle>
+                  <CardDescription>Stay updated</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                See who followed you, liked your videos, commented, and more activity updates.
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                <span className="text-sm font-medium">View Notifications</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Lead Clips Card */}
         <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
           <Card
@@ -1266,8 +1326,7 @@ function SchemaDashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6"
       >
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0 gap-2">
-            <ArrowLeft className="w-4 h-4" />
+          <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0">
             <span className="text-sm">Back to Dashboard</span>
           </Button>
           <div>
@@ -1563,7 +1622,16 @@ export default function Home() {
       }
     };
     window.addEventListener('navigate-video', handler);
-    return () => window.removeEventListener('navigate-video', handler);
+    window.addEventListener('navigate-users-list', (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setProfileUserId(detail.userId);
+      // Store the tab info temporarily (we'll handle this in UsersListView)
+      setView('users-list');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    return () => {
+      window.removeEventListener('navigate-video', handler);
+    };
   }, []);
 
   const handleVideoClick = useCallback((id: string) => {
@@ -1652,6 +1720,30 @@ export default function Home() {
           <SegmentsView
             key="segments"
             onNavigate={navigate}
+          />
+        )}
+        {view === 'feed' && (
+          <SocialFeedView
+            key="feed"
+            onNavigate={navigate}
+            setVideoId={handleVideoClick}
+            setProfileUserId={handleSetProfileUserId}
+          />
+        )}
+        {view === 'notifications' && (
+          <NotificationsView
+            key="notifications"
+            onNavigate={navigate}
+            setProfileUserId={handleSetProfileUserId}
+            setVideoId={handleVideoClick}
+          />
+        )}
+        {view === 'users-list' && profileUserId && (
+          <UsersListView
+            key="users-list"
+            onNavigate={navigate}
+            setProfileUserId={handleSetProfileUserId}
+            targetUserId={profileUserId}
           />
         )}
       </AnimatePresence>

@@ -28,7 +28,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  ArrowLeft,
   ArrowDownCircle,
   ArrowUpCircle,
   Heart,
@@ -258,8 +257,7 @@ export function WalletView({ onNavigate }: WalletViewProps) {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-6"
       >
-        <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0 gap-2">
-          <ArrowLeft className="w-4 h-4" />
+        <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0">
           <span className="text-sm">Back to Dashboard</span>
         </Button>
         <div>

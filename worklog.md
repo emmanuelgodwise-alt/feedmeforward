@@ -1253,3 +1253,440 @@ Stage Summary:
 - Files created: 5 API routes, 2 view components
 - Files modified: schema.prisma, page.tsx, quick-nav.tsx, profile-view.tsx
 - New DB fields: 5 on User + 1 AudienceSegment model
+
+---
+## Task ID: notification-helper - main-agent (Notification Helper Library)
+### Work Task
+Create a notification helper library at `/home/z/my-project/src/lib/notifications.ts` for fire-and-forget notification creation across the app.
+
+### Work Summary
+- Created `src/lib/notifications.ts` with:
+  - `NotificationType` union type covering 8 notification types: follow, like, comment, response, poll_vote, mention, invitation_accepted, tip
+  - `CreateNotificationInput` interface with userId, fromUserId, type, title, message, videoId, commentId
+  - `createNotification()` — fire-and-forget function that persists to DB via Prisma, uses `.catch()` for error handling so callers never need to await
+  - `getNotificationDefaults()` — private helper providing default title/message per notification type
+  - `getUnreadCount()` — async function returning count of unread notifications for a user
+- Corrected import path from `@/lib/prisma` (user spec) to `@/lib/db` (actual project convention)
+- `npm run lint` passes with zero errors
+
+#### File Created
+```
+src/lib/notifications.ts (created)
+```
+
+---
+## Task ID: 2-a - backend-agent (Phase 7: Follow System, Social Feed, Search, Notifications — API Routes)
+### Work Task
+Create 10 API routes for the Follow system, social feed, user search, and notifications. All routes use `X-User-Id` header for authentication.
+
+### Work Summary
+
+#### 1. POST/DELETE `/api/users/[userId]/follow/route.ts` — Follow/Unfollow (1 file, 2 handlers)
+**POST (Follow):**
+- Auth via `X-User-Id` header
+- Validates: cannot follow yourself (400), target user must exist (404)
+- Creates Follow record; catches P2002 Prisma error for duplicate follows → returns 409
+- Creates a Notification (type='follow') for the followed user with "New Follower" title and "@username started following you" message
+- Triggers `recalculateScore` for both follower and followed user (fire and forget)
+- Returns `{ success: true, following: { id, username, displayName, avatarUrl, memberScore, isVerified } }`
+
+**DELETE (Unfollow):**
+- Auth via `X-User-Id` header
+- Uses composite unique key `followerId_followingId` to find the Follow record
+- Returns 404 if not following
+- Deletes the Follow record and triggers score recalc for both users
+- Returns `{ success: true }`
+
+#### 2. GET `/api/users/[userId]/followers/route.ts` — List followers
+- Auth via `X-User-Id`, query params: `page` (default 1), `limit` (default 20, max 100)
+- Verifies target user exists (404 if not)
+- Queries Follow records where `followingId = params.userId`, includes follower user data
+- Batch checks which followers the current user follows back (for "Follows You" indicator)
+- Returns `{ followers: [...withFollowedByYou], pagination }`
+
+#### 3. GET `/api/users/[userId]/following/route.ts` — List following
+- Same pagination as followers
+- Queries Follow records where `followerId = params.userId`, includes following user data + bio
+- Batch checks which users the current user also follows
+- Returns `{ following: [...withFollowedByYou], pagination }`
+
+#### 4. GET `/api/users/[userId]/follow-status/route.ts` — Check follow status
+- Checks both directions in parallel using `findUnique` on composite key
+- Returns `{ isFollowing: boolean, isFollowedBy: boolean }`
+- Returns both false if checking status with self
+
+#### 5. GET `/api/feed/route.ts` — Social Feed
+- Auth via `X-User-Id`
+- Gets IDs of users that current user follows, adds own ID
+- Queries public videos from those creators, ordered by createdAt desc
+- Includes creator data (avatar, username, isVerified), polls with user's vote status, vote counts, comment counts
+- Parses JSON options and computes totalVotes for each poll
+- Query params: `page` (default 1), `limit` (default 20, max 50)
+- Returns `{ feed: [...], pagination }`
+
+#### 6. GET `/api/users/search/route.ts` — Search users
+- Auth via `X-User-Id`, query params: `q` (required, min 2 chars), `limit` (default 20, max 50)
+- Case-insensitive search on username and displayName using `contains`
+- Excludes current user from results
+- Batch checks follow/followed-by status with current user
+- Results ordered by memberScore desc
+- Returns `{ users: [...withIsFollowing/isFollowedBy], total }`
+
+#### 7. GET `/api/notifications/route.ts` — List notifications
+- Auth via `X-User-Id`, query params: `unreadOnly` (boolean), `page`, `limit` (default 20, max 100)
+- Uses `Prisma.NotificationWhereInput` for type-safe query building
+- Includes `fromUser` data (id, username, displayName, avatarUrl) and `video` data (id, title, thumbnailUrl) via relations
+- Always returns `unreadCount` regardless of filter
+- Returns `{ notifications: [...], unreadCount, pagination }`
+
+#### 8. PATCH `/api/notifications/[id]/route.ts` — Mark notification as read
+- Auth via `X-User-Id`, Next.js 15 async params pattern
+- Verifies notification exists (404) and belongs to current user (403)
+- Sets `isRead = true`
+- Returns `{ success: true }`
+
+#### 9. POST `/api/notifications/read-all/route.ts` — Mark all as read
+- Auth via `X-User-Id`
+- Uses `updateMany` for efficient bulk update of all unread notifications for current user
+- Returns `{ success: true, updatedCount }`
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev server compiles successfully with no runtime errors
+- TypeScript strict typing throughout all files
+- All routes use `X-User-Id` header for authentication
+- Uses Next.js 15 async params pattern (`params: Promise<{...}>`) for dynamic routes
+- Proper error handling with try/catch on all routes
+- Efficient batch queries for follow status checks (avoids N+1 queries)
+
+#### Files Created
+```
+src/app/api/users/[userId]/follow/route.ts (POST + DELETE)
+src/app/api/users/[userId]/followers/route.ts (GET)
+src/app/api/users/[userId]/following/route.ts (GET)
+src/app/api/users/[userId]/follow-status/route.ts (GET)
+src/app/api/feed/route.ts (GET)
+src/app/api/users/search/route.ts (GET)
+src/app/api/notifications/route.ts (GET)
+src/app/api/notifications/[id]/route.ts (PATCH)
+src/app/api/notifications/read-all/route.ts (POST)
+```
+
+---
+## Task ID: follow-button-component - main-agent (FollowButton Component)
+### Work Task
+Create a reusable FollowButton component at `/src/components/follow-button.tsx` for the FeedMeForward project.
+
+### Work Summary
+Created production-quality `FollowButton` component with the following features:
+
+**Props API:**
+- `targetUserId` (required) — the user to follow/unfollow
+- `targetUsername` (optional) — used in toast messages (e.g., "Following @jane")
+- `size` — "sm" | "default" | "lg"
+- `variant` — "full" (icon + text) | "compact" (icon-only)
+- `onFollowChange` — callback after follow state changes
+- `className` — custom class merging
+
+**Behavior:**
+- Returns `null` when viewing own profile (`currentUser.id === targetUserId`)
+- Returns `null` when unauthenticated
+- Fetches follow status on mount from `GET /api/users/[id]/follow-status` with cancellation-safe effect
+- Optimistic UI updates — state flips immediately, reverts on API failure
+- `POST /api/users/[id]/follow` to follow, `DELETE` to unfollow
+- Toast notifications: "Following @username" / "Unfollowed @username" on success; error toasts on failure
+- `Loader2` spinner during initial load and action in-progress
+
+**Styling:**
+- `variant="full"`: gradient orange→amber "Follow" button; gray "Following" button with hover overlay revealing red "Unfollow" text
+- `variant="compact"`: icon-only circle button matching same color scheme
+- Responsive sizing (sm/default/lg)
+- `active:scale-[0.98]` press feedback on follow button
+- All hooks called unconditionally (React hooks rules) — fixed initial lint error
+
+**Quality:**
+- `npm run lint` passes with zero errors
+- Dev server compiles successfully
+- TypeScript strict typing throughout
+- Integrates with existing auth store, toast hook, and API routes
+
+
+---
+## Task ID: social-feed-view - component-builder
+### Work Task
+Create SocialFeedView component at `/home/z/my-project/src/components/views/social-feed-view.tsx` for the FeedMeForward Next.js project — a personalized feed of videos from followed users.
+
+### Work Summary
+
+#### 1. SocialFeedView Component (`src/components/views/social-feed-view.tsx`) — Created
+- **Props**: `onNavigate`, `setVideoId`, `setProfileUserId` matching the standard view component pattern
+- **Feed API Integration**: Fetches from `GET /api/feed?page=&limit=12` with `X-User-Id` header, adapts response format (feed items have `poll`/`stats` objects) to match VideoCard's expected `Video` type with `_count` format
+- **Two Tabs**: "Following Feed" (main content) and "Discover" (navigates to explore view)
+- **Following Feed Tab**:
+  - "Who to Follow" section at top with horizontal scrollable row of suggested user cards (avatar, username, verified badge, follow/unfollow button)
+  - Suggested users fetched from `GET /api/scores/leaderboard?limit=5` (top users as natural suggestions), with follow status checked via parallel `GET /api/users/{id}/follow-status` calls
+  - Optimistic follow/unfollow with rollback on error
+  - Responsive video grid: 1 col mobile, 2 cols sm, 3 cols lg
+  - framer-motion stagger animations on video cards (0.04s delay per card)
+  - Loading skeletons (4 skeleton cards), error state with retry, empty state with "Discover Creators" CTA
+  - Pagination: "Load More Videos" button when more pages available, "You're all caught up!" badge at end
+  - Video click → `setVideoId + onNavigate('video-detail')`, Creator click → `setProfileUserId + onNavigate('profile')`
+- **Discover Tab**: Centered card with TrendingUp icon, description, and "Go to Explore" button
+- **Header**: "Your Feed" with Rss icon in orange gradient, subtitle "Videos from creators you follow"
+- **Back Button**: "Back to Dashboard" text-only ghost button (no ArrowLeft icon)
+- **Refresh**: Top-right refresh button with spinning animation
+- **QuickNav**: Rendered below header with `activeView="social-feed"`
+- **Warm orange/amber color scheme** consistent with project theme
+
+#### 2. FollowButton Fix (`src/components/follow-button.tsx`) — Modified
+- Fixed pre-existing React lint error: `useCallback` was called after an early return (rules-of-hooks violation)
+- Moved early return guard (`if (!currentUser || currentUser.id === targetUserId)`) below computed variables
+- Converted `handleToggleFollow` from `useCallback` to a plain async function (removes unused `useCallback` import)
+- Lint now passes with zero errors
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings** (was 1 error before FollowButton fix)
+- Dev log shows successful compilation with no runtime errors
+- TypeScript strict typing throughout
+- All framer-motion animations properly keyed and configured
+- Responsive design (mobile-first)
+- No ArrowLeft icons on back buttons
+
+---
+## Task ID: users-list-view - main-agent
+### Work Task
+Create UsersListView component and FollowButton component for displaying followers/following lists in user profiles.
+
+### Work Summary
+
+#### 1. API Fix: Followers Route (`src/app/api/users/[userId]/followers/route.ts`)
+- Added `bio: true` to the follower select clause, matching the following API's output format
+- Ensures the UsersListView can display bio text for both followers and following users
+
+#### 2. FollowButton Component (`src/components/follow-button.tsx`) — Created
+- Reusable follow/unfollow toggle button with two variants: `default` (full text) and `compact` (icon only)
+- Two sizes: `sm` and `default`
+- Props: targetUserId, initialFollowing, variant, size, onFollowChange callback
+- Uses framer-motion AnimatePresence for smooth icon transitions between Follow/Following/Loading states
+- Calls POST/DELETE `/api/users/[userId]/follow` with X-User-Id header
+- Automatically hidden for own profile or unauthenticated users
+- Orange/amber gradient styling matching project theme
+
+#### 3. UsersListView Component (`src/components/views/users-list-view.tsx`) — Created
+Full-featured followers/following list view with:
+
+**UI Features:**
+- Two tabs (Followers/Following) using shadcn Tabs component
+- Search bar with real-time client-side filtering on username/displayName, clear button
+- Title showing target username with count badge
+- "Back to Dashboard" button (text only, no ArrowLeft icon per spec)
+- QuickNav at bottom for global navigation
+
+**User Rows:**
+- 40px avatar with gradient fallback using deterministic hash-based gradient selection
+- Initials (up to 2 chars) on gradient avatar
+- Verified badge (amber UserCheck icon) overlay on avatar
+- Username (bold, hover turns orange) + displayName fallback
+- @username below name
+- Bio truncated to 1 line with max-w-xs
+- Member score level badge (Bronze/Silver/Gold/Diamond) using getScoreLevelBadge
+- "Follows you" badge (emerald green) shown on followers tab for mutual followers
+- Compact FollowButton (orange gradient for follow, outline for following)
+- Click on entire row → setProfileUserId + onNavigate('profile')
+- Follow button click uses stopPropagation to prevent row navigation
+
+**Data Handling:**
+- Fetches from GET `/api/users/[targetUserId]/followers` and `/api/users/[targetUserId]/following`
+- Auth via X-User-Id header
+- Pagination: 20 per page with "Load More" button showing remaining count
+- Append mode for load-more (preserves existing items)
+- Client-side search filter with result count display
+- Resets search query when switching tabs
+
+**States:**
+- Loading: 8 skeleton rows with avatar + text + button placeholders
+- Error: Card with icon, error message, retry button
+- Empty: Contextual message (no followers / not following anyone / no search results)
+- Loading more: Centered spinner
+
+**Animations:**
+- framer-motion stagger container (0.04s per item) for smooth list entrance
+- Individual list items animate with opacity, y, and scale
+- Layout animation for reordering on search filter
+- AnimatePresence for smooth loading/error/empty state transitions
+- Header elements stagger in with decreasing delays
+
+**Design:**
+- max-w-2xl centered layout
+- Warm orange/amber color scheme throughout
+- Responsive (mobile-first)
+- Hover effects on rows (orange tint background, username color change)
+- Dark mode support via Tailwind dark: variants
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation with no runtime errors
+- TypeScript strict typing throughout
+- All existing API routes used as-is (only added `bio` field to followers select)
+- No new dependencies required
+
+#### Files Created/Modified
+```
+src/components/follow-button.tsx (created)
+src/components/views/users-list-view.tsx (created)
+src/app/api/users/[userId]/followers/route.ts (modified - added bio to select)
+```
+
+---
+## Task ID: 7 - notifications-view-component
+### Work Task
+Create a NotificationsView component at `/home/z/my-project/src/components/views/notifications-view.tsx` for the FeedMeForward project. The component displays a list of notifications for the current user with type-specific icons, read/unread states, navigation, and pagination.
+
+### Work Summary
+
+#### Component: `src/components/views/notifications-view.tsx` — Created
+A production-quality notification view component with the following features:
+
+**Architecture:**
+- Three sub-components: `NotificationsView` (main), `NotificationList` (list with loading/empty/pagination), `NotificationRow` (individual row)
+- Type-specific configuration via `TYPE_CONFIG` map with icon, color, bgColor, ringColor, and action type per notification type
+- All 8 notification types supported: follow, like, comment, response, poll_vote, mention, invitation_accepted, tip
+
+**Data Fetching:**
+- Fetches from `GET /api/notifications` with `X-User-Id` header (supports `unreadOnly`, `page`, `limit` query params)
+- Two tabs: "All" (all notifications) and "Unread" (filtered with `unreadOnly=true`)
+- Independent pagination state for each tab
+- Parallel initial fetch of both all and unread notifications
+
+**Mark as Read:**
+- Single notification: `PATCH /api/notifications/[id]` on click, with optimistic local state update
+- Mark all read: `POST /api/notifications/read-all` via "Mark All Read" button in header
+- Tracks `markingIds` Set to prevent duplicate mark-as-read calls and show loading indicator
+
+**Notification Row Design:**
+- Type-specific circular icon (36px) with colored background and ring
+- `fromUser` avatar (36px) with gradient fallback and initials — clickable → navigates to profile via `setProfileUserId`
+- Title text (bold for unread, muted for read) + message text (truncated)
+- Relative time (just now, Xm ago, Xh ago, Xd ago, or full date)
+- Video thumbnail (48px) with fallback gradient — clickable → navigates to video detail via `setVideoId`
+- Unread indicator: orange dot on left edge + orange-tinted background (`bg-orange-50/60`)
+- Read notifications: muted grey appearance (`hover:bg-muted/50`)
+- Read status icon on right (Check/CheckCheck from lucide-react)
+
+**Navigation Logic:**
+- Follow/invitation_accepted → navigate to `fromUser`'s profile
+- Like/comment/response/poll_vote/mention/tip → navigate to video detail
+
+**UI Features:**
+- Header: Bell icon + "Notifications" title + unread count badge + "Mark All Read" button (hidden when no unread)
+- Back button: "Back to Dashboard" text only (no ArrowLeft icon)
+- QuickNav at bottom
+- Loading skeletons (6 placeholder rows)
+- Empty state: "No notifications yet" with Bell icon in orange circle
+- Pagination: "Load More" button with remaining count
+
+**Animations (framer-motion):**
+- Header: fade + slide down
+- Notification rows: staggered spring animations (`staggerChildren: 0.04`, spring stiffness 400, damping 30)
+- Container/list variants for coordinated stagger
+
+**Relative Time Helper:**
+- < 60s: "just now"
+- < 60m: "Xm ago"
+- < 24h: "Xh ago"
+- < 7d: "Xd ago"
+- else: "Mon Day" or "Mon Day, Year"
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation with no runtime errors
+- TypeScript strict typing throughout
+- Follows existing project patterns (matches wallet-view.tsx conventions)
+- Warm orange/amber color scheme maintained
+- All shadcn/ui components used: Button, Card, CardContent, Skeleton, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Separator
+- All lucide-react icons used: Bell, Check, CheckCheck, Heart, MessageCircle, UserPlus, DollarSign, Video, Award, Loader2, Star
+- Responsive design with mobile-first approach
+
+---
+Task ID: 1-fix
+Agent: Main Agent
+Task: Remove arrow icons from all back links + verify memberScore null safety
+
+Work Log:
+- Removed all `<ArrowLeft className="w-4 h-4" />` from back links in 13 files (page.tsx + 12 component files)
+- Removed `gap-2` class from Button elements that only had text (no icon)
+- Cleaned up unused ArrowLeft imports from all files
+- Verified memberScore already has null safety: `currentUser.memberScore ?? 0` (line 821)
+- Build passes with zero errors, lint passes clean
+
+Stage Summary:
+- 13 files updated to remove ArrowLeft icons from back/return links
+- All back links now show text-only buttons (e.g., "Back to Home", "Back to Dashboard")
+- memberScore TypeError was already fixed in previous session
+
+---
+Task ID: 2-a
+Agent: Main Agent (API routes via subagent)
+Task: Phase 8A — Notification model + 10 Follow/Feed API routes
+
+Work Log:
+- Added Notification model to Prisma schema (17 models total now)
+- Added notifications relations to User and Video models
+- Pushed schema to SQLite via `prisma db push`
+- Created notification helper library at `src/lib/notifications.ts`
+- Created 10 API routes:
+  1. POST /api/users/[userId]/follow — Follow a user (creates notification)
+  2. DELETE /api/users/[userId]/follow — Unfollow a user
+  3. GET /api/users/[userId]/followers — List followers with "Follows You" indicator
+  4. GET /api/users/[userId]/following — List following with follow status
+  5. GET /api/users/[userId]/follow-status — Check mutual follow status
+  6. GET /api/feed — Social feed (videos from followed + own)
+  7. GET /api/users/search — Search users by username/displayName
+  8. GET /api/notifications — List notifications with unread count
+  9. PATCH /api/notifications/[id] — Mark notification as read
+  10. POST /api/notifications/read-all — Mark all notifications as read
+
+Stage Summary:
+- 10 new API routes, 1 new DB model, 1 helper library
+- All routes use X-User-Id header auth
+- Build passes with zero errors
+
+---
+Task ID: 2-b
+Agent: Main Agent (UI via subagents)
+Task: Phase 8B — Social engagement UI components
+
+Work Log:
+- Created FollowButton component (reusable, full/compact variants, optimistic updates)
+- Created UsersListView (followers/following list with tabs, search, pagination)
+- Created SocialFeedView (personalized feed + suggested users + discover tab)
+- Created NotificationsView (8 notification types, all/unread tabs, mark-as-read)
+- Updated ProfileView to use real FollowButton + clickable follower/following counts
+- Added notification creation to like and comment API routes
+
+Stage Summary:
+- 4 new view components + 1 reusable component
+- ProfileView now has functional follow/unfollow and clickable follower counts
+- Notifications auto-created on: follow, like, comment
+- Build passes, lint clean
+
+---
+Task ID: 2-c
+Agent: Main Agent
+Task: Phase 8C — SPA integration, Dashboard cards, QuickNav update
+
+Work Log:
+- Added 'feed', 'notifications', 'users-list' to View type union
+- Added Bell, Rss to lucide-react imports
+- Added SocialFeedView, NotificationsView, UsersListView imports
+- Added Social Feed and Notifications cards to Dashboard (11 total cards)
+- Added view routing for feed, notifications, users-list
+- Added navigate-users-list custom event listener in page.tsx
+- Updated QuickNav with Feed and Alerts items (11 total nav items)
+- Verified build: 46+ API routes, zero errors, zero lint warnings
+
+Stage Summary:
+- Phase 8 complete: Full social engagement system
+- 10 API routes, 4 new views, 1 reusable component
+- Dashboard has 11 feature cards, QuickNav has 11 navigation items
+- Total API routes: 46+

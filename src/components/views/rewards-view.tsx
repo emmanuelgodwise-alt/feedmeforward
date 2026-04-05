@@ -15,7 +15,6 @@ import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth-store';
 import { QuickNav } from '@/components/quick-nav';
 import {
-  ArrowLeft,
   Trophy,
   TrendingUp,
   Wallet,
@@ -205,8 +204,7 @@ export function RewardsView({ onNavigate }: ViewProps) {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
       >
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0 gap-2">
-            <ArrowLeft className="w-4 h-4" />
+          <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0">
             <span className="text-sm">Back to Dashboard</span>
           </Button>
           <div>

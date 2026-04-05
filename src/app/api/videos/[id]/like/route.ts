@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { recalculateScore } from '@/lib/score-engine';
+import { createNotification } from '@/lib/notifications';
 
 // POST /api/videos/[id]/like — Like a video
 export async function POST(
@@ -28,6 +29,16 @@ export async function POST(
 
     // Trigger score recalculation for the video creator (fire and forget)
     recalculateScore(video.creatorId).catch((err) => console.error('Score recalc failed:', err));
+
+    // Create notification for video creator (only if not liking own video)
+    if (video.creatorId !== userId) {
+      createNotification({
+        userId: video.creatorId,
+        fromUserId: userId,
+        type: 'like',
+        videoId,
+      });
+    }
 
     return NextResponse.json({ success: true, data: like });
   } catch (error: unknown) {

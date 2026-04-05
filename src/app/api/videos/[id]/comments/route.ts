@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { recalculateScore } from '@/lib/score-engine';
+import { createNotification } from '@/lib/notifications';
 
 // GET /api/videos/[id]/comments — Get comments for a video
 export async function GET(
@@ -98,6 +99,17 @@ export async function POST(
 
     // Trigger score recalculation for the commenter (fire and forget)
     recalculateScore(userId).catch((err) => console.error('Score recalc failed:', err));
+
+    // Create notification for video creator (only if not commenting on own video)
+    if (video.creatorId !== userId) {
+      createNotification({
+        userId: video.creatorId,
+        fromUserId: userId,
+        type: 'comment',
+        videoId,
+        commentId: comment.id,
+      });
+    }
 
     return NextResponse.json({ success: true, data: comment }, { status: 201 });
   } catch (error) {

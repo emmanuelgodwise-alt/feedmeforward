@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Loader2, Play, X, Upload, FileVideo, CheckCircle } from 'lucide-react';
+import { Loader2, Play, X, Upload, FileVideo, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useVideoStore } from '@/stores/video-store';
 import { useToast } from '@/hooks/use-toast';
@@ -162,8 +162,7 @@ export function CreateResponseView({
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-6"
       >
-        <Button variant="ghost" onClick={() => onNavigate('video-detail')} className="shrink-0 gap-2">
-          <ArrowLeft className="w-4 h-4" />
+        <Button variant="ghost" onClick={() => onNavigate('video-detail')} className="shrink-0">
           <span className="text-sm">Back to Video</span>
         </Button>
         <div>

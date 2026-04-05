@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Loader2, Plus, X, Eye, DollarSign, Calendar, Users, Play, HelpCircle, AlertCircle, Wallet, Upload, FileVideo, CheckCircle } from 'lucide-react';
+import { Loader2, Plus, X, Eye, DollarSign, Calendar, Users, Play, HelpCircle, AlertCircle, Wallet, Upload, FileVideo, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useVideoStore } from '@/stores/video-store';
 import { useToast } from '@/hooks/use-toast';
@@ -216,8 +216,7 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-6"
       >
-        <Button variant="ghost" onClick={() => onNavigate('explore')} className="shrink-0 gap-2">
-          <ArrowLeft className="w-4 h-4" />
+        <Button variant="ghost" onClick={() => onNavigate('explore')} className="shrink-0">
           <span className="text-sm">Back to Explore</span>
         </Button>
         <div>

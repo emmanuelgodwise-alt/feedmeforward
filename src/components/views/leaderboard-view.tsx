@@ -9,7 +9,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import {
-  ArrowLeft,
   Trophy,
   Crown,
   Medal,
@@ -265,8 +264,7 @@ export function LeaderboardView({ onNavigate, setProfileUserId }: LeaderboardVie
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-6"
       >
-        <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0 gap-2">
-          <ArrowLeft className="w-4 h-4" />
+        <Button variant="ghost" onClick={() => onNavigate('dashboard')} className="shrink-0">
           <span className="text-sm">Back to Dashboard</span>
         </Button>
         <div>

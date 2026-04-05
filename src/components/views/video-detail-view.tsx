@@ -18,7 +18,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  ArrowLeft,
   Heart,
   MessageCircle,
   Share2,
@@ -274,8 +273,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
           <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Video not found</h2>
           <p className="text-muted-foreground mb-4">This video may have been removed or doesn&apos;t exist.</p>
-          <Button variant="ghost" onClick={() => onNavigate('explore')} className="gap-2">
-            <ArrowLeft className="w-4 h-4" />
+          <Button variant="ghost" onClick={() => onNavigate('explore')} className="shrink-0">
             <span className="text-sm">Back to Explore</span>
           </Button>
         </div>
@@ -295,8 +293,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-6"
       >
-        <Button variant="ghost" onClick={() => onNavigate('explore')} className="shrink-0 gap-2">
-          <ArrowLeft className="w-4 h-4" />
+        <Button variant="ghost" onClick={() => onNavigate('explore')} className="shrink-0">
           <span className="text-sm">Back to Explore</span>
         </Button>
         <div className="flex-1 min-w-0">
@@ -364,7 +361,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2"
+                className="shrink-0"
                 onClick={() => window.open(`/api/videos/download/${videoId}?userId=${currentUser?.id || ''}`, '_blank')}
               >
                 <Download className="w-4 h-4" />
@@ -452,7 +449,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2"
+                className="shrink-0"
                 onClick={handleShare}
               >
                 {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}

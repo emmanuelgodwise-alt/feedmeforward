@@ -11,6 +11,8 @@ import {
   Home,
   BarChart3,
   Target,
+  Rss,
+  Bell,
 } from 'lucide-react';
 
 interface QuickNavProps {
@@ -20,11 +22,13 @@ interface QuickNavProps {
 
 const NAV_ITEMS = [
   { icon: Home, label: 'Home', view: 'dashboard' },
+  { icon: Rss, label: 'Feed', view: 'feed' },
   { icon: Video, label: 'Explore', view: 'explore' },
   { icon: Plus, label: 'Create', view: 'create-lead' },
+  { icon: Bell, label: 'Alerts', view: 'notifications' },
   { icon: TrendingUp, label: 'Rewards', view: 'rewards' },
   { icon: Wallet, label: 'Wallet', view: 'wallet' },
-  { icon: Users, label: 'Leaderboard', view: 'leaderboard' },
+  { icon: Users, label: 'Ranks', view: 'leaderboard' },
   { icon: UserPlus, label: 'Invite', view: 'invitations' },
   { icon: BarChart3, label: 'Insights', view: 'audience' },
   { icon: Target, label: 'Segments', view: 'segments' },

@@ -45,6 +45,8 @@ model User {
   liveSessions      LiveSession[]   @relation("LiveSessionCreator")
   reports           Report[]        @relation("UserReports")
   segments          AudienceSegment[] @relation("UserAudienceSegments")
+  notifications     Notification[]  @relation("UserNotifications")
+  sentNotifications Notification[]  @relation("NotificationSender")
 }
 
 // ─── Video Model ────────────────────────────────────────────────────
@@ -70,8 +72,9 @@ model Video {
   comments     Comment[]
   likes        Like[]
   reports      Report[]
-  invitations  Invitation[]
-  circleShares CircleVideo[]
+  invitations     Invitation[]
+  circleShares    CircleVideo[]
+  notifications   Notification[]  @relation("NotificationVideo")
 
   // Self-referential for response clips
   parentVideoId String?
@@ -292,6 +295,26 @@ model Report {
   reporter User    @relation("UserReports", fields: [reporterId], references: [id])
   video    Video?  @relation(fields: [videoId], references: [id])
   comment  Comment? @relation(fields: [commentId], references: [id])
+}
+
+// ─── Notification Model ───────────────────────────────────────────
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String   // user who receives the notification
+  fromUserId  String?  // user who triggered the notification
+  type        String   // "follow", "like", "comment", "response", "poll_vote", "mention", "invitation_accepted", "tip"
+  title       String?
+  message     String?
+  videoId     String?
+  commentId   String?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user     User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  fromUser User?    @relation("NotificationSender", fields: [fromUserId], references: [id], onDelete: Cascade)
+  video    Video?   @relation("NotificationVideo", fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
 }
 
 // ─── Audience Segment Model ─────────────────────────────────────────
