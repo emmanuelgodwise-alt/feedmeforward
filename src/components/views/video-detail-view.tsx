@@ -41,14 +41,18 @@ import {
   ChevronUp,
   BarChart3,
   Wallet,
+  Mic,
 } from 'lucide-react';
 import { TipDialog } from '@/components/tip-dialog';
+import { TranscribeDialog } from '@/components/transcribe-dialog';
+import { ShareDialog } from '@/components/share-dialog';
 import { VideoActions } from '@/components/video-actions';
 import { QuickNav } from '@/components/quick-nav';
 import { useVideoStore } from '@/stores/video-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import { PollCard } from '@/components/poll-card';
+import { PollAnalytics } from '@/components/poll-analytics';
 import { CommentSection } from '@/components/comment-section';
 import { timeAgo, getGradient } from '@/components/video-card';
 import type { Video, VideoDetail } from '@/types';
@@ -80,6 +84,9 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
   const [videoVersion, setVideoVersion] = useState(0);
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   const [showAllResponses, setShowAllResponses] = useState(false);
+  const [transcribeOpen, setTranscribeOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [analyticsPollId, setAnalyticsPollId] = useState<string | null>(null);
   const { updateWalletBalance } = useAuthStore();
   const pollRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -402,23 +409,34 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
         </div>
       </motion.div>
 
-      {/* ─── Download Button for local videos ─────────────────────── */}
+      {/* ─── Download & Transcribe Buttons for local videos ───────── */}
       {video.videoUrl.startsWith('/uploads/') && (
         <motion.div
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08 }}
-          className="mt-2"
+          className="mt-2 flex items-center gap-2 flex-wrap"
         >
           <Button
             variant="outline"
             size="sm"
-            className="shrink-0"
+            className="shrink-0 gap-2"
             onClick={() => window.open(`/api/videos/download/${videoId}?userId=${currentUser?.id || ''}`, '_blank')}
           >
             <Download className="w-4 h-4" />
             Download Video
           </Button>
+          {!video.isTextOnly && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-2 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300"
+              onClick={() => setTranscribeOpen(true)}
+            >
+              <Mic className="w-4 h-4" />
+              Transcribe to Text
+            </Button>
+          )}
         </motion.div>
       )}
 
@@ -504,11 +522,11 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
             <Button
               variant="outline"
               size="sm"
-              className="shrink-0"
-              onClick={handleShare}
+              className="shrink-0 gap-2"
+              onClick={() => setShareOpen(true)}
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copied' : 'Share'}
+              <Share2 className="w-4 h-4" />
+              Share
             </Button>
             {/* Video Actions (edit/delete/report/share) */}
             <VideoActions
@@ -689,7 +707,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
           </h2>
           {video.polls.map((poll) => (
             <div key={poll.id} className="space-y-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <PollCard poll={poll} />
                 {/* Live badge for active polls */}
                 {poll.status === 'active' && (
@@ -701,7 +719,35 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                     LIVE
                   </motion.span>
                 )}
+                {/* Analytics button */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className={`gap-1.5 text-xs shrink-0 ${
+                    analyticsPollId === poll.id
+                      ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-300 text-orange-600 dark:text-orange-400'
+                      : 'hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-600 hover:border-orange-300'
+                  }`}
+                  onClick={() => setAnalyticsPollId(analyticsPollId === poll.id ? null : poll.id)}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  Analytics
+                </Button>
               </div>
+
+              {/* ─── Analytics Panel (expandable) ─── */}
+              {analyticsPollId === poll.id && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="rounded-xl border bg-card p-4 mt-2">
+                    <PollAnalytics pollId={poll.id} />
+                  </div>
+                </motion.div>
+              )}
               {/* Claim reward for paid polls */}
               {poll.isPaid && poll.rewardPerResponse && poll.rewardPerResponse > 0 && poll.userVoted && currentUser && !isCreator && (
                 <div className="flex items-center gap-2 px-1">
@@ -906,6 +952,24 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
       </motion.div>
 
       {/* ─── DIALOGS ──────────────────────────────────────────────── */}
+
+      {/* Transcribe Dialog */}
+      <TranscribeDialog
+        open={transcribeOpen}
+        onOpenChange={setTranscribeOpen}
+        videoId={videoId}
+        videoTitle={video.title}
+      />
+
+      {/* Share Dialog */}
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        videoId={videoId}
+        videoTitle={video.title}
+        videoUrl={video.videoUrl}
+        isLocalUpload={video.videoUrl.startsWith('/uploads/')}
+      />
 
       {/* Tip Dialog */}
       {currentUser && (

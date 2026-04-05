@@ -2658,3 +2658,61 @@ Stage Summary:
 - Original intent audit: Lead Clip/Response Clip layout, text-only handling, and video-primary emphasis all verified as correctly implemented
 - Key files changed: src/components/views/explore-view.tsx, src/components/quick-nav.tsx
 - Preview link ready: https://preview-chat-48456d7d-3f89-493d-944c-2f51255dd204.space.z.ai/
+
+---
+Task ID: 2-a
+Agent: Main
+Task: Feature 1 — Voice-to-Text Transcription
+
+Work Log:
+- Created POST /api/videos/[id]/transcribe API route using z-ai-web-dev-sdk ASR
+- Supports local uploaded videos (MP4 etc.) — reads file, converts to base64, calls ASR
+- Returns cleaned transcription with word count, character count, reading time
+- Handles errors: text-only videos, file not found, external URLs, silent audio, large files (>100MB)
+- Created TranscribeDialog component with: loading animation, transcription display, copy to clipboard, raw transcription toggle, word/char/reading time stats
+- Added "Transcribe to Text" button next to "Download Video" on video detail view for local uploads
+- Hidden for text-only responses and external videos
+
+Stage Summary:
+- New file: src/app/api/videos/[id]/transcribe/route.ts
+- New file: src/components/transcribe-dialog.tsx
+- Modified: src/components/views/video-detail-view.tsx (added Mic import, transcribeOpen state, TranscribeDialog)
+
+---
+Task ID: 2-b
+Agent: Main
+Task: Feature 2 — YouTube-style Download & Share
+
+Work Log:
+- Created ShareDialog component with comprehensive sharing options
+- Social sharing: X/Twitter, Facebook, WhatsApp, LinkedIn, Telegram, Reddit — all with proper share URLs
+- Copy link with one-click clipboard copy
+- Share via email (opens mailto: client)
+- Embed code section with copy functionality (like YouTube embed)
+- Download section for local uploads
+- Replaced old simple "Share" button (copy-to-clipboard only) with new Share button that opens ShareDialog
+- Download and Transcribe buttons now sit side-by-side in a row
+
+Stage Summary:
+- New file: src/components/share-dialog.tsx
+- Modified: src/components/views/video-detail-view.tsx (replaced handleShare with setShareOpen, added ShareDialog)
+
+---
+Task ID: 2-c
+Agent: Main
+Task: Feature 3 — Advanced Poll Analytics Dashboard
+
+Work Log:
+- Created GET /api/polls/[id]/analytics API route with comprehensive analytics computation
+- Analytics include: vote distribution, timeline (daily), hourly activity heatmap, engagement metrics, velocity analysis, voter demographics (score distribution, verified count, new users), timing data, AI-generated insights
+- Created PollAnalytics component using Recharts: 4 KPI cards, bar chart for distribution, stacked area chart for timeline, hourly activity bar chart, option comparison panel, voter demographics panel, key insights panel
+- Export to CSV functionality for business users
+- Collapsible sections for demographics and hourly data (keeps UI clean for casual users)
+- Added "Analytics" button next to each poll on video detail view — toggles expandable analytics panel
+- Fixed BarChart naming collision between lucide-react and recharts
+
+Stage Summary:
+- New file: src/app/api/polls/[id]/analytics/route.ts
+- New file: src/components/poll-analytics.tsx
+- Modified: src/components/views/video-detail-view.tsx (added analyticsPollId state, PollAnalytics import, Analytics button + panel)
+- All 3 features build successfully
