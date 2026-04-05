@@ -1668,7 +1668,7 @@ function SchemaDashboard({ onNavigate }: { onNavigate: (view: View) => void }) {
 
 // ─── Main App ──────────────────────────────────────────────────────
 export default function Home() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, currentUser } = useAuthStore();
 
   // Establish global real-time SSE connection for all views
   useRealtime();

@@ -2846,3 +2846,17 @@ Stage Summary:
 - 60+ API routes, 19 DB models, 4 languages
 
 ### 📊 BUILD STATUS: ✅ PASSING (verified 2026-04-06)
+
+---
+Task ID: hotfix-1
+Agent: Main
+Task: Fix "currentUser is not defined" runtime error in page.tsx
+
+Work Log:
+- Line 1671 only destructured `isAuthenticated` from useAuthStore() but line 1676 referenced `currentUser?.onboardingCompleted`
+- Added `currentUser` to the destructuring: `const { isAuthenticated, currentUser } = useAuthStore();`
+- Build verified passing after fix
+
+Stage Summary:
+- File modified: src/app/page.tsx (line 1671)
+- Error resolved: "ReferenceError: currentUser is not defined"
