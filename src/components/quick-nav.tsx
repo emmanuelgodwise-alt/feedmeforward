@@ -10,7 +10,6 @@ import {
   Plus,
   Home,
   BarChart3,
-  Target,
   Rss,
   Bell,
   MessageSquare,
@@ -23,19 +22,18 @@ interface QuickNavProps {
 }
 
 const NAV_ITEMS = [
-  { icon: Home, label: 'Home', view: 'dashboard' },
-  { icon: Rss, label: 'Feed', view: 'feed' },
-  { icon: Video, label: 'Explore', view: 'explore' },
+  { icon: Video, label: 'Video Polls', view: 'explore' },
   { icon: Plus, label: 'Create', view: 'create-lead' },
+  { icon: Rss, label: 'Feed', view: 'feed' },
   { icon: MessageSquare, label: 'Messages', view: 'messages' },
   { icon: Bell, label: 'Alerts', view: 'notifications' },
+  { icon: Users, label: 'Ranks', view: 'leaderboard' },
   { icon: TrendingUp, label: 'Rewards', view: 'rewards' },
   { icon: Wallet, label: 'Wallet', view: 'wallet' },
-  { icon: Users, label: 'Ranks', view: 'leaderboard' },
-  { icon: UserPlus, label: 'Invite', view: 'invitations' },
-  { icon: BarChart3, label: 'Insights', view: 'audience' },
-  { icon: Target, label: 'Segments', view: 'segments' },
   { icon: Circle, label: 'Communities', view: 'circles' },
+  { icon: UserPlus, label: 'Invite', view: 'invitations' },
+  { icon: Home, label: 'My Dashboard', view: 'dashboard' },
+  { icon: BarChart3, label: 'Insights', view: 'audience' },
 ];
 
 export function QuickNav({ onNavigate, activeView }: QuickNavProps) {

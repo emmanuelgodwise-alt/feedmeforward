@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -27,7 +27,6 @@ import {
   Tag,
   Users,
   Video,
-  ChevronRight,
   ExternalLink,
   Copy,
   Check,
@@ -37,6 +36,11 @@ import {
   TrendingUp,
   Loader2,
   Download,
+  Type,
+  ChevronDown,
+  ChevronUp,
+  BarChart3,
+  Wallet,
 } from 'lucide-react';
 import { TipDialog } from '@/components/tip-dialog';
 import { VideoActions } from '@/components/video-actions';
@@ -47,7 +51,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PollCard } from '@/components/poll-card';
 import { CommentSection } from '@/components/comment-section';
 import { timeAgo, getGradient } from '@/components/video-card';
-import type { VideoDetail, Video } from '@/types';
+import type { Video, VideoDetail } from '@/types';
 import type { View } from '@/app/page';
 import { STATUS_COLORS } from '@/types';
 import { useWalletStore } from '@/stores/wallet-store';
@@ -74,6 +78,8 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
   const [fundDialogOpen, setFundDialogOpen] = useState(false);
   const [earningRevenue, setEarningRevenue] = useState(false);
   const [videoVersion, setVideoVersion] = useState(0);
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
+  const [showAllResponses, setShowAllResponses] = useState(false);
   const { updateWalletBalance } = useAuthStore();
   const pollRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -280,6 +286,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
     }
   };
 
+  // ─── Loading state ───────────────────────────────────────────────
   if (isLoading && !currentVideo) {
     return (
       <div className="min-h-screen px-4 py-6 max-w-4xl mx-auto">
@@ -295,6 +302,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
     );
   }
 
+  // ─── Not found state ─────────────────────────────────────────────
   if (!currentVideo) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
@@ -313,17 +321,19 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
   const video = currentVideo;
   const embedUrl = getEmbedUrl(video.videoUrl);
   const gradient = getGradient(video.id);
+  const isCreator = currentUser?.id === video.creator.id;
+  const displayedResponses = showAllResponses ? responses.slice(0, 12) : responses.slice(0, 8);
 
   return (
     <div className="min-h-screen px-4 py-6 max-w-4xl mx-auto">
-      {/* Header */}
+      {/* ─── Header ───────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-4 mb-6"
+        className="flex items-center gap-4 mb-4"
       >
         <Button variant="ghost" onClick={() => onNavigate('explore')} className="shrink-0">
-          <span className="text-sm">Back to Explore</span>
+          <span className="text-sm">← Back to Video Polls</span>
         </Button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -333,486 +343,548 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
             <Badge className={`text-xs ${STATUS_COLORS[video.status] || ''}`}>
               {video.status.charAt(0).toUpperCase() + video.status.slice(1)}
             </Badge>
+            {video.isTextOnly && (
+              <Badge variant="outline" className="text-xs gap-1 border-amber-300 text-amber-700 dark:text-amber-300">
+                <Type className="w-3 h-3" />
+                Text Only
+              </Badge>
+            )}
           </div>
         </div>
       </motion.div>
 
       <QuickNav onNavigate={(v) => onNavigate(v as View)} activeView="video-detail" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Video Player */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-          >
-            <div className="aspect-video rounded-xl overflow-hidden bg-black/5 dark:bg-black/20 relative">
-              {embedUrl && !embedError ? (
-                <iframe
-                  src={embedUrl}
-                  className="w-full h-full"
-                  allowFullScreen
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  onError={() => setEmbedError(true)}
-                  title={video.title}
-                />
-              ) : (
-                <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-                  <a
-                    href={video.videoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex flex-col items-center gap-2 text-white hover:scale-105 transition-transform"
-                  >
-                    <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                      <Play className="w-10 h-10 text-white fill-white ml-1" />
-                    </div>
-                    <span className="text-sm font-medium flex items-center gap-1">
-                      Watch on external site
-                      <ExternalLink className="w-3 h-3" />
-                    </span>
-                  </a>
+      {/* ─── LEAD CLIP — FULL WIDTH VIDEO PLAYER ─────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="mt-4"
+      >
+        <div className="aspect-video rounded-xl overflow-hidden bg-black/5 dark:bg-black/20 relative">
+          {embedUrl && !embedError ? (
+            <iframe
+              src={embedUrl}
+              className="w-full h-full"
+              allowFullScreen
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              onError={() => setEmbedError(true)}
+              title={video.title}
+            />
+          ) : video.videoUrl && !video.isTextOnly ? (
+            <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+              <a
+                href={video.videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center gap-2 text-white hover:scale-105 transition-transform"
+              >
+                <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <Play className="w-10 h-10 text-white fill-white ml-1" />
                 </div>
-              )}
+                <span className="text-sm font-medium flex items-center gap-1">
+                  Watch on external site
+                  <ExternalLink className="w-3 h-3" />
+                </span>
+              </a>
             </div>
-          </motion.div>
+          ) : video.isTextOnly ? (
+            <div className="w-full h-full bg-muted/50 dark:bg-muted/20 flex flex-col items-center justify-center p-4">
+              <Type className="w-12 h-12 text-muted-foreground/40 mb-3" />
+              <p className="text-sm font-medium text-muted-foreground/60">This Is A Text-Only Response</p>
+            </div>
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center">
+              <Play className="w-16 h-16 text-white/80" />
+            </div>
+          )}
+        </div>
+      </motion.div>
 
-          {/* Download Button for local videos */}
-          {video.videoUrl.startsWith('/uploads/') && (
-            <motion.div
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.08 }}
-              className="mt-2"
+      {/* ─── Download Button for local videos ─────────────────────── */}
+      {video.videoUrl.startsWith('/uploads/') && (
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          className="mt-2"
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => window.open(`/api/videos/download/${videoId}?userId=${currentUser?.id || ''}`, '_blank')}
+          >
+            <Download className="w-4 h-4" />
+            Download Video
+          </Button>
+        </motion.div>
+      )}
+
+      {/* ─── VIDEO INFO ───────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mt-6 space-y-4"
+      >
+        <div>
+          <h1 className="text-2xl font-bold leading-tight">{video.title}</h1>
+          <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground flex-wrap">
+            <button
+              onClick={handleCreatorClick}
+              className="font-medium text-foreground hover:text-orange-500 transition-colors flex items-center gap-1.5"
             >
+              @{video.creator.username}
+              {video.creator.isVerified && (
+                <CheckCircle2 className="w-4 h-4 text-amber-500" />
+              )}
+            </button>
+            <span className="flex items-center gap-1">
+              <Eye className="w-4 h-4" />
+              {video.viewCount} views
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              {timeAgo(video.createdAt)}
+            </span>
+          </div>
+        </div>
+
+        {video.description && (
+          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+            {video.description}
+          </p>
+        )}
+
+        {/* Tags & Category */}
+        {(video.tags && video.tags.length > 0) || video.category ? (
+          <div className="flex flex-wrap gap-2">
+            {video.category && (
+              <Badge variant="secondary" className="gap-1">
+                <Tag className="w-3 h-3" />
+                {video.category}
+              </Badge>
+            )}
+            {video.tags?.map((tag) => (
+              <Badge key={tag} variant="outline" className="text-xs">
+                #{tag}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
+
+        {/* ─── Action Buttons ────────────────────────────────────── */}
+        <div className="space-y-3">
+          {/* Row 1: Like, Comment, Share, Tip, Edit */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant={video.isLiked ? 'default' : 'outline'}
+              size="sm"
+              className={`gap-2 ${
+                video.isLiked
+                  ? 'bg-rose-500 hover:bg-rose-600 text-white'
+                  : 'hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-500 hover:border-rose-300'
+              }`}
+              onClick={handleLike}
+            >
+              <Heart className={`w-4 h-4 ${video.isLiked ? 'fill-white' : ''}`} />
+              {video.likeCount}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-500 hover:border-orange-300"
+              onClick={() => setCommentsExpanded(true)}
+            >
+              <MessageCircle className="w-4 h-4" />
+              {video.commentCount}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={handleShare}
+            >
+              {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+              {copied ? 'Copied' : 'Share'}
+            </Button>
+            {/* Video Actions (edit/delete/report/share) */}
+            <VideoActions
+              videoId={videoId}
+              creatorId={video.creator.id}
+              title={video.title}
+              currentUserId={currentUser?.id}
+              onVideoUpdated={() => setVideoVersion((v) => v + 1)}
+            />
+            {/* Tip Creator button */}
+            {currentUser && !isCreator && (
               <Button
                 variant="outline"
                 size="sm"
-                className="shrink-0"
-                onClick={() => window.open(`/api/videos/download/${videoId}?userId=${currentUser?.id || ''}`, '_blank')}
+                className="gap-2 hover:bg-pink-50 dark:hover:bg-pink-950/30 hover:text-pink-500 hover:border-pink-300"
+                onClick={() => setTipOpen(true)}
               >
-                <Download className="w-4 h-4" />
-                Download Video
+                <DollarSign className="w-4 h-4" />
+                <Heart className="w-3 h-3" />
+                Tip
               </Button>
-            </motion.div>
-          )}
-
-          {/* Video Info */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="space-y-4"
-          >
-            <div>
-              <h1 className="text-2xl font-bold leading-tight">{video.title}</h1>
-              <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
-                <button
-                  onClick={handleCreatorClick}
-                  className="font-medium text-foreground hover:text-orange-500 transition-colors flex items-center gap-1.5"
-                >
-                  @{video.creator.username}
-                  {video.creator.isVerified && (
-                    <CheckCircle2 className="w-4 h-4 text-amber-500" />
-                  )}
-                </button>
-                <span className="flex items-center gap-1">
-                  <Eye className="w-4 h-4" />
-                  {video.viewCount} views
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  {timeAgo(video.createdAt)}
-                </span>
-              </div>
-            </div>
-
-            {video.description && (
-              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                {video.description}
-              </p>
             )}
+          </div>
 
-            {/* Tags & Category */}
-            {(video.tags && video.tags.length > 0) || video.category ? (
-              <div className="flex flex-wrap gap-2">
-                {video.category && (
-                  <Badge variant="secondary" className="gap-1">
-                    <Tag className="w-3 h-3" />
-                    {video.category}
-                  </Badge>
-                )}
-                {video.tags?.map((tag) => (
-                  <Badge key={tag} variant="outline" className="text-xs">
-                    #{tag}
-                  </Badge>
-                ))}
-              </div>
-            ) : null}
-
-            {/* Action Buttons */}
+          {/* Row 2: Respond buttons (only for lead type, only for authenticated) */}
+          {video.type === 'lead' && currentUser && (
             <div className="flex flex-wrap items-center gap-2">
               <Button
-                variant={video.isLiked ? 'default' : 'outline'}
                 size="sm"
-                className={`gap-2 ${
-                  video.isLiked
-                    ? 'bg-rose-500 hover:bg-rose-600 text-white'
-                    : 'hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-500 hover:border-rose-300'
-                }`}
-                onClick={handleLike}
+                className="gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
+                onClick={handleRespond}
               >
-                <Heart className={`w-4 h-4 ${video.isLiked ? 'fill-white' : ''}`} />
-                {video.likeCount}
+                <Video className="w-4 h-4" />
+                Respond with Video Clip
               </Button>
               <Button
-                variant="outline"
                 size="sm"
-                className="gap-2 hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-500 hover:border-orange-300"
-              >
-                <MessageCircle className="w-4 h-4" />
-                {video.commentCount}
-              </Button>
-              <Button
                 variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={handleShare}
+                className="gap-2 hover:bg-amber-50 dark:hover:bg-amber-950/30 hover:text-amber-600 hover:border-amber-300"
+                onClick={handleRespond}
               >
-                {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copied' : 'Share'}
+                <Type className="w-4 h-4" />
+                Respond with Text Only
               </Button>
-              {/* Video Actions (edit/delete/report/share) */}
-              <VideoActions
-                videoId={videoId}
-                creatorId={video.creator.id}
-                title={video.title}
-                currentUserId={currentUser?.id}
-                onVideoUpdated={() => setVideoVersion((v) => v + 1)}
-              />
-
-              {/* Tip Creator button */}
-              {currentUser && video.creator.id !== currentUser.id && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 hover:bg-pink-50 dark:hover:bg-pink-950/30 hover:text-pink-500 hover:border-pink-300"
-                  onClick={() => setTipOpen(true)}
-                >
-                  <DollarSign className="w-4 h-4" />
-                  <Heart className="w-3 h-3" />
-                  Tip
-                </Button>
-              )}
-              {video.type === 'lead' && (
-                <Button
-                  size="sm"
-                  className="gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white ml-auto"
-                  onClick={handleRespond}
-                >
-                  <Video className="w-4 h-4" />
-                  Respond with Clip
-                </Button>
-              )}
             </div>
+          )}
+          {video.type === 'lead' && !currentUser && (
+            <p className="text-xs text-muted-foreground">
+              <a onClick={() => onNavigate('login' as View)} className="cursor-pointer text-orange-500 hover:underline font-medium">Sign in</a> to respond to this clip
+            </p>
+          )}
+        </div>
+      </motion.div>
 
-            <Separator />
-          </motion.div>
-
-          {/* Polls */}
-          {video.polls && video.polls.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="space-y-4"
-            >
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Users className="w-5 h-5 text-orange-500" />
-                Polls ({video.polls.length})
-              </h2>
-              {video.polls.map((poll) => (
-                <div key={poll.id} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <PollCard poll={poll} />
-                    {/* Live badge for active polls */}
-                    {poll.status === 'active' && (
-                      <motion.span
-                        animate={{ opacity: [1, 0.4, 1] }}
-                        transition={{ repeat: Infinity, duration: 2 }}
-                        className="text-xs font-bold text-rose-500 bg-rose-100 dark:bg-rose-950/50 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
-                      >
-                        LIVE
-                      </motion.span>
-                    )}
-                  </div>
-                  {/* Claim reward for paid polls */}
-                  {poll.isPaid && poll.rewardPerResponse && poll.rewardPerResponse > 0 && poll.userVoted && currentUser && video.creator.id !== currentUser.id && (
-                    <div className="flex items-center gap-2 px-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-300"
-                        onClick={() => handleClaimReward(poll.id)}
-                        disabled={claimingReward === poll.id}
-                      >
-                        {claimingReward === poll.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Star className="w-4 h-4" />
-                        )}
-                        Claim Reward (${poll.rewardPerResponse.toFixed(2)})
-                      </Button>
-                    </div>
-                  )}
-                  {/* Fund poll for creator */}
-                  {poll.isPaid && currentUser && video.creator.id === currentUser.id && (
-                    <div className="flex items-center gap-2 px-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
-                        onClick={() => handleFundPoll(poll.id)}
-                      >
-                        <DollarSign className="w-4 h-4" />
-                        Fund This Poll
-                      </Button>
-                      {poll.totalRewardPool > 0 && (
-                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                          Pool: ${poll.totalRewardPool.toFixed(2)}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                  {/* Reward display for paid polls */}
-                  {poll.isPaid && poll.rewardPerResponse && poll.rewardPerResponse > 0 && !poll.userVoted && currentUser && video.creator.id !== currentUser.id && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 px-1">
-                      <Star className="w-3 h-3" />
-                      Earn ${poll.rewardPerResponse.toFixed(2)} for your response
-                    </p>
-                  )}
+      {/* ─── RESPONSE CLIPS (PROMINENT) ───────────────────────────── */}
+      {video.type === 'lead' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mt-8 space-y-4"
+        >
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Video className="w-5 h-5 text-amber-500" />
+            Response Clips ({video.responseCount})
+          </h2>
+          {loadingResponses ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="aspect-video rounded-lg" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
               ))}
-            </motion.div>
-          )}
-
-          {/* Response Clips (only for lead type) */}
-          {video.type === 'lead' && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="space-y-4"
-            >
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Video className="w-5 h-5 text-amber-500" />
-                Response Clips ({video.responseCount})
-              </h2>
-              {loadingResponses ? (
-                <div className="flex gap-3 overflow-x-auto pb-2">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="shrink-0 w-48 space-y-2">
-                      <Skeleton className="aspect-video rounded-lg" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-3 w-1/2" />
-                    </div>
-                  ))}
-                </div>
-              ) : responses.length === 0 ? (
-                <Card className="border-dashed">
-                  <CardContent className="p-6 text-center">
-                    <Video className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">No responses yet. Be the first to respond!</p>
+            </div>
+          ) : responses.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="p-8 text-center">
+                <Video className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground mb-1">No responses yet. Be the first to respond!</p>
+                <p className="text-xs text-muted-foreground mb-4">Share your opinion with a video clip or text response</p>
+                {currentUser && (
+                  <div className="flex items-center justify-center gap-2">
                     <Button
                       size="sm"
-                      className="mt-3 gap-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white"
+                      className="gap-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white"
                       onClick={handleRespond}
                     >
                       <Video className="w-3 h-3" />
                       Respond Now
                     </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-                  {responses.slice(0, 10).map((response) => {
-                    const respGradient = getGradient(response.id);
-                    return (
-                      <motion.div
-                        key={response.id}
-                        whileHover={{ scale: 1.03 }}
-                        className="shrink-0 w-48 cursor-pointer"
-                        onClick={() => handleResponseClick(response.id)}
-                      >
-                        <Card className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow">
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {displayedResponses.map((response) => {
+                  const respGradient = getGradient(response.id);
+                  const isTextResponse = response.isTextOnly === true;
+                  return (
+                    <motion.div
+                      key={response.id}
+                      whileHover={{ scale: 1.03 }}
+                      className="cursor-pointer"
+                      onClick={() => handleResponseClick(response.id)}
+                    >
+                      <Card className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow">
+                        {/* Thumbnail or Text-Only Box */}
+                        {isTextResponse ? (
+                          <div className="aspect-video bg-muted/50 dark:bg-muted/20 flex flex-col items-center justify-center p-3 border border-dashed border-muted-foreground/30">
+                            <Type className="w-8 h-8 text-muted-foreground/50 mb-1.5" />
+                            <p className="text-[10px] font-medium text-muted-foreground/70 text-center leading-tight">
+                              This Is A Text-Only Response
+                            </p>
+                          </div>
+                        ) : (
                           <div className={`aspect-video bg-gradient-to-br ${respGradient} flex items-center justify-center relative`}>
                             <Play className="w-8 h-8 text-white/80" />
                             <Badge className="absolute top-1 left-1 text-[10px] px-1 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
                               Response
                             </Badge>
                           </div>
-                          <CardContent className="p-2">
-                            <p className="text-xs font-semibold line-clamp-1">{response.title}</p>
-                            <p className="text-[10px] text-muted-foreground">@{response.creator?.username}</p>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    );
-                  })}
-                  {responses.length > 10 && (
-                    <div className="shrink-0 w-48 flex items-center justify-center">
-                      <Button variant="ghost" className="text-xs gap-1 text-orange-500">
-                        See all {responses.length}
-                        <ChevronRight className="w-3 h-3" />
-                      </Button>
-                    </div>
+                        )}
+                        <CardContent className="p-2.5">
+                          <p className="text-xs font-semibold line-clamp-1">{response.title}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            @{response.creator?.username}
+                            <span className="mx-1">·</span>
+                            {timeAgo(response.createdAt)}
+                          </p>
+                          {isTextResponse && response.description && (
+                            <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                              {response.description}
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </div>
+              {/* Show all / See more */}
+              {responses.length > 8 && !showAllResponses && (
+                <div className="text-center">
+                  <Button variant="ghost" size="sm" className="text-xs gap-1 text-orange-500" onClick={() => setShowAllResponses(true)}>
+                    See all {responses.length} responses
+                    <ChevronDown className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
+              {showAllResponses && responses.length > 8 && (
+                <div className="text-center">
+                  <Button variant="ghost" size="sm" className="text-xs gap-1 text-muted-foreground" onClick={() => setShowAllResponses(false)}>
+                    Show less
+                    <ChevronUp className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </motion.div>
+      )}
+
+      {/* ─── POLLS ────────────────────────────────────────────────── */}
+      {video.polls && video.polls.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mt-8 space-y-4"
+        >
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Users className="w-5 h-5 text-orange-500" />
+            Polls ({video.polls.length})
+          </h2>
+          {video.polls.map((poll) => (
+            <div key={poll.id} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <PollCard poll={poll} />
+                {/* Live badge for active polls */}
+                {poll.status === 'active' && (
+                  <motion.span
+                    animate={{ opacity: [1, 0.4, 1] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                    className="text-xs font-bold text-rose-500 bg-rose-100 dark:bg-rose-950/50 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                  >
+                    LIVE
+                  </motion.span>
+                )}
+              </div>
+              {/* Claim reward for paid polls */}
+              {poll.isPaid && poll.rewardPerResponse && poll.rewardPerResponse > 0 && poll.userVoted && currentUser && !isCreator && (
+                <div className="flex items-center gap-2 px-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-300"
+                    onClick={() => handleClaimReward(poll.id)}
+                    disabled={claimingReward === poll.id}
+                  >
+                    {claimingReward === poll.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Star className="w-4 h-4" />
+                    )}
+                    Claim Reward (${poll.rewardPerResponse.toFixed(2)})
+                  </Button>
+                </div>
+              )}
+              {/* Fund poll for creator */}
+              {poll.isPaid && currentUser && isCreator && (
+                <div className="flex items-center gap-2 px-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
+                    onClick={() => handleFundPoll(poll.id)}
+                  >
+                    <DollarSign className="w-4 h-4" />
+                    Fund This Poll
+                  </Button>
+                  {poll.totalRewardPool && poll.totalRewardPool > 0 && (
+                    <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                      Pool: ${poll.totalRewardPool.toFixed(2)}
+                    </Badge>
                   )}
                 </div>
               )}
-            </motion.div>
-          )}
+              {/* Reward display for paid polls */}
+              {poll.isPaid && poll.rewardPerResponse && poll.rewardPerResponse > 0 && !poll.userVoted && currentUser && !isCreator && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 px-1">
+                  <Star className="w-3 h-3" />
+                  Earn ${poll.rewardPerResponse.toFixed(2)} for your response
+                </p>
+              )}
+            </div>
+          ))}
+        </motion.div>
+      )}
 
-          <Separator />
-
-          {/* Comments */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-          >
-            <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-              <MessageCircle className="w-5 h-5 text-orange-500" />
-              Comments ({video.commentCount})
-            </h2>
+      {/* ─── COMMENTS (SECONDARY, COLLAPSIBLE) ────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="mt-8"
+      >
+        {!commentsExpanded ? (
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setCommentsExpanded(true)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="text-lg font-semibold">
+                Text Comments ({video.commentCount})
+              </span>
+              <ChevronDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-orange-500" />
+                Text Comments ({video.commentCount})
+              </h2>
+              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setCommentsExpanded(false)}>
+                <ChevronUp className="w-3 h-3 mr-1" />
+                Collapse
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground -mt-2 flex items-center gap-1">
+              <Video className="w-3 h-3" />
+              Prefer video responses over text for stronger impact
+            </p>
             <CommentSection videoId={videoId} />
-          </motion.div>
-        </div>
+          </div>
+        )}
+      </motion.div>
 
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* Creator Card */}
-          <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card>
-              <CardContent className="p-4 text-center">
-                <button onClick={handleCreatorClick} className="cursor-pointer">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center mx-auto mb-3 text-white text-xl font-bold">
-                    {video.creator.username.charAt(0).toUpperCase()}
-                  </div>
-                  <p className="font-semibold flex items-center justify-center gap-1.5 hover:text-orange-500 transition-colors">
-                    @{video.creator.username}
+      {/* ─── FOOTER INFO BAR ──────────────────────────────────────── */}
+      <Separator className="my-8" />
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              {/* Creator card (small) */}
+              <button
+                onClick={handleCreatorClick}
+                className="flex items-center gap-3 hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors shrink-0"
+              >
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                  {video.creator.username.charAt(0).toUpperCase()}
+                </div>
+                <div className="text-left min-w-0">
+                  <p className="text-sm font-semibold flex items-center gap-1.5 hover:text-orange-500 transition-colors truncate">
+                    {video.creator.username}
                     {video.creator.isVerified && (
-                      <CheckCircle2 className="w-4 h-4 text-amber-500" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                     )}
                   </p>
-                </button>
-                <p className="text-xs text-muted-foreground mt-1">Creator</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Video Stats */}
-          <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.15 }}
-          >
-            <Card>
-              <CardContent className="p-4 space-y-3">
-                <h3 className="text-sm font-semibold">Stats</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      <Eye className="w-4 h-4" /> Views
-                    </span>
-                    <span className="font-medium">{video.viewCount}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      <Heart className="w-4 h-4" /> Likes
-                    </span>
-                    <span className="font-medium">{video.likeCount}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      <MessageCircle className="w-4 h-4" /> Comments
-                    </span>
-                    <span className="font-medium">{video.commentCount}</span>
-                  </div>
-                  {video.type === 'lead' && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground flex items-center gap-2">
-                        <Video className="w-4 h-4" /> Responses
-                      </span>
-                      <span className="font-medium">{video.responseCount}</span>
-                    </div>
-                  )}
-                  {(video.polls?.length || 0) > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground flex items-center gap-2">
-                        <Users className="w-4 h-4" /> Polls
-                      </span>
-                      <span className="font-medium">{video.polls?.length}</span>
-                    </div>
-                  )}
+                  <p className="text-xs text-muted-foreground">Creator</p>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+              </button>
 
-          {/* Earn Ad Revenue (for creator) */}
-          {currentUser && video.creator.id === currentUser.id && (
-            <motion.div
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.25 }}
-            >
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-emerald-500" />
-                      <h3 className="text-sm font-semibold">Ad Revenue</h3>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-2 text-xs border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
-                      onClick={handleEarnRevenue}
-                      disabled={earningRevenue}
-                    >
-                      {earningRevenue ? <Loader2 className="w-3 h-3 animate-spin" /> : <DollarSign className="w-3 h-3" />}
-                      Earn Revenue
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Based on {video.viewCount} views, {video.likeCount} likes, {video.commentCount} comments
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+              {/* Stats row */}
+              <div className="flex items-center gap-4 text-xs text-muted-foreground sm:flex-1 sm:justify-center flex-wrap">
+                <span className="flex items-center gap-1">
+                  <Eye className="w-3.5 h-3.5" />
+                  {video.viewCount} views
+                </span>
+                <span className="flex items-center gap-1">
+                  <Heart className="w-3.5 h-3.5" />
+                  {video.likeCount} likes
+                </span>
+                <span className="flex items-center gap-1">
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  {video.commentCount} comments
+                </span>
+                {video.type === 'lead' && (
+                  <span className="flex items-center gap-1">
+                    <Video className="w-3.5 h-3.5" />
+                    {video.responseCount} responses
+                  </span>
+                )}
+              </div>
 
-          {/* Poll Summary */}
-          {video.polls && video.polls.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card>
-                <CardContent className="p-4 space-y-3">
-                  <h3 className="text-sm font-semibold">Poll Activity</h3>
+              {/* Actions */}
+              <div className="flex items-center gap-2 shrink-0">
+                {currentUser && isCreator && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
+                    onClick={handleEarnRevenue}
+                    disabled={earningRevenue}
+                  >
+                    {earningRevenue ? <Loader2 className="w-3 h-3 animate-spin" /> : <TrendingUp className="w-3 h-3" />}
+                    Earn Revenue
+                  </Button>
+                )}
+                {currentUser && !isCreator && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs hover:bg-pink-50 dark:hover:bg-pink-950/30 hover:text-pink-500 hover:border-pink-300"
+                    onClick={() => setTipOpen(true)}
+                  >
+                    <DollarSign className="w-3 h-3" />
+                    Tip
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Poll Activity Summary */}
+            {video.polls && video.polls.length > 0 && (
+              <div className="mt-3 pt-3 border-t">
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart3 className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Poll Activity</span>
+                </div>
+                <div className="space-y-2">
                   {video.polls.map((poll) => (
                     <div key={poll.id} className="space-y-1">
                       <p className="text-xs text-muted-foreground truncate">{poll.question}</p>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                           <div
                             className="h-full bg-gradient-to-r from-orange-400 to-amber-500 rounded-full transition-all duration-500"
                             style={{
@@ -822,16 +894,18 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                             }}
                           />
                         </div>
-                        <span className="text-xs font-medium shrink-0">{poll.responseCount}</span>
+                        <span className="text-[10px] font-medium shrink-0 text-muted-foreground">{poll.responseCount}</span>
                       </div>
                     </div>
                   ))}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </div>
-      </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* ─── DIALOGS ──────────────────────────────────────────────── */}
 
       {/* Tip Dialog */}
       {currentUser && (

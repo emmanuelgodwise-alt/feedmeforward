@@ -27,6 +27,7 @@ export interface Video {
   duration: number | null;
   viewCount: number;
   isPublic: boolean;
+  isTextOnly?: boolean;
   createdAt: string;
   creator?: VideoCreator;
   _count?: VideoCounts;
@@ -47,6 +48,7 @@ export interface Poll {
   options: PollOption[];
   isPaid: boolean;
   rewardPerResponse: number | null;
+  totalRewardPool?: number;
   responseCount: number;
   closesAt: string | null;
   userVoted?: boolean;

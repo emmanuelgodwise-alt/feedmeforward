@@ -73,22 +73,29 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, videoUrl, thumbnailUrl, category, tags, type, parentVideoId } = body;
+    const { title, description, videoUrl, thumbnailUrl, category, tags, type, parentVideoId, isTextOnly } = body;
 
     // Validate
     if (!title || typeof title !== 'string' || title.trim().length < 1) {
       return NextResponse.json({ success: false, error: 'Title is required' }, { status: 400 });
     }
-    if (!videoUrl || typeof videoUrl !== 'string') {
-      return NextResponse.json({ success: false, error: 'Video URL is required' }, { status: 400 });
-    }
-    try {
-      // Accept both full URLs and relative upload paths (e.g. /uploads/videos/...)
-      if (!videoUrl.startsWith('/')) {
-        new URL(videoUrl);
+
+    // When isTextOnly is true, videoUrl is optional (defaults to empty string)
+    const textOnly = !!isTextOnly;
+    const finalVideoUrl = textOnly ? (videoUrl || '') : videoUrl;
+
+    if (!textOnly) {
+      if (!videoUrl || typeof videoUrl !== 'string') {
+        return NextResponse.json({ success: false, error: 'Video URL is required' }, { status: 400 });
       }
-    } catch {
-      return NextResponse.json({ success: false, error: 'Video URL must be a valid URL' }, { status: 400 });
+      try {
+        // Accept both full URLs and relative upload paths (e.g. /uploads/videos/...)
+        if (!videoUrl.startsWith('/')) {
+          new URL(videoUrl);
+        }
+      } catch {
+        return NextResponse.json({ success: false, error: 'Video URL must be a valid URL' }, { status: 400 });
+      }
     }
 
     // Validate parentVideoId if provided
@@ -104,12 +111,13 @@ export async function POST(request: NextRequest) {
         creatorId: userId,
         title: title.trim(),
         description: description?.trim() || null,
-        videoUrl,
+        videoUrl: finalVideoUrl,
         thumbnailUrl: thumbnailUrl || null,
         category: category || null,
         tags: tags && Array.isArray(tags) && tags.length > 0 ? JSON.stringify(tags) : null,
         type: type || 'lead',
         parentVideoId: parentVideoId || null,
+        isTextOnly: textOnly,
         status: 'active',
       },
       include: {

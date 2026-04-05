@@ -448,7 +448,7 @@ function SignUpForm({ onNavigate }: { onNavigate: (view: View) => void }) {
       });
 
       login(data.user);
-      onNavigate('dashboard');
+      onNavigate('explore');
     } catch {
       toast({
         title: 'Network error',
@@ -683,7 +683,7 @@ function LoginForm({ onNavigate }: { onNavigate: (view: View) => void }) {
       });
 
       login(data.user);
-      onNavigate('dashboard');
+      onNavigate('explore');
     } catch {
       toast({
         title: 'Network error',
@@ -1672,7 +1672,7 @@ export default function Home() {
   // Establish global real-time SSE connection for all views
   useRealtime();
 
-  const [view, setView] = useState<View>(isAuthenticated ? 'dashboard' : 'landing');
+  const [view, setView] = useState<View>(isAuthenticated ? 'explore' : 'landing');
   const [videoId, setVideoId] = useState<string>('');
   const [parentVideoId, setParentVideoId] = useState<string>('');
   const [parentVideoTitle, setParentVideoTitle] = useState<string>('');

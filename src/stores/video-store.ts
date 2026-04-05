@@ -24,6 +24,7 @@ interface VideoStore {
     tags?: string[];
     type?: string;
     parentVideoId?: string;
+    isTextOnly?: boolean;
   }) => Promise<Video | null>;
   createPoll: (data: {
     videoId: string;

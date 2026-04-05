@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Play, X, Upload, FileVideo, CheckCircle } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, Play, X, Upload, FileVideo, CheckCircle, Video, Type } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useVideoStore } from '@/stores/video-store';
 import { useToast } from '@/hooks/use-toast';
@@ -41,6 +42,7 @@ export function CreateResponseView({
     thumbnailUrl: '',
     tags: '',
   });
+  const [isTextOnly, setIsTextOnly] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Upload state
@@ -107,15 +109,19 @@ export function CreateResponseView({
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!form.title.trim()) newErrors.title = 'Title is required';
-    if (!form.videoUrl.trim()) newErrors.videoUrl = 'Video URL is required';
-    else {
-      try {
-        // Accept both full URLs and relative upload paths (e.g. /uploads/videos/...)
-        if (!form.videoUrl.startsWith('/')) {
-          new URL(form.videoUrl);
+    if (isTextOnly) {
+      if (!form.description.trim()) newErrors.description = 'Description is required for text-only responses';
+    } else {
+      if (!form.videoUrl.trim()) newErrors.videoUrl = 'Video URL is required';
+      else {
+        try {
+          // Accept both full URLs and relative upload paths (e.g. /uploads/videos/...)
+          if (!form.videoUrl.startsWith('/')) {
+            new URL(form.videoUrl);
+          }
+        } catch {
+          newErrors.videoUrl = 'Please enter a valid URL';
         }
-      } catch {
-        newErrors.videoUrl = 'Please enter a valid URL';
       }
     }
     setErrors(newErrors);
@@ -134,11 +140,12 @@ export function CreateResponseView({
     const video = await createVideo({
       title: form.title.trim(),
       description: form.description.trim() || undefined,
-      videoUrl: form.videoUrl.trim(),
+      videoUrl: isTextOnly ? '' : form.videoUrl.trim(),
       thumbnailUrl: form.thumbnailUrl.trim() || undefined,
       tags: tagsArray.length > 0 ? tagsArray : undefined,
       type: 'response',
       parentVideoId,
+      isTextOnly,
     });
 
     if (!video) {
@@ -146,7 +153,7 @@ export function CreateResponseView({
       return;
     }
 
-    toast({ title: 'Response created!', description: 'Your response clip has been published.' });
+    toast({ title: 'Response created!', description: isTextOnly ? 'Your text response has been published.' : 'Your response clip has been published.' });
     window.dispatchEvent(new CustomEvent('navigate-video', { detail: { videoId: parentVideoId } }));
   };
 
@@ -169,8 +176,8 @@ export function CreateResponseView({
           <span className="text-sm">Back to Video</span>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Respond with Clip</h1>
-          <p className="text-sm text-muted-foreground">Create a video response</p>
+          <h1 className="text-2xl font-bold">Respond to Lead Clip</h1>
+          <p className="text-sm text-muted-foreground">Share your opinion on this topic</p>
         </div>
       </motion.div>
 
@@ -202,6 +209,28 @@ export function CreateResponseView({
         </Card>
       </motion.div>
 
+      {/* Response Type Toggle */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isTextOnly ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-orange-100 dark:bg-orange-900/40'}`}>
+                  {isTextOnly ? <Type className="w-4 h-4 text-amber-600" /> : <Video className="w-4 h-4 text-orange-500" />}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">{isTextOnly ? 'Text-Only Response' : 'Video Response'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isTextOnly ? 'Your video box will appear but marked as text-only' : 'Upload a video or paste a URL'}
+                  </p>
+                </div>
+              </div>
+              <Switch checked={isTextOnly} onCheckedChange={setIsTextOnly} />
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           <motion.div
@@ -224,6 +253,7 @@ export function CreateResponseView({
                 </div>
 
                 {/* Video Upload */}
+                {!isTextOnly && (
                 <div className="space-y-2">
                   <Label>Upload Video</Label>
                   <div
@@ -290,7 +320,9 @@ export function CreateResponseView({
                     Upload a local file, or paste a URL below
                   </p>
                 </div>
+                )}
 
+                {!isTextOnly && (
                 <div className="space-y-2">
                   <Label htmlFor="resp-url">Video URL *</Label>
                   <Input
@@ -302,6 +334,15 @@ export function CreateResponseView({
                   />
                   {errors.videoUrl && <p className="text-xs text-destructive">{errors.videoUrl}</p>}
                 </div>
+                )}
+
+                {isTextOnly && (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3">
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    Your response will appear as a text-only opinion. The video box will show &quot;This Is A Text-Only Response&quot;.
+                  </p>
+                </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="resp-thumbnail">Thumbnail URL (optional)</Label>
@@ -314,7 +355,7 @@ export function CreateResponseView({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="resp-desc">Description</Label>
+                  <Label htmlFor="resp-desc">Description {isTextOnly && '*'}</Label>
                   <Textarea
                     id="resp-desc"
                     placeholder="What's your response about?"
@@ -322,6 +363,7 @@ export function CreateResponseView({
                     onChange={(e) => updateForm('description', e.target.value)}
                     rows={3}
                   />
+                  {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -364,7 +406,7 @@ export function CreateResponseView({
                   Publishing...
                 </>
               ) : (
-                'Publish Response Clip'
+                isTextOnly ? 'Publish Text Response' : 'Publish Response Clip'
               )}
             </Button>
           </motion.div>

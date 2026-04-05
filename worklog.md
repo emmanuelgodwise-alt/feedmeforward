@@ -2410,3 +2410,231 @@ Stage Summary:
 - Content reporting with jury resolution
 - Build: ✅, Lint: ✅
 - ALL 12 PHASES COMPLETE
+
+---
+## Task ID: backend-align - main-agent (Backend Alignment: isTextOnly + Explore Back Button)
+### Work Task
+Apply 5 backend changes to align with the original FeedMeForward project intent: add isTextOnly field to Video schema, update POST /api/videos for text-only responses, verify GET endpoints include isTextOnly, and update explore view back button.
+
+### Work Summary
+
+#### 1. Prisma Schema — Added `isTextOnly` to Video model
+- Added `isTextOnly Boolean @default(false)` field after `isPublic` in the Video model
+- Comment: `// text-only response, no video`
+- Ran `npx prisma db push` — successfully synced with SQLite and regenerated Prisma Client (v6.19.2)
+
+#### 2. POST /api/videos — Updated for text-only support
+- Added `isTextOnly` to destructured request body fields
+- When `isTextOnly` is true (`!!isTextOnly`):
+  - Skips videoUrl requirement (allows empty string or null)
+  - Sets `videoUrl` to empty string `""` if not provided
+- When `isTextOnly` is false: existing videoUrl validation still applies (required, valid URL)
+- Stores `isTextOnly: textOnly` in the video create data
+
+#### 3. GET /api/videos/[id]/responses — Verified ✅
+- Uses `db.video.findMany` without explicit `select`, so all scalar fields (including `isTextOnly`) are included by default
+- The spread `...v` in the parsed map preserves `isTextOnly` in the response
+- No changes needed
+
+#### 4. GET /api/videos and GET /api/videos/[id] — Verified ✅
+- Both endpoints use `findMany`/`findUnique` without explicit `select`, so all scalar fields are included
+- The JSON parsing (`...v, tags: v.tags ? JSON.parse(v.tags) : null`) uses spread which preserves `isTextOnly`
+- No changes needed
+
+#### 5. Explore View Back Button — Updated
+- Changed from `<Button variant="ghost">` with `<span>Back to Dashboard</span>` text to `<Button variant="ghost" size="icon">` with `<Home>` icon only
+- Added `Home` import from lucide-react
+- Navigation target remains 'dashboard' (unchanged)
+
+#### Files Modified
+```
+prisma/schema.prisma (added isTextOnly field)
+src/app/api/videos/route.ts (POST handler: isTextOnly support)
+src/components/views/explore-view.tsx (back button: Home icon only)
+```
+
+#### Quality Checks
+- `npm run lint` passes with zero errors and zero warnings
+- Dev log shows successful compilation (`✓ Compiled in 141ms`) with no runtime errors
+- `npx prisma db push` completed successfully in 17ms
+
+---
+## Task ID: nav-restructure - main-agent (Navigation Restructure: Video Polls as Focal Point)
+### Work Task
+Restructure navigation so Video Polls (explore) is the focal point instead of the dashboard. This involves changing the default signed-in view, auth redirects, QuickNav ordering, and ExploreView header.
+
+### Work Summary
+
+#### 1. Default Signed-In View (`src/app/page.tsx`, line 1675)
+- Changed `useState<View>(isAuthenticated ? 'dashboard' : 'landing')` to `useState<View>(isAuthenticated ? 'explore' : 'landing')`
+- Signed-in users now land directly on the Video Polls explore view instead of the dashboard
+
+#### 2. Signup Redirect (`src/app/page.tsx`, line 451)
+- Changed `onNavigate('dashboard')` in SignUpForm handleSubmit to `onNavigate('explore')`
+- After successful registration, users are redirected to the explore view
+
+#### 3. Login Redirect (`src/app/page.tsx`, line 686)
+- Changed `onNavigate('dashboard')` in LoginForm handleSubmit to `onNavigate('explore')`
+- After successful login, users are redirected to the explore view
+
+#### 4. QuickNav Restructure (`src/components/quick-nav.tsx`)
+- Reordered NAV_ITEMS array to put Video Polls first:
+  1. Video Polls (explore) - **new first item**
+  2. Create (create-lead)
+  3. Feed (feed)
+  4. Messages (messages)
+  5. Alerts (notifications)
+  6. Ranks (leaderboard)
+  7. Rewards (rewards)
+  8. Wallet (wallet)
+  9. Communities (circles)
+  10. Invite (invitations)
+  11. My Dashboard (dashboard) - **moved to second-to-last**
+  12. Insights (audience)
+- Removed `Segments` nav item (was linked to 'segments' view, Target icon removed)
+- Removed unused `Target` import from lucide-react
+- "Home" renamed to "My Dashboard" for clarity
+- "Explore" renamed to "Video Polls" to match the view heading
+
+#### 5. ExploreView Header Update (`src/components/views/explore-view.tsx`)
+- Changed heading from "Explore" to "Video Polls"
+- Changed subtitle from "Discover and engage with video polls" to "Create, share and respond to video opinion polls — the heartbeat of FeedMeForward"
+- Back button was already a Home icon-only button (from prior FIX task), no text change needed
+
+#### Issues Found
+- None. All changes applied cleanly.
+- Pre-existing notification API error (`db.notification.count` undefined) was observed in dev logs but is unrelated to this task.
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilations (`✓ Compiled in 87-141ms`) with no new runtime errors
+
+#### Files Modified
+```
+src/app/page.tsx (3 edits: default view, signup redirect, login redirect)
+src/components/quick-nav.tsx (NAV_ITEMS reorder + unused import cleanup)
+src/components/views/explore-view.tsx (heading + subtitle text update)
+```
+
+---
+## Task ID: text-only-response - main-agent (Add Text-Only Response Support to Create Response View)
+### Work Task
+Add text-only response support to the Create Response View with a toggle between "Video Response" and "Text-Only Response" modes, conditional form fields, validation logic, and backend support.
+
+### Work Summary
+
+#### 1. Video Store (`src/stores/video-store.ts`) — Modified
+- Added `isTextOnly?: boolean` to the `createVideo` data type interface
+
+#### 2. Create Response View (`src/components/views/create-response-view.tsx`) — Modified
+- **New imports**: Added `Switch` from `@/components/ui/switch`, `Video` and `Type` from `lucide-react`
+- **New state**: Added `const [isTextOnly, setIsTextOnly] = useState(false)`
+- **Response Type Toggle Card**: Added between Parent Video Info and the form — a card with icon (Video/Type), label, description, and Switch toggle. Animated with framer-motion.
+- **Conditional Video Upload section**: Wrapped in `{!isTextOnly && (...)}` — completely hidden when text-only mode is active
+- **Conditional Video URL input**: Wrapped in `{!isTextOnly && (...)}` — completely hidden when text-only mode is active
+- **Text-only notice**: When `isTextOnly` is true, shows amber-themed info box: "Your response will appear as a text-only opinion. The video box will show 'This Is A Text-Only Response'."
+- **Description field**: Label changes to show `*` when `isTextOnly` is true; added description error display
+- **Validation logic**: When `isTextOnly` is false → existing videoUrl validation; when true → requires description, skips videoUrl validation
+- **Submit handler**: Passes `isTextOnly: true` and `videoUrl: ''` to `createVideo` when in text-only mode
+- **Toast message**: Changes between "Your text response has been published." and "Your response clip has been published."
+- **Submit button text**: Conditionally shows "Publish Text Response" or "Publish Response Clip"
+- **Page title**: Changed from "Respond with Clip" → "Respond to Lead Clip"
+- **Page subtitle**: Changed from "Create a video response" → "Share your opinion on this topic"
+
+#### 3. API Route (`src/app/api/videos/route.ts`) — Already Updated
+- The POST handler already supports `isTextOnly` with conditional videoUrl validation
+- When `isTextOnly` is true, videoUrl defaults to empty string and validation is skipped
+- `isTextOnly` boolean is persisted to the database
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation with no runtime errors
+- TypeScript strict typing throughout
+- All imports verified correct
+
+#### Files Modified
+```
+src/stores/video-store.ts (modified - added isTextOnly to createVideo type)
+src/components/views/create-response-view.tsx (modified - full text-only response support)
+```
+
+---
+## Task ID: REBUILD-VIDEO-DETAIL - main-agent (Video Detail View Rebuild)
+### Work Task
+Completely rebuild src/components/views/video-detail-view.tsx to match the original FeedMeForward platform intent: a VIDEO OPINION POLL platform with full-width layout, prominent response clips, text-only response handling, collapsible comments, and footer info bar replacing the old sidebar.
+
+### Work Summary
+
+#### 1. Types Updated (`src/types/index.ts`)
+- Added `isTextOnly?: boolean` to the `Video` interface (propagates to `VideoDetail` via extends)
+- Added `totalRewardPool?: number` to the `Poll` interface
+- These fields were already returned by the API but not typed
+
+#### 2. Video Detail View (`src/components/views/video-detail-view.tsx`) — Complete Rewrite
+
+**Layout Change:**
+- Removed 3-column grid layout with sidebar (`grid grid-cols-1 lg:grid-cols-3 gap-6`) → single column `max-w-4xl mx-auto`
+- Removed entire sidebar div (creator card, stats card, ad revenue card, poll activity summary card)
+
+**New Section Order:**
+1. Header with back button ("← Back to Video Polls") and status badges including "Text Only" badge
+2. QuickNav
+3. **Lead Clip** — full-width video player with aspect-video ratio, embed support (YouTube/Vimeo), local video download, and text-only response handling (Type icon + muted card)
+4. **Video Info** — title, @creator (clickable), views, time, tags, description
+5. **Action Buttons Row 1** — Like, Comment (click to expand comments), Share, VideoActions, Tip Creator
+6. **Action Buttons Row 2** — "Respond with Video Clip" (primary orange gradient) + "Respond with Text Only" (outline amber) — both only for lead type, authenticated users; shows sign-in prompt for guests
+7. **Response Clips (PROMINENT)** — section right after actions, before polls:
+   - Large heading "Response Clips (X)" with Video icon
+   - Responsive grid: 1 col mobile, 2 cols tablet, 3 cols desktop, 4 cols XL
+   - Text-only responses render with Type icon + "This Is A Text-Only Response" in dashed muted box + description text
+   - Video responses render with gradient thumbnail + play icon + title + @creator + time
+   - Shows up to 8 responses initially with "See all X" expand button
+   - Shows up to 12 when expanded with "Show less" collapse
+   - Empty state with CTA
+8. **Polls** — moved after response clips (was before), kept all existing logic (claim reward, fund poll, LIVE badge, reward displays)
+9. **Comments (SECONDARY)** — collapsible:
+   - Starts COLLAPSED with button "Text Comments (X)" with ChevronDown
+   - Click to expand reveals CommentSection + subtle note "Prefer video responses over text for stronger impact"
+   - "Collapse" button to re-hide
+10. **Footer Info Bar** — replaces sidebar:
+    - Compact single Card with flex row:
+      - Creator mini-card (avatar initial + username + verified badge) — clickable to profile
+      - Stats row (views, likes, comments, responses) — horizontal
+      - Actions: "Earn Revenue" button (for creator) or "Tip" button (for viewers)
+    - Poll Activity summary below divider (if polls exist): question + progress bar + count
+
+**New Features:**
+- Text-only response handling on both the lead clip player (when viewed as a response) and individual response cards
+- Collapsible comments section (`commentsExpanded` state)
+- Show all responses toggle (`showAllResponses` state)
+- "Respond with Text Only" button alongside "Respond with Video Clip"
+- Comment count button expands comments section
+- Sign-in prompt for unauthenticated users wanting to respond
+
+**Preserved All Business Logic:**
+- All existing state variables and handlers
+- handleLike, handleClaimReward, handleFundPoll, handleEarnRevenue, handleShare, handleRespond, handleResponseClick, handleCreatorClick, getEmbedUrl, triggerScoreRecalc
+- Poll auto-refresh every 15s via pollRefreshRef
+- TipDialog and FundPollDialog components
+- VideoActions integration
+- navigate-video custom event for cross-component navigation
+- Score recalculation after likes
+
+**New Imports:**
+- `Type` from lucide-react (text-only indicators)
+- `ChevronDown`, `ChevronUp` from lucide-react (collapsible comments)
+- `BarChart3` from lucide-react (poll activity section in footer)
+- `Wallet` from lucide-react (imported but available for footer)
+- `AnimatePresence` from framer-motion (imported for potential future use)
+
+**Unused imports removed:**
+- `CardHeader`, `CardTitle` (no longer needed without sidebar cards)
+- `Users` kept for polls heading
+- All sidebar-related layout code removed
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev server compiles successfully (`✓ Compiled in 242ms`) with no errors related to this change
+- TypeScript strict typing throughout
+- All existing functionality preserved
+
