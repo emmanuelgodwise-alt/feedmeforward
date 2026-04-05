@@ -2784,3 +2784,65 @@ Stage Summary:
 - New file: src/components/views/onboarding-view.tsx
 - Modified: src/stores/auth-store.ts (added onboardingCompleted to User)
 - Modified: src/app/page.tsx (View type, initial state, signup/login redirects, render block)
+
+---
+## SESSION CHECKPOINT — 2026-04-06
+
+### 📍 WHERE WE ARE
+
+**All 12 original phases COMPLETE. All 6 enhancement features COMPLETE.**
+
+### ✅ COMPLETED PHASES (12 original + 6 features = 18 milestones)
+
+**Original 12 Phases:**
+1. Project Foundation & Authentication
+2. Database Schema — Core Entities (16→19 models)
+3. Core Video Polling (7 API routes, 4 views)
+4. Member Scoring & Gamification (score engine + UI)
+5. Wallet & Monetization (8 wallet/poll API routes + UI)
+6. Friend Invitation System (5 API routes + UI)
+7. Social Features & Notifications (follows, comments, reports)
+8. Real-time Features (WebSocket-based)
+9. Communities / Circles
+10. Internationalization (EN/FR/ES/HI)
+11. Safety & Moderation
+12. Production hardening & bug fixes
+
+**6 Enhancement Features:**
+- Feature 1: Voice-to-Text Transcription (ASR-based)
+- Feature 2: YouTube-style Download & Share
+- Feature 3: Advanced Poll Analytics (KPI cards, charts, AI insights, CSV export)
+- Feature 4: Enhanced Auto-Scoring (video 6x multiplier, influencer score 0-100, Elite level)
+- Feature 5: Paid Polls for Businesses (already existed from Phase 5 — verified complete)
+- Feature 6: Onboarding System (6-step wizard, auto video format info, tutorials, influencer path)
+
+### 🔑 KEY ARCHITECTURE DECISIONS
+- Video is PRIMARY, text is SECONDARY (Lead Clip big on top, Response clips row underneath)
+- Text-only shows empty dashed box with "This Is A Text-Only Response"
+- Video Polls is the default signed-in view (focal point of navigation)
+- Preview link MUST be provided after every phase completion (non-negotiable)
+- User timezone: Africa/Lagos
+- Warm orange/amber color theme throughout (no blue/indigo)
+
+### 📁 CRITICAL FILES
+- Main SPA router: `src/app/page.tsx`
+- Prisma schema: `prisma/schema.prisma` (19 models)
+- Score engine: `src/lib/score-engine.ts` (v2 with video 6x multiplier)
+- Auth store: `src/stores/auth-store.ts`
+- Wallet store: `src/stores/wallet-store.ts`
+- Video store: `src/stores/video-store.ts`
+- Types: `src/types/index.ts`
+- Video detail view: `src/components/views/video-detail-view.tsx` (central view with all feature integrations)
+
+### 🔜 WHAT'S NEXT (PENDING TASKS)
+- **No explicit pending tasks.** The user requested a session pause.
+- When resumed, the user may request additional features or refinements.
+- Always provide preview link after completing any work: `https://preview-chat-48456d7d-3f89-493d-944c-2f51255dd204.space.z.ai/`
+
+### 🛠 TECH STACK
+- Next.js 14 App Router, TypeScript, Tailwind CSS, Prisma ORM, SQLite
+- Zustand (state), framer-motion (animations), Recharts (charts), shadcn/ui
+- z-ai-web-dev-sdk (ASR transcription, AI features)
+- 60+ API routes, 19 DB models, 4 languages
+
+### 📊 BUILD STATUS: ✅ PASSING (verified 2026-04-06)
