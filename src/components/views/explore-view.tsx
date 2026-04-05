@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Video, RefreshCw, Search, Home } from 'lucide-react';
+import { Plus, Video, RefreshCw, Search } from 'lucide-react';
 import { useVideoStore } from '@/stores/video-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { VideoCard } from '@/components/video-card';
@@ -39,22 +39,23 @@ export function ExploreView({ onNavigate, setVideoId }: ExploreViewProps) {
 
   return (
     <div className="min-h-screen px-4 py-6 max-w-6xl mx-auto">
-      {/* Header */}
+      {/* Header — Video Polls IS the home */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6"
       >
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => onNavigate('dashboard')} className="shrink-0">
-            <Home className="w-5 h-5" />
-          </Button>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-md shadow-orange-500/20 shrink-0">
+            <Video className="w-5 h-5 text-white" />
+          </div>
           <div>
             <div className="flex items-center gap-2">
-              <Video className="w-6 h-6 text-orange-500" />
-              <h1 className="text-2xl font-bold">Video Polls</h1>
+              <h1 className="text-2xl font-bold">
+                <span className="bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">Video Polls</span>
+              </h1>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">Create, share and respond to video opinion polls — the heartbeat of FeedMeForward</p>
+            <p className="text-sm text-muted-foreground mt-0.5">Create, share and respond to video opinion polls — the heartbeat of FeedMeForward</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -65,7 +66,7 @@ export function ExploreView({ onNavigate, setVideoId }: ExploreViewProps) {
           {currentUser && (
             <Button
               size="sm"
-              className="gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
+              className="gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-sm"
               onClick={() => onNavigate('create-lead')}
             >
               <Plus className="w-4 h-4" />
