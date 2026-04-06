@@ -9,6 +9,9 @@ import {
   ArrowDownRight, Minus, PieChart as PieChartIcon, Clock, Globe, Star, Lock, Unlock,
   FileText, Layers, Percent, RefreshCw, CheckCircle2, XCircle,
   Info, Sparkles, Vote, Filter, Search, Trophy,
+  Wifi, Bot, GitCompare, Medal, Gauge, Lightbulb, ArrowRight,
+  CheckCircle, Calendar, BarChart2, AlertTriangle, Copy,
+  FileCheck2, Scale,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +24,8 @@ import { useAuthStore } from '@/stores/auth-store';
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell, PieChart, Pie,
-  RadialBarChart, RadialBar,
+  RadialBarChart, RadialBar, RadarChart, Radar,
+  PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts';
 
 // ─── Colors ─────────────────────────────────────────────────────────
@@ -130,6 +134,12 @@ export function AnalyticsProView({ onNavigate }: ViewProps) {
   const [contentSearch, setContentSearch] = useState('');
   const [pollStatus, setPollStatus] = useState('all');
   const [exporting, setExporting] = useState(false);
+  const [realtime, setRealtime] = useState<Record<string, unknown> | null>(null);
+  const [insights, setInsights] = useState<Record<string, unknown> | null>(null);
+  const [benchmarks, setBenchmarks] = useState<Record<string, unknown> | null>(null);
+  const [compare, setCompare] = useState<Record<string, unknown> | null>(null);
+  const [compareIds, setCompareIds] = useState('');
+  const [showCompareResults, setShowCompareResults] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!currentUser) return;
@@ -137,13 +147,16 @@ export function AnalyticsProView({ onNavigate }: ViewProps) {
     setError(null);
     try {
       const headers = { 'X-User-Id': currentUser.id };
-      const [o, e, c, a, r, p] = await Promise.all([
+      const [o, e, c, a, r, p, rt, ai, bm] = await Promise.all([
         fetch(`/api/analytics/overview?period=${period}`, { headers }).then((r) => r.json()),
         fetch(`/api/analytics/engagement?period=${period}`, { headers }).then((r) => r.json()),
         fetch(`/api/analytics/content?limit=50`, { headers }).then((r) => r.json()),
         fetch(`/api/analytics/audience?period=${period}`, { headers }).then((r) => r.json()),
         fetch('/api/analytics/revenue', { headers }).then((r) => r.json()),
         fetch(`/api/analytics/polls?status=${pollStatus}`, { headers }).then((r) => r.json()),
+        fetch('/api/analytics/realtime', { headers }).then((r) => r.json()),
+        fetch('/api/analytics/ai-insights', { headers }).then((r) => r.json()),
+        fetch('/api/analytics/benchmarks', { headers }).then((r) => r.json()),
       ]);
       if (o.success) setOverview(o.data);
       if (e.success) setEngagement(e.data);
@@ -151,12 +164,25 @@ export function AnalyticsProView({ onNavigate }: ViewProps) {
       if (a.success) setAudience(a.data);
       if (r.success) setRevenue(r.data);
       if (p.success) setPolls(p.data);
+      if (rt.success) setRealtime(rt.data);
+      if (ai.success) setInsights(ai.data);
+      if (bm.success) setBenchmarks(bm.data);
     } catch {
       setError('Failed to load analytics');
     } finally {
       setLoading(false);
     }
   }, [currentUser, period, pollStatus]);
+
+  const fetchCompare = useCallback(async () => {
+    if (!currentUser || !compareIds) return;
+    try {
+      const headers = { 'X-User-Id': currentUser.id };
+      const res = await fetch(`/api/analytics/compare?videoIds=${compareIds}`, { headers });
+      const json = await res.json();
+      if (json.success) { setCompare(json.data); setShowCompareResults(true); }
+    } catch { /* silent */ }
+  }, [currentUser, compareIds]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -282,6 +308,10 @@ export function AnalyticsProView({ onNavigate }: ViewProps) {
           <TabsTrigger value="audience" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white"><Users className="w-3.5 h-3.5" />Audience</TabsTrigger>
           <TabsTrigger value="revenue" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white"><DollarSign className="w-3.5 h-3.5" />Revenue</TabsTrigger>
           <TabsTrigger value="polls" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white"><Vote className="w-3.5 h-3.5" />Poll Trust</TabsTrigger>
+          <TabsTrigger value="realtime" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white"><Wifi className="w-3.5 h-3.5" />Real-Time</TabsTrigger>
+          <TabsTrigger value="ai-insights" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white"><Bot className="w-3.5 h-3.5" />AI Insights</TabsTrigger>
+          <TabsTrigger value="benchmarks" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white"><GitCompare className="w-3.5 h-3.5" />Benchmarks</TabsTrigger>
+          <TabsTrigger value="compare" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white"><Scale className="w-3.5 h-3.5" />Compare</TabsTrigger>
         </TabsList>
 
         {/* ═══════════════════════════════════════════════════════
@@ -398,7 +428,7 @@ export function AnalyticsProView({ onNavigate }: ViewProps) {
               <CardContent>
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={(overview?.reactions as Array<Record<string, number>>).map((r) => ({ type: r.type.charAt(0).toUpperCase() + r.type.slice(1), count: r.count }))} layout="vertical" margin={{ left: 20 }}>
+                    <BarChart data={(overview?.reactions as Array<Record<string, any>>).map((r: any) => ({ type: String(r.type).charAt(0).toUpperCase() + String(r.type).slice(1), count: r.count }))} layout="vertical" margin={{ left: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis type="number" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
                       <YAxis dataKey="type" type="category" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" width={60} />
@@ -1065,6 +1095,47 @@ export function AnalyticsProView({ onNavigate }: ViewProps) {
                               </div>
                             )}
 
+                            {/* Reliability Certificate */}
+                            {poll.reliabilityCertificate && (
+                              <div className="mt-3 p-3 rounded-lg border bg-muted/30">
+                                {poll.reliabilityCertificate.isCertified ? (
+                                  <>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <FileCheck2 className="w-4 h-4 text-amber-500" />
+                                      <span className="text-xs font-semibold">Reliability Certificate</span>
+                                      <Badge className={`text-[10px] border-0 text-white ${poll.reliabilityCertificate.level === 'gold' ? 'bg-gradient-to-r from-amber-400 to-yellow-500' : poll.reliabilityCertificate.level === 'silver' ? 'bg-gradient-to-r from-gray-300 to-gray-400' : 'bg-gradient-to-r from-orange-300 to-orange-400'}`}>
+                                        {poll.reliabilityCertificate.level === 'gold' ? 'Gold' : poll.reliabilityCertificate.level === 'silver' ? 'Silver' : 'Bronze'}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground mb-2">{poll.reliabilityCertificate.requirementsMet} of {poll.reliabilityCertificate.totalRequirements} requirements met</p>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                                      {((poll.reliabilityCertificate.checks || []) as Array<{ name: string; passed: boolean }>).map((check: any, ci: number) => (
+                                        <div key={ci} className="flex items-center gap-1.5 text-[10px]">
+                                          {check.passed ? <CheckCircle className="w-3 h-3 text-emerald-500" /> : <XCircle className="w-3 h-3 text-red-400" />}
+                                          <span className={check.passed ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'}>{check.name}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+                                      <span className="text-xs font-semibold text-muted-foreground">Not yet certified</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                                      {((poll.reliabilityCertificate.checks || []) as Array<{ name: string; passed: boolean }>).map((check: any, ci: number) => (
+                                        <div key={ci} className="flex items-center gap-1.5 text-[10px]">
+                                          {check.passed ? <CheckCircle className="w-3 h-3 text-emerald-500" /> : <XCircle className="w-3 h-3 text-red-400" />}
+                                          <span className={check.passed ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'}>{check.name}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )}
+
                             {/* Leading Option */}
                             {(poll.leadingOption) && (
                               <div className="mt-3 flex items-center gap-2 p-2 rounded-lg bg-muted/30">
@@ -1079,6 +1150,480 @@ export function AnalyticsProView({ onNavigate }: ViewProps) {
                   );
                 })}
               </div>
+            </>
+          )}
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════
+            TAB 7: REAL-TIME — Live engagement monitoring
+            ═══════════════════════════════════════════════════════ */}
+        <TabsContent value="realtime" className="space-y-6">
+          {realtime && (
+            <>
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard icon={Wifi} label="Active Now" value={String((realtime as any)?.activeNow ?? 0)} color="emerald" subtext={<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />Live</span>} />
+                <KpiCard icon={Eye} label="Views (48h)" value={fmt((realtime as any)?.viewsLast48h ?? 0)} color="orange" />
+                <KpiCard icon={Activity} label="Views (60min)" value={fmt((realtime as any)?.viewsLast60min ?? 0)} color="blue" />
+                <KpiCard icon={Heart} label="Engagement (60min)" value={fmt((realtime as any)?.realtimeMetrics?.likes + (realtime as any)?.realtimeMetrics?.comments + (realtime as any)?.realtimeMetrics?.votes || 0)} color="purple" />
+              </div>
+
+              {/* Real-Time Feed + Trending */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Wifi className="w-4 h-4 text-orange-500" />Live Engagement Feed</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {((realtime as any)?.engagementFeed || []).slice(0, 15).map((action: any, i: number) => {
+                        const TypeIcon = action.type === 'like' ? Heart : action.type === 'comment' ? MessageCircle : action.type === 'vote' ? Vote : action.type === 'react' ? Sparkles : action.type === 'follow' ? Users : Globe;
+                        return (
+                          <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                            <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0"><TypeIcon className="w-3.5 h-3.5 text-muted-foreground" /></div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm truncate"><span className="font-medium">{action.username}</span>{' '}{action.type}{' '}<span className="text-muted-foreground">{action.target}</span></p>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground shrink-0">{action.timeAgo}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="w-4 h-4 text-amber-500" />Trending Now</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {((realtime as any)?.trendingNow || []).slice(0, 3).map((video: any, i: number) => (
+                        <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/10">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${i === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white' : 'bg-muted text-muted-foreground'}`}>{i + 1}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{video.title}</p>
+                            <p className="text-xs text-muted-foreground">{fmt(video.views)} views · {video.velocity}↑/hr</p>
+                          </div>
+                          <Badge className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] border-0">{video.velocity}↑</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Metrics Breakdown */}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><BarChart2 className="w-4 h-4 text-blue-500" />Real-Time Metrics Breakdown</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {[
+                      { label: 'Likes', value: (realtime as any)?.realtimeMetrics?.likes ?? 0, icon: Heart, color: 'text-red-500' },
+                      { label: 'Comments', value: (realtime as any)?.realtimeMetrics?.comments ?? 0, icon: MessageCircle, color: 'text-blue-500' },
+                      { label: 'Votes', value: (realtime as any)?.realtimeMetrics?.votes ?? 0, icon: Vote, color: 'text-purple-500' },
+                      { label: 'Reactions', value: (realtime as any)?.realtimeMetrics?.reactions ?? 0, icon: Sparkles, color: 'text-pink-500' },
+                      { label: 'Follows', value: (realtime as any)?.realtimeMetrics?.follows ?? 0, icon: Users, color: 'text-emerald-500' },
+                      { label: 'Shares', value: (realtime as any)?.realtimeMetrics?.shares ?? 0, icon: Globe, color: 'text-cyan-500' },
+                    ].map((m, i) => (
+                      <div key={i} className="text-center p-3 rounded-lg bg-muted/30">
+                        <m.icon className={`w-5 h-5 ${m.color} mx-auto mb-1`} />
+                        <p className="text-lg font-bold">{fmt(m.value)}</p>
+                        <p className="text-[10px] text-muted-foreground">{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════
+            TAB 8: AI INSIGHTS — AI-powered recommendations
+            ═══════════════════════════════════════════════════════ */}
+        <TabsContent value="ai-insights" className="space-y-6">
+          {insights && (
+            <>
+              {/* Performance Insights */}
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2 mb-4"><Bot className="w-5 h-5 text-orange-500" />Performance Insights</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {((insights as any)?.performanceInsights || []).map((insight: any, i: number) => {
+                    const severityColors: Record<string, string> = {
+                      opportunity: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+                      warning: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+                      info: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+                    };
+                    const severityBorders: Record<string, string> = {
+                      opportunity: 'border-emerald-200 dark:border-emerald-800/40',
+                      warning: 'border-amber-200 dark:border-amber-800/40',
+                      info: 'border-blue-200 dark:border-blue-800/40',
+                    };
+                    return (
+                      <Card key={i} className={`border ${severityBorders[insight.severity] || 'border-border'}`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h4 className="text-sm font-semibold">{insight.title}</h4>
+                            <Badge className={`text-[10px] border-0 ${severityColors[insight.severity] || 'bg-muted'}`}>{insight.severity}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-2">{insight.description}</p>
+                          <div className="flex items-center gap-2">
+                            <Lightbulb className="w-3 h-3 text-amber-500 shrink-0" />
+                            <p className="text-xs text-muted-foreground"><span className="font-medium">Action: </span>{insight.action}</p>
+                          </div>
+                          <div className="mt-2">
+                            <Badge variant="outline" className="text-[10px]">Impact: {insight.impact}</Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Content Suggestions */}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Lightbulb className="w-4 h-4 text-amber-500" />Content Suggestions</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {((insights as any)?.contentSuggestions || []).map((suggestion: any, i: number) => (
+                      <div key={i} className="p-4 rounded-lg bg-muted/30 border">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Sparkles className="w-4 h-4 text-orange-500" />
+                          <span className="text-sm font-semibold">{suggestion.title}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{suggestion.description}</p>
+                        <Badge className="mt-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] border-0">{suggestion.type}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Optimal Posting Times + Growth Projections */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-500" />Optimal Posting Times</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Best Days</p>
+                        <div className="flex flex-wrap gap-2">
+                          {((insights as any)?.optimalPostingTimes?.bestDays || []).map((day: string, i: number) => (
+                            <Badge key={i} className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-xs">{day}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Best Hours</p>
+                        <div className="flex flex-wrap gap-2">
+                          {((insights as any)?.optimalPostingTimes?.bestHours || []).map((hour: string, i: number) => (
+                            <Badge key={i} className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-xs">{hour}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="w-4 h-4 text-emerald-500" />Growth Projections</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="text-center p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30">
+                        <Eye className="w-5 h-5 text-orange-500 mx-auto mb-1" />
+                        <p className="text-lg font-bold">{fmt((insights as any)?.growthProjections?.projectedViews7d ?? 0)}</p>
+                        <p className="text-[10px] text-muted-foreground">Views (7d)</p>
+                      </div>
+                      <div className="text-center p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
+                        <Users className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
+                        <p className="text-lg font-bold">{fmt((insights as any)?.growthProjections?.projectedFollowers30d ?? 0)}</p>
+                        <p className="text-[10px] text-muted-foreground">Followers (30d)</p>
+                      </div>
+                      <div className="text-center p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30">
+                        <DollarSign className="w-5 h-5 text-amber-500 mx-auto mb-1" />
+                        <p className="text-lg font-bold">{fmtMoney((insights as any)?.growthProjections?.projectedRevenue30d ?? 0)}</p>
+                        <p className="text-[10px] text-muted-foreground">Revenue (30d)</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Competitive Score */}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Gauge className="w-4 h-4 text-purple-500" />Competitive Score</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center">
+                    <div className="relative w-40 h-40">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadialBarChart cx="50%" cy="50%" innerRadius="60%" outerRadius="80%" startAngle={90} endAngle={-270} data={[{ name: 'Score', value: (insights as any)?.competitiveScore ?? 0 }]}>
+                          <RadialBar background dataKey="value" fill="#8b5cf6" cornerRadius={10} />
+                        </RadialBarChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center">
+                          <p className="text-3xl font-bold text-purple-600">{(insights as any)?.competitiveScore ?? 0}</p>
+                          <p className="text-[10px] text-muted-foreground">Score</p>
+                        </div>
+                      </div>
+                    </div>
+                    <Badge className={`mt-2 text-xs ${((insights as any)?.competitiveScore ?? 0) >= 80 ? 'bg-emerald-100 text-emerald-700' : ((insights as any)?.competitiveScore ?? 0) >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                      {((insights as any)?.competitiveScore ?? 0) >= 80 ? 'Excellent' : ((insights as any)?.competitiveScore ?? 0) >= 60 ? 'Good' : 'Needs Improvement'}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════
+            TAB 9: BENCHMARKS — Platform comparison & rankings
+            ═══════════════════════════════════════════════════════ */}
+        <TabsContent value="benchmarks" className="space-y-6">
+          {benchmarks && (
+            <>
+              {/* Ranking Badge */}
+              <div className="flex justify-center">
+                <Card className="border-0 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/20 shadow-lg w-full max-w-md">
+                  <CardContent className="p-6 text-center">
+                    <Medal className="w-10 h-10 text-amber-500 mx-auto mb-2" />
+                    <p className="text-4xl font-bold bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">{(benchmarks as any)?.rankingBadge ?? 'Top 10%'}</p>
+                    <p className="text-sm text-muted-foreground mt-1">Composite Score</p>
+                    <p className="text-3xl font-bold mt-1">{(benchmarks as any)?.compositeScore ?? 0}<span className="text-lg text-muted-foreground">/100</span></p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Percentile Rankings */}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><BarChart2 className="w-4 h-4 text-blue-500" />Percentile Rankings</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Views', value: (benchmarks as any)?.percentileRankings?.views ?? 0 },
+                      { label: 'Engagement', value: (benchmarks as any)?.percentileRankings?.engagement ?? 0 },
+                      { label: 'Followers', value: (benchmarks as any)?.percentileRankings?.followers ?? 0 },
+                      { label: 'Score', value: (benchmarks as any)?.percentileRankings?.score ?? 0 },
+                      { label: 'Content', value: (benchmarks as any)?.percentileRankings?.content ?? 0 },
+                      { label: 'Responses', value: (benchmarks as any)?.percentileRankings?.responses ?? 0 },
+                      { label: 'Poll Trust', value: (benchmarks as any)?.percentileRankings?.pollTrust ?? 0 },
+                    ].map((item, i) => (
+                      <div key={i} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-medium">{item.label}</span>
+                          <span className={`text-xs font-semibold ${item.value > 75 ? 'text-emerald-500' : item.value > 50 ? 'text-amber-500' : 'text-muted-foreground'}`}>{item.value}th percentile</span>
+                        </div>
+                        <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all duration-500 ${item.value > 75 ? 'bg-emerald-500' : item.value > 50 ? 'bg-amber-500' : 'bg-gray-400'}`} style={{ width: `${item.value}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Creator vs Platform */}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><GitCompare className="w-4 h-4 text-purple-500" />Creator vs Platform Average</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th className="text-left p-3 text-xs uppercase text-muted-foreground">Metric</th>
+                          <th className="text-right p-3 text-xs uppercase text-muted-foreground">You</th>
+                          <th className="text-right p-3 text-xs uppercase text-muted-foreground">Platform Avg</th>
+                          <th className="text-center p-3 text-xs uppercase text-muted-foreground">vs</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {((benchmarks as any)?.creatorVsPlatform || []).map((row: any, i: number) => {
+                          const ratio = row.platformAvg > 0 ? row.creator / row.platformAvg : 0;
+                          return (
+                            <tr key={i} className="border-b hover:bg-muted/30">
+                              <td className="p-3 font-medium">{row.metric}</td>
+                              <td className="p-3 text-right font-semibold">{row.creator}</td>
+                              <td className="p-3 text-right text-muted-foreground">{row.platformAvg}</td>
+                              <td className="p-3 text-center">
+                                {ratio >= 1 ? (
+                                  <Badge className="bg-emerald-100 text-emerald-700 text-[10px] border-0">Above</Badge>
+                                ) : (
+                                  <Badge className="bg-red-100 text-red-700 text-[10px] border-0">Below</Badge>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Category Benchmarks */}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Medal className="w-4 h-4 text-amber-500" />Category Benchmarks</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {((benchmarks as any)?.categoryBenchmarks || []).map((cat: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                        <div>
+                          <p className="text-sm font-medium">{cat.category}</p>
+                          <p className="text-xs text-muted-foreground">You: {cat.creatorValue} · Avg: {cat.categoryAverage}</p>
+                        </div>
+                        {cat.creatorValue >= cat.categoryAverage ? (
+                          <Badge className="bg-emerald-100 text-emerald-700 text-[10px] border-0 flex items-center gap-1"><ArrowUpRight className="w-3 h-3" />Above</Badge>
+                        ) : (
+                          <Badge className="bg-red-100 text-red-700 text-[10px] border-0 flex items-center gap-1"><ArrowDownRight className="w-3 h-3" />Below</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Growth Comparison */}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="w-4 h-4 text-emerald-500" />Growth Comparison</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Your Growth Rate</p>
+                      <p className="text-2xl font-bold text-emerald-600">{(benchmarks as any)?.growthComparison?.creatorRate ?? 0}%</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-muted/30 text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Platform Average</p>
+                      <p className="text-2xl font-bold text-muted-foreground">{(benchmarks as any)?.growthComparison?.platformRate ?? 0}%</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-center">
+                    {((benchmarks as any)?.growthComparison?.creatorRate ?? 0) >= ((benchmarks as any)?.growthComparison?.platformRate ?? 0) ? (
+                      <Badge className="bg-emerald-100 text-emerald-700 text-xs border-0 flex items-center gap-1 mx-auto"><ArrowUpRight className="w-3 h-3" />Growing faster than average</Badge>
+                    ) : (
+                      <Badge className="bg-amber-100 text-amber-700 text-xs border-0 flex items-center gap-1 mx-auto"><ArrowDownRight className="w-3 h-3" />Below platform growth rate</Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════
+            TAB 10: COMPARE — Video comparison tool
+            ═══════════════════════════════════════════════════════ */}
+        <TabsContent value="compare" className="space-y-6">
+          {/* Input Section */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <Scale className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder="Enter comma-separated video IDs..." value={compareIds} onChange={(e) => setCompareIds(e.target.value)} className="pl-9" />
+                </div>
+                <Button onClick={fetchCompare} disabled={!compareIds} className="bg-gradient-to-r from-orange-500 to-amber-500 text-white gap-2">
+                  <GitCompare className="w-4 h-4" />Compare
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {showCompareResults && compare && (
+            <>
+              {/* Radar Chart */}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><GitCompare className="w-4 h-4 text-purple-500" />Metric Comparison</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart data={(compare as any)?.radarData || []}>
+                        <PolarGrid stroke="hsl(var(--border))" />
+                        <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <PolarRadiusAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                        <Tooltip {...tooltipStyle} />
+                        <Legend wrapperStyle={{ fontSize: '11px' }} />
+                        {((compare as any)?.videos || []).map((_: any, i: number) => (
+                          <Radar key={i} name={`Video ${i + 1}`} dataKey={`video${i + 1}`} stroke={COLORS[i % COLORS.length]} fill={COLORS[i % COLORS.length]} fillOpacity={0.15} />
+                        ))}
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Side-by-side Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {((compare as any)?.videos || []).map((video: any, i: number) => (
+                  <Card key={i}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-semibold truncate">{video.title || `Video ${i + 1}`}</CardTitle>
+                      <CardDescription>ID: {video.id}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="text-center p-2 rounded-lg bg-orange-50 dark:bg-orange-950/30">
+                          <Eye className="w-4 h-4 text-orange-500 mx-auto mb-1" />
+                          <p className="text-sm font-bold">{fmt(video.views ?? 0)}</p>
+                          <p className="text-[10px] text-muted-foreground">Views</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-red-50 dark:bg-red-950/30">
+                          <Heart className="w-4 h-4 text-red-500 mx-auto mb-1" />
+                          <p className="text-sm font-bold">{fmt(video.engagement ?? 0)}</p>
+                          <p className="text-[10px] text-muted-foreground">Engagement</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-purple-50 dark:bg-purple-950/30">
+                          <Sparkles className="w-4 h-4 text-purple-500 mx-auto mb-1" />
+                          <p className="text-sm font-bold">{fmt(video.reactions ?? 0)}</p>
+                          <p className="text-[10px] text-muted-foreground">Reactions</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30">
+                          <MessageCircle className="w-4 h-4 text-blue-500 mx-auto mb-1" />
+                          <p className="text-sm font-bold">{fmt(video.responses ?? 0)}</p>
+                          <p className="text-[10px] text-muted-foreground">Responses</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
+                          <Zap className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
+                          <p className="text-sm font-bold">{video.velocity ?? 0}/hr</p>
+                          <p className="text-[10px] text-muted-foreground">Velocity</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30">
+                          <Vote className="w-4 h-4 text-amber-500 mx-auto mb-1" />
+                          <p className="text-sm font-bold">{video.pollParticipation ?? 0}%</p>
+                          <p className="text-[10px] text-muted-foreground">Poll Part.</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Best Performing Highlights */}
+              {((compare as any)?.bestPerforming || []).length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Award className="w-4 h-4 text-amber-500" />Best Performing Highlights</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {((compare as any)?.bestPerforming || []).map((bp: any, i: number) => (
+                        <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
+                          <Medal className="w-4 h-4 text-amber-500 shrink-0" />
+                          <span className="text-sm flex-1"><span className="font-medium">{bp.video}</span> leads in <span className="font-semibold">{bp.metric}</span> with <span className="text-emerald-600 font-semibold">{bp.value}</span></span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Winner Card */}
+              {(compare as any)?.winner && (
+                <Card className="border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/80 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/10">
+                  <CardContent className="p-6 text-center">
+                    <Trophy className="w-10 h-10 text-amber-500 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground mb-1">Overall Winner</p>
+                    <p className="text-xl font-bold">{(compare as any)?.winner?.title || (compare as any)?.winner?.id}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Composite Score: {(compare as any)?.winner?.score ?? 0}/100</p>
+                  </CardContent>
+                </Card>
+              )}
             </>
           )}
         </TabsContent>

@@ -3964,3 +3964,273 @@ Stage Summary:
 - Zero TypeScript errors in all new files
 - Ad types: pre-roll, banner overlay, post-vote interstitial
 
+
+---
+## Task ID: analytics-compare - main-agent (Analytics: Video Comparison API)
+### Work Task
+Create a GET endpoint at `/api/analytics/compare` for side-by-side comparison of multiple videos, with authentication, comprehensive validation, and rich analytics data including normalized metrics for radar chart visualization.
+
+### Work Summary
+
+#### 1. API Route: GET `/api/analytics/compare` — Created
+- **File**: `src/app/api/analytics/compare/route.ts`
+- **Authentication**: Validates `X-User-Id` header, returns 401 if missing
+- **Query parameters**: `videoIds` (required, comma-separated, max 5, deduplicated)
+
+**Validation:**
+- Missing videoIds → 400 with descriptive error
+- Empty/whitespace-only → 400
+- More than 5 IDs → 400 with max limit message
+- Duplicate IDs → 400 with dedup message
+- Videos not found or not owned by user → 404 with list of missing IDs
+- Fewer than 2 videos → 400 (comparison requires at least 2)
+
+**Response structure (`data` field):**
+
+1. **`videos`** — Array of per-video comparison data:
+   - Core: id, title, thumbnail, type, category, createdAt
+   - Counts: views, likes, comments, responses, shares (reposts)
+   - Computed: engagementRate ((likes+comments+responses)/views*100), daysSincePublished, viewsPerDay, engagementVelocity
+   - reactionBreakdown: { fire, heart, laugh, wow, sad, angry, clap, thinking } counts
+   - pollData (if poll exists): { totalVotes, leadingOption, optionsCount }
+
+2. **`comparison`** — Head-to-head analysis:
+   - bestPerforming: Array of { metric, videoId, value } for 8 key metrics (views, likes, comments, responses, shares, engagementRate, viewsPerDay, engagementVelocity)
+   - averages: { avgViews, avgEngagement, avgViewsPerDay } across compared videos
+   - range: { viewsRange: {min, max, spread}, engagementRange: {min, max, spread} }
+   - winner: { videoId, title, compositeScore, highlights[] } — overall best based on weighted composite score (views 25%, engagement 20%, reactions 15%, responses 10%, velocity 20%, poll 10%)
+
+3. **`metrics`** — Normalized (0-100) radar chart data per video:
+   - views, engagement, reactions, responses, velocity, pollParticipation
+   - Each metric scaled relative to max value in comparison set
+
+**Technical details:**
+- Uses `import { db } from '@/lib/db'` for Prisma client
+- Single optimized query fetches videos with `_count` for likes/comments/responses/reactions/reposts, plus individual reaction types and poll data
+- Internal `_raw` field used for composite score calculation, stripped from final response
+- All numeric values rounded to 2 decimal places
+- Poll options safely parsed with try/catch fallback
+- Days since published clamped to minimum 1 to prevent division-by-zero
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors** (1 pre-existing warning in unrelated file)
+- Dev server running successfully with no compilation errors
+- TypeScript strict typing throughout
+- Follows existing project patterns (NextRequest/NextResponse, x-user-id header auth, success/error response format)
+
+#### File Created
+```
+src/app/api/analytics/compare/route.ts (created)
+```
+
+---
+## Task ID: analytics-realtime - main-agent (Real-Time Analytics API)
+### Work Task
+Create a GET endpoint at `/api/analytics/realtime` providing YouTube Studio-style real-time analytics data for creators.
+
+### Work Summary
+
+Created `/src/app/api/analytics/realtime/route.ts` — a production-quality GET endpoint with the following features:
+
+1. **Authentication**: Validates `X-User-Id` header, verifies user existence in DB, returns 401/404 appropriately.
+
+2. **activeNow**: Counts unique users who interacted with the creator's content in the last 5 minutes. Queries across 6 engagement types (likes, comments, reactions, reposts, poll votes, follows), merges all userIds into a Set for deduplication.
+
+3. **viewsLast48h**: Aggregates `viewCount` across all creator's videos using Prisma `_sum`.
+
+4. **viewsLast60min**: Estimated recent views using a proxy model — counts new videos in the last hour (×3 estimated views each) plus recent engagement actions (likes ×2, comments ×3, reactions ×2, reposts ×2, votes ×2) to approximate view traffic.
+
+5. **engagementFeed**: Fetches the 15 most recent items from each of 5 engagement sources (likes, comments, reactions, poll votes, follows) with user info (username, displayName) and target info (video title or poll question). Merges all into a unified array, sorts by timestamp descending, and slices to top 15. Reaction type is encoded as `reaction:fire`, `reaction:heart`, etc.
+
+6. **trendingNow**: Fetches all creator videos with engagement counts (likes, comments, reactions, reposts). Calculates engagement velocity = totalEngagement / hoursSinceCreation (min 0.1h floor to prevent division by zero). Returns top 3 sorted by velocity.
+
+7. **realtimeMetrics**: Breakdown of activity by type in the last hour — likes, comments, votes, reactions, follows, shares (reposts). All 6 queries run in parallel via `Promise.all`.
+
+**Response shape** matches the specified JSON format exactly:
+```json
+{
+  "success": true,
+  "data": {
+    "activeNow": number,
+    "viewsLast48h": number,
+    "viewsLast60min": number,
+    "engagementFeed": Array<{ type, username, displayName, target, timestamp }>,
+    "trendingNow": Array<{ id, title, views, velocity }>,
+    "realtimeMetrics": { likes, comments, votes, reactions, follows, shares }
+  }
+}
+```
+
+**Quality checks**: `npm run lint` passes with zero errors (only 1 pre-existing warning in unrelated file). Follows exact same code patterns as existing analytics routes (`/api/analytics/overview`, `/api/analytics/engagement`).
+
+---
+## Task ID: AI-INSIGHTS - backend-agent
+### Work Task
+Create a new API route at `/api/analytics/ai-insights` (GET) that generates AI-powered actionable insights and recommendations for content creators using rule-based intelligence (not external AI API). Authenticate via `X-User-Id` header.
+
+### Work Summary
+
+Created `/src/app/api/analytics/ai-insights/route.ts` — a comprehensive, production-quality GET endpoint (~560 lines) that analyzes creator data and generates contextual recommendations similar to YouTube Studio's "Suggestions" tab.
+
+#### 1. Performance Insights (15 Rule-Based Rules)
+Returns an array of insight objects, each with: category, severity, title, description, metric, action, impact. Rules implemented:
+- **Engagement**: Exceptional engagement > 15% (opportunity), Low engagement < 3% (warning), High views but low engagement on top content (warning)
+- **Growth**: Rapid growth > 20% WoW (opportunity), View count declining > 10% (warning)
+- **Content**: Low response rate < 0.5 (warning), Post more frequently < 1/week (info), Double down on dominant category 2x+ (opportunity)
+- **Audience**: Growing audience > 10% in 30d (opportunity), Monitor follower retention > 10% new (info)
+- **Revenue**: Revenue acceleration > 30% MoM (opportunity)
+- **Polls**: Strong poll ROI > 80% conversion (opportunity), Improve poll reliability < 40 trust score (warning), Boost verified voter participation < 50% (warning)
+- **Real-time**: Audience is highly active right now > 10 interactions in 2 hours (opportunity)
+
+Insights are sorted by impact (high→medium→low) then severity (warning→opportunity→info).
+
+#### 2. Content Suggestions
+Generates 3-7 contextual suggestions based on:
+- Top-performing category (category-specific poll series ideas)
+- Engagement patterns (community circles, debate-worthy content)
+- Monetization signals (paid poll scaling, premium tiers)
+- Posting consistency (batch-creation tips)
+- Response rate optimization (response challenges)
+- Cross-category diversification (crossover content)
+
+#### 3. Optimal Posting Times
+Analyzes 30-day engagement data (votes, likes, comments, reactions) to determine:
+- `bestDays`: Top 3 days with above-average engagement (short format: Mon, Tue, etc.)
+- `bestHours`: Top 3 peak hours sorted chronologically
+- `timezone`: Based on user's location or UTC fallback
+- Falls back to platform defaults (Tue, Thu, Sat / 10, 14, 18) if insufficient data
+
+#### 4. Growth Projections
+Simple linear projections based on recent 7/30-day trends:
+- `projectedViews7d`: Current views + daily average × 7
+- `projectedFollowers30d`: Total followers + daily growth rate × 30
+- `projectedRevenue30d`: Current month + daily revenue rate × remaining days
+
+#### 5. Competitive Score
+Composite score (0-100) comparing creator metrics against platform-wide averages:
+- **Engagement** (25%): User engagement rate vs platform average
+- **Growth** (25%): View growth rate normalized to 0-100 scale
+- **Content Quality** (20%): Avg views per video vs platform average
+- **Monetization** (15%): Monthly revenue vs platform average
+- **Audience** (15%): Follower count and growth rate
+- Returns `percentile` label (e.g., "Top 15%", "Top 50%")
+
+#### 6. Technical Implementation
+- Fully parallelized data collection (41 database queries in single `Promise.all`)
+- Time windows: 2h (recent activity), 7d (content frequency), 14d (frequency averaging), 30d (primary period), 60d (comparison period)
+- Platform-wide stats computed from actual database aggregates (not hardcoded)
+- Response includes `_meta` object with insight counts for frontend rendering
+- Default "get started" insight for new accounts with no data
+
+#### Quality Checks
+- `npm run lint` passes with zero errors (only 1 pre-existing warning in unrelated file)
+- Dev server compiles and serves without runtime errors
+- Follows exact same code patterns as existing analytics routes
+- TypeScript strict typing with full interface definitions
+
+---
+## Task ID: analytics-pro-upgrade - frontend-agent
+### Work Task
+Upgrade the existing AnalyticsProView component by adding 4 new tabs (Real-Time, AI Insights, Benchmarks, Compare), enhancing the Poll Trust tab with a Reliability Certificate section, and adding all necessary imports, state variables, and data fetching logic.
+
+### Work Summary
+
+#### Changes Made to `src/components/views/analytics-pro-view.tsx`
+
+**1. New Imports Added:**
+- Recharts: `RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis`
+- Lucide: `Wifi, Bot, GitCompare, Medal, Gauge, Lightbulb, ArrowRight, CheckCircle, Calendar, BarChart2, AlertTriangle, Copy, FileCheck2, Scale`
+
+**2. New State Variables (6 added):**
+- `realtime`, `insights`, `benchmarks`, `compare` — data state for new tabs
+- `compareIds`, `showCompareResults` — input and display state for Compare tab
+
+**3. Updated fetchAll Callback:**
+- Extended Promise.all from 6 to 9 parallel fetch calls
+- Added: `/api/analytics/realtime`, `/api/analytics/ai-insights`, `/api/analytics/benchmarks`
+- Added corresponding state setters for all 3 new data sources
+
+**4. New fetchCompare Function:**
+- Separate useCallback for fetching compare data
+- Accepts comma-separated video IDs via `compareIds` state
+- Fetches from `/api/analytics/compare?videoIds=...`
+- Sets `compare` data and `showCompareResults` flag on success
+
+**5. New Tab Triggers (4 added):**
+- Real-Time (Wifi icon), AI Insights (Bot icon), Benchmarks (GitCompare icon), Compare (Scale icon)
+- All use the same gradient styling as existing tabs
+
+**6. Tab 7: Real-Time (`value="realtime"`):**
+- 4 KPI cards: Active Now (with green pulsing dot), Views (48h), Views (60min), Engagement (60min)
+- Live Engagement Feed: scrollable list of last 15 actions with type-specific icons, username, target, relative time
+- Trending Now: top 3 videos with ranked badges and velocity indicators
+- Real-Time Metrics Breakdown: 6-metric grid (Likes, Comments, Votes, Reactions, Follows, Shares)
+
+**7. Tab 8: AI Insights (`value="ai-insights"`):**
+- Performance Insights: severity-coded cards (opportunity=emerald, warning=amber, info=blue) with title, description, action suggestion, impact badge
+- Content Suggestions: grid of suggestion cards with type badges
+- Optimal Posting Times: best days and best hours displayed as badge chips
+- Growth Projections: 3 cards (Views 7d, Followers 30d, Revenue 30d)
+- Competitive Score: RadialBarChart gauge with rating label (Excellent/Good/Needs Improvement)
+
+**8. Tab 9: Benchmarks (`value="benchmarks"`):**
+- Ranking Badge: large gradient card showing rank tier and composite score
+- Percentile Rankings: 7 horizontal bars (Views, Engagement, Followers, Score, Content, Responses, Poll Trust) with color-coded fill (>75 green, >50 amber, else gray)
+- Creator vs Platform: comparison table with above/below indicators
+- Category Benchmarks: per-category performance cards with above/below badges
+- Growth Comparison: dual cards comparing creator growth rate vs platform average
+
+**9. Tab 10: Compare (`value="compare"`):**
+- Input section: text input for comma-separated video IDs + Compare button
+- Radar Chart: 6-metric comparison using Recharts RadarChart with PolarGrid
+- Side-by-side comparison cards for each video (views, engagement, reactions, responses, velocity, poll participation)
+- Best Performing Highlights: list of leading videos per metric
+- Winner Card: trophy display with composite score
+
+**10. Enhanced Tab 6 (Poll Trust) — Reliability Certificate:**
+- Added between bias indicators and leading option sections
+- For certified polls: gold/silver/bronze badge, requirements met count, grid of 6 checks (green CheckCircle for passed, red XCircle for failed)
+- For non-certified polls: "Not yet certified" header with the same checks grid
+- Uses FileCheck2, CheckCircle, XCircle, AlertTriangle icons
+
+#### Quality Checks
+- `npm run lint` passes with zero errors (1 pre-existing warning in unrelated file)
+- TypeScript compilation succeeds with no errors in the modified file
+- All existing 6 tabs preserved exactly as they were
+- File grew from ~1088 lines to ~1620 lines
+- Fixed malformed JSX attribute during development (stray `"` character in RadialBarChart data prop)
+
+---
+Task ID: Analytics Upgrade — Robust Analytics Pro Enhancement (YouTube/Facebook-Rivaling)
+Agent: Main Agent + 4 Sub-agents
+Task: Complete the robust analytics upgrade to rival YouTube/Facebook analytics, specifically designed for business/corporate adoption with reliable poll results.
+
+Work Log:
+- Analyzed existing analytics infrastructure: 6 API routes, 3 dashboard views, 1088-line AnalyticsProView with 6 tabs
+- Identified gaps: no real-time analytics, no AI insights, no platform benchmarks, no content comparison, no statistical rigor in poll trust
+- Created 4 new API routes in parallel using sub-agents:
+  1. `GET /api/analytics/realtime` — Real-time active viewers, engagement feed, trending videos, metrics breakdown
+  2. `GET /api/analytics/ai-insights` — 15 rule-based performance insights, content suggestions, optimal posting times, growth projections, competitive scoring
+  3. `GET /api/analytics/benchmarks` — Platform-wide averages, percentile rankings, category benchmarks, ranking badges, growth comparison
+  4. `GET /api/analytics/compare` — Side-by-side video comparison, radar chart data, head-to-head analysis, winner determination
+- Enhanced existing `GET /api/analytics/polls` with:
+  - Margin of Error calculation (95% CI using z=1.96)
+  - Confidence Intervals (lower/upper bounds for leading option)
+  - Chi-Square significance test (with p-value approximation)
+  - Reliability Certificate system (Gold/Silver/Bronze tiers with 6 quality checks)
+- Upgraded AnalyticsProView from 6 tabs to 10 tabs:
+  - Tab 7: Real-Time — Live pulse, engagement feed, trending, metrics grid
+  - Tab 8: AI Insights — Severity-coded insights, suggestions, posting times, projections, competitive score gauge
+  - Tab 9: Benchmarks — Ranking badge, 7 percentile bars, creator vs platform comparison, category benchmarks, growth comparison
+  - Tab 10: Compare — Video ID input, radar chart, side-by-side cards, best-performing highlights, winner trophy
+- Enhanced Tab 6 (Poll Trust) with Reliability Certificate section showing gold/silver/bronze badges and pass/fail checks
+- Fixed all TypeScript errors in new/modified files
+- Build verified: `npx next build` succeeds
+
+Stage Summary:
+- 4 new API routes, 1 enhanced API route, AnalyticsProView upgraded from 1088 to ~1620+ lines
+- 10 total analytics tabs rivaling YouTube Studio and Facebook Insights
+- Business-grade poll reliability with statistical rigor (margin of error, chi-square, certificates)
+- AI-powered insights engine for actionable recommendations
+- Platform benchmarking for competitive analysis
+- Zero new TypeScript errors in modified files

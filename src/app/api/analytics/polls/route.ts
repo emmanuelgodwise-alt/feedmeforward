@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     });
 
     // ─── Process each poll ─────────────────────────────────────
-    const pollAnalytics = [];
+    const pollAnalytics: any[] = [];
     for (const poll of polls) {
       const options = JSON.parse(poll.options as string) as Array<{ id: string; text: string; voteCount: number }>;
       const totalVotes = poll.responseCount;
@@ -80,14 +80,54 @@ export async function GET(request: NextRequest) {
       const engagementRate = ((totalVotes / views) * 100).toFixed(2);
       const leadingOption = [...options].sort((a, b) => b.voteCount - a.voteCount)[0];
 
-      // Statistical confidence (simplified)
+      // ── Margin of Error (95% CI) ────────────────────────────
+      // MoE = z * sqrt(p*(1-p)/n) where z=1.96 for 95% CI
+      let marginOfError = 0;
+      let confidenceInterval: { lower: number; upper: number } | null = null;
       let confidence: string;
-      if (totalVotes >= 384) confidence = '95% (±5%)';
-      else if (totalVotes >= 96) confidence = '90% (±10%)';
-      else if (totalVotes >= 24) confidence = '80% (±20%)';
-      else confidence = 'Low (sample too small)';
+      const leadingPct = leadingOption ? (leadingOption.voteCount / (totalVotes || 1)) : 0.5;
 
-      // Bias indicators
+      if (totalVotes >= 30) {
+        marginOfError = 1.96 * Math.sqrt((leadingPct * (1 - leadingPct)) / totalVotes);
+        confidenceInterval = {
+          lower: Math.max(0, Math.round((leadingPct - marginOfError) * 1000) / 10),
+          upper: Math.min(100, Math.round((leadingPct + marginOfError) * 1000) / 10),
+        };
+        marginOfError = Math.round(marginOfError * 1000) / 10;
+      }
+
+      if (totalVotes >= 384) confidence = '95%';
+      else if (totalVotes >= 96) confidence = '90%';
+      else if (totalVotes >= 24) confidence = '80%';
+      else confidence = 'Low';
+
+      // ── Chi-Square Test for Significance ──────────────────────
+      // Tests if vote distribution differs significantly from uniform
+      let chiSquareResult: { statistic: number; pValue: number; isSignificant: boolean } | null = null;
+      if (totalVotes >= 10 && options.length >= 2) {
+        const expected = totalVotes / options.length;
+        let chiSquare = 0;
+        for (const opt of options) {
+          chiSquare += Math.pow(opt.voteCount - expected, 2) / Math.max(expected, 0.01);
+        }
+        // Approximate p-value using chi-square distribution with df = k-1
+        const df = options.length - 1;
+        // Simplified p-value approximation
+        let pValue = 1;
+        if (chiSquare > 0) {
+          // Using Wilson-Hilferty approximation for chi-square p-value
+          const z = Math.pow(chiSquare / df, 1 / 3) - (1 - 2 / (9 * df)) / Math.sqrt(2 / (9 * df));
+          // Approximate normal CDF
+          pValue = 0.5 * (1 + Math.sign(z) * Math.sqrt(1 - Math.exp(-2 * z * z / Math.PI)));
+        }
+        chiSquareResult = {
+          statistic: Math.round(chiSquare * 100) / 100,
+          pValue: Math.round(pValue * 10000) / 10000,
+          isSignificant: pValue < 0.05,
+        };
+      }
+
+      // ── Bias indicators (computed before certificate) ─────────
       const newAccountVoters = votes.filter((v) => Date.now() - v.user.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000).length;
       const newAccountRatio = votes.length > 0 ? newAccountVoters / votes.length : 0;
       const biasIndicators: string[] = [];
@@ -95,6 +135,24 @@ export async function GET(request: NextRequest) {
       if (verifiedRatio < 0.2 && totalVotes > 10) biasIndicators.push('Low verified user ratio');
       if (uniqueLocations < 2 && totalVotes > 10) biasIndicators.push('Geographically concentrated');
       if (totalVotes < 10) biasIndicators.push('Insufficient sample size');
+
+      // ── Reliability Certificate ───────────────────────────────
+      const certChecks = [
+        { name: 'Sample Size', passed: totalVotes >= 100, description: `Need ≥100 votes (have ${totalVotes})` },
+        { name: 'Verified Voters', passed: verifiedRatio >= 0.5, description: `Need ≥50% verified (have ${Math.round(verifiedRatio * 100)}%)` },
+        { name: 'Geographic Diversity', passed: uniqueLocations >= 3, description: `Need ≥3 locations (have ${uniqueLocations})` },
+        { name: 'Low Bot Risk', passed: newAccountRatio < 0.15, description: `Need <15% new accounts (have ${Math.round(newAccountRatio * 100)}%)` },
+        { name: 'Statistical Significance', passed: chiSquareResult?.isSignificant === true, description: 'Chi-square p<0.05' },
+        { name: 'Sufficient Age Range', passed: uniqueAgeRanges >= 2, description: `Need ≥2 age ranges (have ${uniqueAgeRanges})` },
+      ];
+      const metChecks = certChecks.filter(c => c.passed).length;
+      const totalChecks = certChecks.length;
+      let certLevel: 'gold' | 'silver' | 'bronze' | null = null;
+      let isCertified = false;
+      if (metChecks >= 6) { certLevel = 'gold'; isCertified = true; }
+      else if (metChecks >= 4) { certLevel = 'silver'; isCertified = true; }
+      else if (metChecks >= 3) { certLevel = 'bronze'; isCertified = true; }
+      const reliabilityCertificate = { isCertified, level: certLevel, requirements: { met: metChecks, total: totalChecks }, checks: certChecks };
 
       // Time-to-first-vote
       const firstVote = votes.length > 0 ? votes.reduce((a, b) => a.createdAt < b.createdAt ? a : b) : null;
@@ -108,8 +166,8 @@ export async function GET(request: NextRequest) {
         : 0;
 
       // ── Revenue for paid polls ───────────────────────────────
-      let revenueData = null;
-      if (poll.isPaid) {
+      let revenueData: { totalPool: number; spent: number; remaining: number; costPerResponse: number } | null = null;
+      if (poll.isPaid && poll.totalRewardPool != null && poll.rewardPerResponse != null) {
         revenueData = {
           totalPool: poll.totalRewardPool,
           spent: Math.min(totalVotes * poll.rewardPerResponse, poll.totalRewardPool),
@@ -146,8 +204,12 @@ export async function GET(request: NextRequest) {
             velocity: Math.round(velocityScore),
           },
           confidence,
+          marginOfError,
+          confidenceInterval,
+          chiSquareResult,
           biasIndicators,
         },
+        reliabilityCertificate,
         voters: {
           uniqueCount: votes.length,
           verifiedCount: verifiedVoters,
@@ -162,6 +224,9 @@ export async function GET(request: NextRequest) {
           votesPerHour: Math.round(votesPerHour * 10) / 10,
           timeToFirstVote,
         },
+        marginOfError,
+        confidenceInterval,
+        chiSquareResult,
         evenness: Math.round(evenness * 100),
         status: poll.closesAt && new Date(poll.closesAt) < new Date() ? 'closed' : 'active',
         closesAt: poll.closesAt?.toISOString() || null,
