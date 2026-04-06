@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   Contact,
   Target,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface QuickNavProps {
@@ -38,6 +39,7 @@ const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', view: 'dashboard' },
   { icon: BarChart3, label: 'Insights', view: 'audience' },
   { icon: Target, label: 'Segments', view: 'segments' },
+  { icon: ShieldCheck, label: 'Analytics Pro', view: 'analytics-pro' },
 ];
 
 export function QuickNav({ onNavigate, activeView }: QuickNavProps) {
