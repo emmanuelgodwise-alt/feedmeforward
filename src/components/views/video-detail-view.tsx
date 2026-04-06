@@ -44,6 +44,7 @@ import {
   BarChart3,
   Wallet,
   Mic,
+  Target,
 } from 'lucide-react';
 import { TipDialog } from '@/components/tip-dialog';
 import { TranscribeDialog } from '@/components/transcribe-dialog';
@@ -57,6 +58,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PollCard } from '@/components/poll-card';
 import { PollAnalytics } from '@/components/poll-analytics';
 import { CommentSection } from '@/components/comment-section';
+import { TargetingCriteriaDisplay } from '@/components/targeting-criteria-display';
 import { timeAgo, getGradient } from '@/components/video-card';
 import type { Video, VideoDetail } from '@/types';
 import type { View } from '@/app/page';
@@ -865,6 +867,18 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                   <Star className="w-3 h-3" />
                   Earn ${poll.rewardPerResponse.toFixed(2)} for your response
                 </p>
+              )}
+              {/* Targeting criteria display */}
+              {poll.targetingCriteria && (
+                <div className="mt-2 px-1">
+                  <div className="rounded-lg border border-orange-200 dark:border-orange-900/40 bg-orange-50/50 dark:bg-orange-950/20 p-3 space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-700 dark:text-orange-300">
+                      <Target className="w-3.5 h-3.5" />
+                      Target Audience
+                    </div>
+                    <TargetingCriteriaDisplay criteria={poll.targetingCriteria} compact />
+                  </div>
+                </div>
               )}
             </div>
           ))}

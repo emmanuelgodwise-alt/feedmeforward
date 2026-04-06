@@ -3316,3 +3316,33 @@ Stage Summary:
 - Users can share their profile via QR from the profile page
 - 8 preset color themes + custom color picker, 4 size options, PNG/SVG format
 - Download functionality with proper filenames
+---
+Task ID: 9
+Agent: full-stack-developer
+Task: Implement Audience Targeting Tool for Paid Polls (Prompt 9)
+
+Work Log:
+- Read and analyzed existing code: polls API, vote API, segments routes, audience match API, video detail API, create-lead-view, explore-view, segments-view, quick-nav, video-store, page.tsx
+- Created shared utility `src/lib/build-where-clause.ts` with SegmentCriteria type, buildWhereClause(), validateCriteria(), hasActiveCriteria(), criteriaToBreakdown()
+- Created Zustand store `src/stores/audience-store.ts` for sharing segment criteria between segments-view and create-lead-view
+- Created reusable `src/components/targeting-criteria-display.tsx` with compact/expanded modes and color-coded badges per criterion field
+- Updated `POST /api/polls` to accept optional targetingCriteria, validate it, and store as JSON string
+- Updated `POST /api/polls/[id]/vote` to check targeting criteria against voting user's profile using buildWhereClause, returning 403 if not matched
+- Created `GET /api/polls/targeted` that returns active paid polls matching current user's profile (not already voted), with video/creator info
+- Created `GET /api/polls/[id]/targeting` that returns parsed criteria, estimated reach, breakdown, and user match status
+- Updated `GET /api/videos/[id]` to parse and include targetingCriteria in poll data
+- Updated video-store createPoll to accept optional targetingCriteria parameter
+- Updated quick-nav to add Segments link with Target icon
+- Fixed segments-view Use button to parse segment criteria, store in audience store, navigate to create-lead, and show toast
+- Updated create-lead-view with full targeting UI: collapsible section when paid poll is ON, segment dropdown for quick apply, manual criteria setup with checkboxes for each field (ageRange, location, gender, language, interests, minScore), estimate audience button, criteria summary badges
+- Updated explore-view with "Targeted Polls" tab that fetches from /api/polls/targeted and shows targeted poll cards with "Targeted for You" badge
+- Updated video-detail-view to show targeting criteria as a "Target Audience" info card near polls using TargetingCriteriaDisplay component
+
+Stage Summary:
+- 4 new API routes created (polls targeted, polls [id] targeting, updated polls POST, updated vote)
+- 2 new shared files (build-where-clause.ts, audience-store.ts)
+- 1 new reusable component (targeting-criteria-display.tsx)
+- 4 existing files updated (create-lead-view, explore-view, video-detail-view, segments-view, quick-nav)
+- All pre-existing lint errors (live-poll-panel, broadcaster-view) are NOT from this task
+- Lint passes with zero NEW errors, dev compiles successfully
+- Warm orange/amber color palette maintained throughout

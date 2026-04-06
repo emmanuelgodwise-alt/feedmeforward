@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { recalculateScore } from '@/lib/score-engine';
+import { buildWhereClause, type SegmentCriteria } from '@/lib/build-where-clause';
 
 // POST /api/polls/[id]/vote — Vote on a poll
 export async function POST(
@@ -25,6 +26,45 @@ export async function POST(
     const poll = await db.poll.findUnique({ where: { id: pollId } });
     if (!poll) {
       return NextResponse.json({ success: false, error: 'Poll not found' }, { status: 404 });
+    }
+
+    // Check targeting criteria
+    if (poll.targetingCriteria) {
+      try {
+        const criteria = JSON.parse(poll.targetingCriteria) as SegmentCriteria;
+        const user = await db.user.findUnique({
+          where: { id: userId },
+          select: {
+            ageRange: true,
+            location: true,
+            gender: true,
+            language: true,
+            interests: true,
+            memberScore: true,
+          },
+        });
+
+        if (!user) {
+          return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+        }
+
+        const whereClause = buildWhereClause(criteria);
+        const matchCount = await db.user.count({
+          where: {
+            ...whereClause,
+            id: userId,
+          },
+        });
+
+        if (matchCount === 0) {
+          return NextResponse.json(
+            { success: false, error: 'This poll is targeted to a specific audience. Your profile doesn\'t match the criteria.' },
+            { status: 403 }
+          );
+        }
+      } catch {
+        // If criteria parsing fails, allow vote
+      }
     }
 
     // Check if already voted (unique constraint will handle it, but give a nice message)

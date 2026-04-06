@@ -15,6 +15,7 @@ import {
   Circle,
   LayoutDashboard,
   Contact,
+  Target,
 } from 'lucide-react';
 
 interface QuickNavProps {
@@ -36,6 +37,7 @@ const NAV_ITEMS = [
   { icon: Contact, label: 'Import Friends', view: 'import-friends' },
   { icon: LayoutDashboard, label: 'Dashboard', view: 'dashboard' },
   { icon: BarChart3, label: 'Insights', view: 'audience' },
+  { icon: Target, label: 'Segments', view: 'segments' },
 ];
 
 export function QuickNav({ onNavigate, activeView }: QuickNavProps) {

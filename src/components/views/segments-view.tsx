@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth-store';
+import { useAudienceStore } from '@/stores/audience-store';
 import { useToast } from '@/hooks/use-toast';
 import { QuickNav } from '@/components/quick-nav';
 import {
@@ -82,6 +83,7 @@ const staggerItem = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 
 
 export function SegmentsView({ onNavigate }: ViewProps) {
   const { currentUser } = useAuthStore();
+  const { setSelectedSegmentCriteria } = useAudienceStore();
   const { toast } = useToast();
 
   const [segments, setSegments] = useState<Segment[]>([]);
@@ -710,7 +712,16 @@ export function SegmentsView({ onNavigate }: ViewProps) {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                            onClick={() => onNavigate('create-lead')}
+                            onClick={() => {
+                              try {
+                                const criteria = JSON.parse(segment.criteria);
+                                setSelectedSegmentCriteria(criteria);
+                                toast({ title: 'Segment applied', description: 'Targeting criteria will be loaded in Create Lead Clip.' });
+                                onNavigate('create-lead');
+                              } catch {
+                                toast({ title: 'Error', description: 'Could not load segment criteria', variant: 'destructive' });
+                              }
+                            }}
                             title="Use this segment to create a lead"
                           >
                             <Send className="w-4 h-4" />

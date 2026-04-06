@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { validateCriteria, type SegmentCriteria } from '@/lib/build-where-clause';
 
 // POST /api/polls — Create a poll
 export async function POST(request: NextRequest) {
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { videoId, question, options, isPaid, rewardPerResponse, totalRewardPool, maxResponses, closesAt } = body;
+    const { videoId, question, options, isPaid, rewardPerResponse, totalRewardPool, maxResponses, closesAt, targetingCriteria } = body;
 
     // Validate
     if (!videoId || typeof videoId !== 'string') {
@@ -24,6 +25,16 @@ export async function POST(request: NextRequest) {
     }
     if (options.length > 6) {
       return NextResponse.json({ success: false, error: 'Maximum 6 options allowed' }, { status: 400 });
+    }
+
+    // Validate targeting criteria if provided
+    let targetingCriteriaStr: string | null = null;
+    if (targetingCriteria) {
+      const validationError = validateCriteria(targetingCriteria);
+      if (validationError) {
+        return NextResponse.json({ success: false, error: validationError }, { status: 400 });
+      }
+      targetingCriteriaStr = JSON.stringify(targetingCriteria);
     }
 
     // Verify video exists and user is creator
@@ -53,6 +64,7 @@ export async function POST(request: NextRequest) {
         maxResponses: maxResponses ? parseInt(maxResponses, 10) : null,
         responseCount: 0,
         closesAt: closesAt ? new Date(closesAt) : null,
+        targetingCriteria: targetingCriteriaStr,
       },
     });
 

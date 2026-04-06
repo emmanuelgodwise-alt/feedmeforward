@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,20 +16,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Plus, X, Eye, DollarSign, Calendar, Users, Play, HelpCircle, AlertCircle, Wallet, Upload, FileVideo, CheckCircle } from 'lucide-react';
+import { Loader2, Plus, X, Eye, DollarSign, Calendar, Users, Play, HelpCircle, AlertCircle, Wallet, Upload, FileVideo, CheckCircle, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useAudienceStore } from '@/stores/audience-store';
 import { useVideoStore } from '@/stores/video-store';
 import { useToast } from '@/hooks/use-toast';
 import { QuickNav } from '@/components/quick-nav';
 import { CATEGORIES } from '@/types';
+import { type SegmentCriteria, hasActiveCriteria, criteriaToBreakdown } from '@/lib/build-where-clause';
 import type { View } from '@/app/page';
 
 interface CreateLeadViewProps {
   onNavigate: (view: View) => void;
 }
 
+const AGE_RANGES = ['18-24', '25-34', '35-44', '45-54', '55+'];
+const GENDERS = ['male', 'female', 'non-binary', 'prefer-not-to-say'];
+
+const emptyCriteria: SegmentCriteria = {};
+
 export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
   const { currentUser } = useAuthStore();
+  const { selectedSegmentCriteria, clearSelectedSegmentCriteria } = useAudienceStore();
   const { createVideo, createPoll, isLoading } = useVideoStore();
   const { toast } = useToast();
 
@@ -58,9 +66,57 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
     closesAt: '',
   });
 
+  // Targeting state
+  const [showTargeting, setShowTargeting] = useState(false);
+  const [targetingEnabled, setTargetingEnabled] = useState<Record<string, boolean>>({
+    ageRange: false,
+    location: false,
+    gender: false,
+    language: false,
+    interests: false,
+    minScore: false,
+  });
+  const [targetingCriteria, setTargetingCriteria] = useState<SegmentCriteria>({ ...emptyCriteria });
+  const [interestsText, setInterestsText] = useState('');
+  const [estimatedReach, setEstimatedReach] = useState<number | null>(null);
+  const [reachLoading, setReachLoading] = useState(false);
+  const [segments, setSegments] = useState<Array<{ id: string; name: string; criteria: string }>>([]);
+  const [selectedSegment, setSelectedSegment] = useState('');
+
   // Upload state
   const [uploading, setUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+
+  // Load segment criteria from audience store when navigated from segments view
+  useEffect(() => {
+    if (selectedSegmentCriteria && hasActiveCriteria(selectedSegmentCriteria)) {
+      setTargetingCriteria({ ...selectedSegmentCriteria });
+      setInterestsText(selectedSegmentCriteria.interests?.join(', ') || '');
+      setTargetingEnabled({
+        ageRange: !!selectedSegmentCriteria.ageRange,
+        location: !!selectedSegmentCriteria.location,
+        gender: !!selectedSegmentCriteria.gender,
+        language: !!selectedSegmentCriteria.language,
+        interests: !!(selectedSegmentCriteria.interests && selectedSegmentCriteria.interests.length > 0),
+        minScore: !!(selectedSegmentCriteria.minScore !== undefined && selectedSegmentCriteria.minScore > 0),
+      });
+      setShowTargeting(true);
+      clearSelectedSegmentCriteria();
+    }
+  }, [selectedSegmentCriteria, clearSelectedSegmentCriteria]);
+
+  // Fetch saved segments
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch('/api/segments', {
+      headers: { 'X-User-Id': currentUser.id },
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data) setSegments(json.data);
+      })
+      .catch(() => {});
+  }, [currentUser]);
 
   const handleFileUpload = async (file: File) => {
     if (file.size > 100 * 1024 * 1024) {
@@ -133,6 +189,96 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
     setPollOptions((prev) => prev.map((opt, i) => (i === index ? { ...opt, text } : opt)));
   };
 
+  const updateTargetingEnabled = (field: string, enabled: boolean) => {
+    setTargetingEnabled((prev) => ({ ...prev, [field]: enabled }));
+    if (!enabled) {
+      const newCriteria = { ...targetingCriteria };
+      delete (newCriteria as Record<string, unknown>)[field];
+      setTargetingCriteria(newCriteria);
+    }
+    setEstimatedReach(null);
+  };
+
+  const handleSegmentSelect = (segmentId: string) => {
+    setSelectedSegment(segmentId);
+    const seg = segments.find((s) => s.id === segmentId);
+    if (seg) {
+      try {
+        const criteria = JSON.parse(seg.criteria) as SegmentCriteria;
+        setTargetingCriteria(criteria);
+        setInterestsText(criteria.interests?.join(', ') || '');
+        setTargetingEnabled({
+          ageRange: !!criteria.ageRange,
+          location: !!criteria.location,
+          gender: !!criteria.gender,
+          language: !!criteria.language,
+          interests: !!(criteria.interests && criteria.interests.length > 0),
+          minScore: !!(criteria.minScore !== undefined && criteria.minScore > 0),
+        });
+        setEstimatedReach(null);
+      } catch {
+        toast({ title: 'Error', description: 'Could not parse segment criteria', variant: 'destructive' });
+      }
+    }
+  };
+
+  const handleEstimateReach = useCallback(async () => {
+    setReachLoading(true);
+    setEstimatedReach(null);
+    try {
+      const criteria: SegmentCriteria = {};
+      const ef = targetingEnabled;
+      if (ef.ageRange && targetingCriteria.ageRange) criteria.ageRange = targetingCriteria.ageRange;
+      if (ef.location && targetingCriteria.location) criteria.location = targetingCriteria.location;
+      if (ef.gender && targetingCriteria.gender) criteria.gender = targetingCriteria.gender;
+      if (ef.language && targetingCriteria.language) criteria.language = targetingCriteria.language;
+      if (ef.interests && targetingCriteria.interests && targetingCriteria.interests.length > 0) {
+        criteria.interests = targetingCriteria.interests;
+      }
+      if (ef.minScore && targetingCriteria.minScore !== undefined && targetingCriteria.minScore > 0) {
+        criteria.minScore = targetingCriteria.minScore;
+      }
+
+      if (!hasActiveCriteria(criteria)) {
+        toast({ title: 'No criteria set', description: 'Enable at least one targeting criterion.', variant: 'destructive' });
+        setReachLoading(false);
+        return;
+      }
+
+      const res = await fetch('/api/audience/match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': currentUser?.id || '' },
+        body: JSON.stringify({ criteria }),
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        setEstimatedReach(json.data.totalMatched);
+      } else {
+        toast({ title: 'Estimate failed', description: json.error || 'Could not estimate reach', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Network error', variant: 'destructive' });
+    } finally {
+      setReachLoading(false);
+    }
+  }, [targetingCriteria, targetingEnabled, currentUser?.id, toast]);
+
+  const getActiveCriteria = (): SegmentCriteria | null => {
+    const criteria: SegmentCriteria = {};
+    const ef = targetingEnabled;
+    if (ef.ageRange && targetingCriteria.ageRange) criteria.ageRange = targetingCriteria.ageRange;
+    if (ef.location && targetingCriteria.location) criteria.location = targetingCriteria.location;
+    if (ef.gender && targetingCriteria.gender) criteria.gender = targetingCriteria.gender;
+    if (ef.language && targetingCriteria.language) criteria.language = targetingCriteria.language;
+    if (ef.interests && targetingCriteria.interests && targetingCriteria.interests.length > 0) {
+      criteria.interests = targetingCriteria.interests;
+    }
+    if (ef.minScore && targetingCriteria.minScore !== undefined && targetingCriteria.minScore > 0) {
+      criteria.minScore = targetingCriteria.minScore;
+    }
+    return hasActiveCriteria(criteria) ? criteria : null;
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -140,7 +286,6 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
     if (!form.videoUrl.trim()) newErrors.videoUrl = 'Video URL is required';
     else {
       try {
-        // Accept both full URLs and relative upload paths (e.g. /uploads/videos/...)
         if (!form.videoUrl.startsWith('/')) {
           new URL(form.videoUrl);
         }
@@ -187,6 +332,7 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
     if (showPoll && pollQuestion.trim()) {
       const filledOptions = pollOptions.filter((o) => o.text.trim()).map((o) => ({ id: o.id, text: o.text.trim() }));
       if (filledOptions.length >= 2) {
+        const activeCriteria = getActiveCriteria();
         await createPoll({
           videoId: video.id,
           question: pollQuestion.trim(),
@@ -196,6 +342,7 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
           totalRewardPool: isPaidPoll ? parseFloat(paidPollSettings.totalRewardPool) || undefined : undefined,
           maxResponses: paidPollSettings.maxResponses ? parseInt(paidPollSettings.maxResponses, 10) : undefined,
           closesAt: paidPollSettings.closesAt || undefined,
+          targetingCriteria: activeCriteria || undefined,
         });
       }
     }
@@ -208,6 +355,8 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
     .split(',')
     .map((t) => t.trim())
     .filter((t) => t.length > 0);
+
+  const activeBadges = criteriaToBreakdown(getActiveCriteria() || {});
 
   if (!currentUser) return null;
 
@@ -555,6 +704,262 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
                         </div>
                       </motion.div>
                     )}
+
+                    {/* ─── Target Audience Section ─── */}
+                    {isPaidPoll && (
+                      <div className="pt-2 border-t">
+                        <button
+                          type="button"
+                          className="flex items-center justify-between w-full py-2 group"
+                          onClick={() => setShowTargeting(!showTargeting)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Target className="w-4 h-4 text-orange-500" />
+                            <span className="text-sm font-semibold">Target Audience</span>
+                            {activeBadges.length > 0 && (
+                              <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+                                {activeBadges.length} criteria
+                              </Badge>
+                            )}
+                          </div>
+                          {showTargeting ? (
+                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </button>
+
+                        {showTargeting && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="space-y-4 pt-3"
+                          >
+                            {/* Quick Apply from Segment */}
+                            {segments.length > 0 && (
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">Quick Apply from Saved Segment</Label>
+                                <Select value={selectedSegment} onValueChange={handleSegmentSelect}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a segment..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {segments.map((seg) => (
+                                      <SelectItem key={seg.id} value={seg.id}>
+                                        {seg.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+
+                            {/* Criteria Summary Badges */}
+                            {activeBadges.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 p-2 rounded-md bg-orange-50/50 dark:bg-orange-950/20">
+                                {activeBadges.map((b, idx) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs">
+                                    <span className="text-muted-foreground mr-1">{b.label}:</span>
+                                    <span className="capitalize">{b.value}</span>
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Manual Criteria Setup */}
+                            <div className="space-y-3">
+                              {/* Age Range */}
+                              <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                                <input
+                                  type="checkbox"
+                                  checked={targetingEnabled.ageRange}
+                                  onChange={(e) => updateTargetingEnabled('ageRange', e.target.checked)}
+                                  className="mt-1 accent-orange-500"
+                                />
+                                <div className="flex-1 space-y-1">
+                                  <Label className="text-sm font-medium">Age Range</Label>
+                                  <select
+                                    disabled={!targetingEnabled.ageRange}
+                                    value={targetingCriteria.ageRange || ''}
+                                    onChange={(e) => {
+                                      setTargetingCriteria((prev) => ({ ...prev, ageRange: e.target.value }));
+                                      setEstimatedReach(null);
+                                    }}
+                                    className="w-full h-8 rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    <option value="">Select...</option>
+                                    {AGE_RANGES.map((r) => (
+                                      <option key={r} value={r}>{r}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              {/* Location */}
+                              <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                                <input
+                                  type="checkbox"
+                                  checked={targetingEnabled.location}
+                                  onChange={(e) => updateTargetingEnabled('location', e.target.checked)}
+                                  className="mt-1 accent-orange-500"
+                                />
+                                <div className="flex-1 space-y-1">
+                                  <Label className="text-sm font-medium">Location</Label>
+                                  <Input
+                                    disabled={!targetingEnabled.location}
+                                    placeholder="e.g. New York"
+                                    value={targetingCriteria.location || ''}
+                                    onChange={(e) => {
+                                      setTargetingCriteria((prev) => ({ ...prev, location: e.target.value }));
+                                      setEstimatedReach(null);
+                                    }}
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Gender */}
+                              <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                                <input
+                                  type="checkbox"
+                                  checked={targetingEnabled.gender}
+                                  onChange={(e) => updateTargetingEnabled('gender', e.target.checked)}
+                                  className="mt-1 accent-orange-500"
+                                />
+                                <div className="flex-1 space-y-1">
+                                  <Label className="text-sm font-medium">Gender</Label>
+                                  <select
+                                    disabled={!targetingEnabled.gender}
+                                    value={targetingCriteria.gender || ''}
+                                    onChange={(e) => {
+                                      setTargetingCriteria((prev) => ({ ...prev, gender: e.target.value }));
+                                      setEstimatedReach(null);
+                                    }}
+                                    className="w-full h-8 rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    <option value="">Select...</option>
+                                    {GENDERS.map((g) => (
+                                      <option key={g} value={g}>{g.replace(/-/g, ' ')}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              {/* Language */}
+                              <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                                <input
+                                  type="checkbox"
+                                  checked={targetingEnabled.language}
+                                  onChange={(e) => updateTargetingEnabled('language', e.target.checked)}
+                                  className="mt-1 accent-orange-500"
+                                />
+                                <div className="flex-1 space-y-1">
+                                  <Label className="text-sm font-medium">Language</Label>
+                                  <Input
+                                    disabled={!targetingEnabled.language}
+                                    placeholder="e.g. en, es"
+                                    value={targetingCriteria.language || ''}
+                                    onChange={(e) => {
+                                      setTargetingCriteria((prev) => ({ ...prev, language: e.target.value }));
+                                      setEstimatedReach(null);
+                                    }}
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Interests */}
+                              <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                                <input
+                                  type="checkbox"
+                                  checked={targetingEnabled.interests}
+                                  onChange={(e) => updateTargetingEnabled('interests', e.target.checked)}
+                                  className="mt-1 accent-orange-500"
+                                />
+                                <div className="flex-1 space-y-1">
+                                  <Label className="text-sm font-medium">Interests</Label>
+                                  <Input
+                                    disabled={!targetingEnabled.interests}
+                                    placeholder="tech, music (comma-separated)"
+                                    value={interestsText}
+                                    onChange={(e) => {
+                                      const text = e.target.value;
+                                      const interests = text.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+                                      setInterestsText(text);
+                                      setTargetingCriteria((prev) => ({ ...prev, interests }));
+                                      setEstimatedReach(null);
+                                    }}
+                                    className="h-8 text-sm"
+                                  />
+                                  {targetingEnabled.interests && targetingCriteria.interests && targetingCriteria.interests.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {targetingCriteria.interests.map((interest) => (
+                                        <Badge key={interest} variant="secondary" className="text-xs bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300">
+                                          {interest}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Min Score */}
+                              <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                                <input
+                                  type="checkbox"
+                                  checked={targetingEnabled.minScore}
+                                  onChange={(e) => updateTargetingEnabled('minScore', e.target.checked)}
+                                  className="mt-1 accent-orange-500"
+                                />
+                                <div className="flex-1 space-y-1">
+                                  <Label className="text-sm font-medium">Minimum Member Score</Label>
+                                  <Input
+                                    type="number"
+                                    disabled={!targetingEnabled.minScore}
+                                    placeholder="e.g. 100"
+                                    min={0}
+                                    max={1000}
+                                    value={targetingCriteria.minScore ?? ''}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value) || 0;
+                                      setTargetingCriteria((prev) => ({ ...prev, minScore: val }));
+                                      setEstimatedReach(null);
+                                    }}
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Estimate Reach */}
+                            <div className="flex items-center gap-3">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleEstimateReach}
+                                disabled={reachLoading}
+                                className="gap-2"
+                              >
+                                {reachLoading ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Eye className="w-4 h-4" />
+                                )}
+                                Estimate Audience
+                              </Button>
+                              {estimatedReach !== null && (
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-950/50 text-sm">
+                                  <Users className="w-4 h-4 text-orange-500" />
+                                  <span className="font-semibold">≈ {estimatedReach.toLocaleString()}</span>
+                                  <span className="text-muted-foreground text-xs">users match</span>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </CardContent>
@@ -588,6 +993,19 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
                       <Badge variant="secondary" className="text-xs">
                         Poll: {pollQuestion}
                       </Badge>
+                    )}
+                    {activeBadges.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        <Badge variant="outline" className="text-xs border-orange-300 text-orange-600 gap-1">
+                          <Target className="w-3 h-3" />
+                          Targeted
+                        </Badge>
+                        {activeBadges.slice(0, 3).map((b, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            {b.value}
+                          </Badge>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>

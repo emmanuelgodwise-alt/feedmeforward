@@ -35,6 +35,7 @@ interface VideoStore {
     totalRewardPool?: number;
     maxResponses?: number;
     closesAt?: string;
+    targetingCriteria?: Record<string, unknown>;
   }) => Promise<boolean>;
   createComment: (videoId: string, content: string, parentCommentId?: string) => Promise<boolean>;
 }

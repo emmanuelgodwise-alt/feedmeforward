@@ -45,6 +45,10 @@ export async function GET(
     const pollsParsed = video.polls.map((poll) => {
       const options = JSON.parse(poll.options);
       const userVote = poll.votes?.[0];
+      let targetingCriteria = null;
+      if (poll.targetingCriteria) {
+        try { targetingCriteria = JSON.parse(poll.targetingCriteria); } catch { /* skip */ }
+      }
       return {
         id: poll.id,
         videoId: poll.videoId,
@@ -56,6 +60,7 @@ export async function GET(
         closesAt: poll.closesAt,
         userVoted: !!userVote,
         userVoteOptionId: userVote?.optionId || null,
+        targetingCriteria,
       };
     });
 
