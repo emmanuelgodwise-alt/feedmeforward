@@ -40,6 +40,9 @@ import { CircleDetailView } from '@/components/views/circle-detail-view';
 import { ModerationView } from '@/components/views/moderation-view';
 import { OnboardingView } from '@/components/views/onboarding-view';
 import { HashtagFeedView } from '@/components/views/hashtag-feed-view';
+import { LiveSessionsView } from '@/components/views/live-sessions-view';
+import { LiveStreamView } from '@/components/views/live-stream-view';
+import { BroadcasterView } from '@/components/views/broadcaster-view';
 import { TrendingVideos } from '@/components/trending-videos';
 import { GlobalSearch } from '@/components/global-search';
 import { SkipToContent } from '@/components/skip-to-content';
@@ -89,7 +92,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'import-friends' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'import-friends' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed' | 'live' | 'live-session' | 'broadcaster';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -1729,6 +1732,7 @@ export default function Home() {
   const [profileUserId, setProfileUserId] = useState<string>('');
   const [circleId, setCircleId] = useState<string>('');
   const [currentHashtag, setCurrentHashtag] = useState<string>('');
+  const [currentLiveSessionId, setCurrentLiveSessionId] = useState<string>('');
 
   const navigate = useCallback((newView: View) => {
     setView(newView);

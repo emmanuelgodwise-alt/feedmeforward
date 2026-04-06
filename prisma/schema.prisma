@@ -44,6 +44,9 @@ model User {
   circleMemberships CircleMember[]  @relation("UserCircleMemberships")
   circleShares      CircleVideo[]
   liveSessions      LiveSession[]   @relation("LiveSessionCreator")
+  livePolls         LivePoll[]     @relation("UserLivePolls")
+  livePollVotes     LivePollVote[] @relation("UserLivePollVotes")
+  liveViewers       LiveViewer[]   @relation("UserLiveViewers")
   reports           Report[]        @relation("UserReports")
   segments          AudienceSegment[] @relation("UserAudienceSegments")
   notifications     Notification[]  @relation("UserNotifications")
@@ -284,31 +287,91 @@ model CircleVideo {
 
 // ─── LiveSession Model ──────────────────────────────────────────────
 model LiveSession {
-  id          String    @id @default(cuid())
-  creatorId   String
-  title       String
-  description String?
-  status      String    @default("scheduled") // "scheduled", "live", "ended"
-  startedAt   DateTime?
-  endedAt     DateTime?
-  viewerCount Int       @default(0)
-  peakViewers Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  creatorId       String
+  title           String
+  description     String?
+  status          String    @default("upcoming") // "upcoming", "live", "ended", "recording"
+  thumbnailUrl    String?
+  category        String?
+  tags            String?   // JSON string of tags array
+  viewerCount     Int       @default(0)
+  peakViewers     Int       @default(0)
+  totalViewCount  Int       @default(0)
+  startedAt       DateTime?
+  endedAt         DateTime?
+  scheduledAt     DateTime?
+  duration        Int?      // seconds, calculated on end
+  isRecorded      Boolean   @default(false)
+  recordedVideoId String?
+  chatEnabled     Boolean   @default(true)
+  pollsEnabled    Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  creator User       @relation("LiveSessionCreator", fields: [creatorId], references: [id])
-  polls   LivePoll[]
+  creator          User               @relation("LiveSessionCreator", fields: [creatorId], references: [id])
+  polls            LivePoll[]
+  chatMessages     LiveChatMessage[]
+  viewers          LiveViewer[]
 }
 
 // ─── LivePoll Model ─────────────────────────────────────────────────
 model LivePoll {
-  id        String   @id @default(cuid())
-  sessionId String
-  question  String
-  options   String   // JSON string of options
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  sessionId   String
+  creatorId   String
+  question    String
+  options     String    // JSON string: [{text, voteCount}]
+  totalVotes  Int       @default(0)
+  status      String    @default("active") // "active", "closed"
+  createdAt   DateTime  @default(now())
+  closedAt    DateTime?
+
+  session LiveSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  creator User            @relation("UserLivePolls", fields: [creatorId], references: [id])
+  votes   LivePollVote[]
+}
+
+// ─── LivePollVote Model ─────────────────────────────────────────────
+model LivePollVote {
+  id          String   @id @default(cuid())
+  pollId      String
+  userId      String
+  optionIndex Int
+  createdAt   DateTime @default(now())
+
+  poll LivePoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user User     @relation("UserLivePollVotes", fields: [userId], references: [id])
+
+  @@unique([pollId, userId])
+}
+
+// ─── LiveChatMessage Model ──────────────────────────────────────────
+model LiveChatMessage {
+  id          String   @id @default(cuid())
+  sessionId   String
+  userId      String
+  username    String
+  displayName String?
+  avatarUrl   String?
+  content     String
+  createdAt   DateTime @default(now())
 
   session LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+// ─── LiveViewer Model ───────────────────────────────────────────────
+model LiveViewer {
+  id           String   @id @default(cuid())
+  sessionId    String
+  userId       String
+  joinedAt     DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+
+  session LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User         @relation("UserLiveViewers", fields: [userId], references: [id])
+
+  @@unique([sessionId, userId])
 }
 
 // ─── Report Model ───────────────────────────────────────────────────
