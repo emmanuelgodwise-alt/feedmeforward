@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { execSync } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
@@ -54,10 +55,36 @@ export async function POST(request: NextRequest) {
 
     const videoUrl = `/uploads/videos/${filename}`;
 
+    // Auto-generate thumbnail using ffmpeg
+    let thumbnailUrl: string | undefined;
+    try {
+      const thumbnailsDir = join(process.cwd(), 'public', 'uploads', 'thumbnails');
+      if (!existsSync(thumbnailsDir)) {
+        await mkdir(thumbnailsDir, { recursive: true });
+      }
+
+      const thumbFilename = `${userId}_${Date.now()}_${uuidv4().slice(0, 8)}.jpg`;
+      const thumbFilepath = join(thumbnailsDir, thumbFilename);
+
+      // Extract frame at 1 second mark
+      execSync(
+        `ffmpeg -i "${filepath}" -ss 00:00:01 -vframes 1 -q:v 2 "${thumbFilepath}" -y`,
+        { timeout: 15000, stdio: 'pipe' }
+      );
+
+      if (existsSync(thumbFilepath)) {
+        thumbnailUrl = `/uploads/thumbnails/${thumbFilename}`;
+      }
+    } catch (ffmpegError) {
+      // Don't fail the upload if thumbnail generation fails
+      console.warn('Thumbnail generation failed (non-fatal):', ffmpegError);
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         videoUrl,
+        thumbnailUrl: thumbnailUrl || null,
         filename,
         size: file.size,
         type: file.type,

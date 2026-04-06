@@ -4355,3 +4355,61 @@ Fix all TypeScript compilation errors across the entire FeedMeForward codebase t
 - `npm run build` → **Success** with all 60+ API routes compiled
 - All files maintain strict TypeScript typing
 
+---
+## Task ID: 1 - Auto-Generate Thumbnails + Thumbnail Upload Feature
+### Agent: general-purpose
+### Task: Auto-generate thumbnails for uploaded videos + personal thumbnail upload during video creation
+
+#### Work Log:
+- Added ffmpeg-based auto-thumbnail generation to `POST /api/videos/upload` route
+- After video upload, extracts frame at 1-second mark using `ffmpeg -i <video> -ss 00:00:01 -vframes 1 -q:v 2`
+- Saves JPEG thumbnails to `public/uploads/thumbnails/` directory
+- Created new `POST /api/videos/upload-thumbnail` endpoint for custom image uploads
+- Replaced plain "Thumbnail URL" text inputs in both create-lead-view.tsx and create-response-view.tsx with rich thumbnail UI
+- Rich UI includes: auto-preview of generated thumbnail, upload custom image button, paste URL fallback, remove/change actions
+- Added `thumbnailPreview`, `showUrlInput`, `uploadingThumbnail` states to both views
+
+#### Stage Summary:
+- **Modified files**: `src/app/api/videos/upload/route.ts`, `src/components/views/create-lead-view.tsx`, `src/components/views/create-response-view.tsx`
+- **Created files**: `src/app/api/videos/upload-thumbnail/route.ts`
+- TypeScript: 0 errors in src/
+- ESLint: 0 errors
+
+---
+## Task ID: 2 - Skip Button on Onboarding + Auto-Skip for Returning Users
+### Agent: general-purpose
+### Task: Add Skip button at top of onboarding page + verify auto-skip for returning users
+
+#### Work Log:
+- Added "Skip" button at the top-right of onboarding page, next to existing "Continue" button
+- Uses existing `handleSkip()` function which marks `onboardingCompleted: true` in DB
+- Styled as ghost/outline variant matching the bottom "Skip for now" button
+- Verified auto-skip logic in page.tsx: login handler checks `onboardingCompleted` and routes directly to 'explore' for returning users
+- Initial view state also checks onboardingCompleted on page refresh/reload
+
+#### Stage Summary:
+- **Modified files**: `src/components/views/onboarding-view.tsx`
+- Auto-skip already working correctly — no changes needed to page.tsx
+- TypeScript: 0 errors, ESLint: 0 errors
+
+---
+## Task ID: 3 - Fix Transcript Service & Language Selector
+### Agent: general-purpose
+### Task: Fix transcript service not working, no error messages, and broken language selector
+
+#### Work Log:
+- **Root cause identified**: APIs were sending entire video files (up to 100MB) as base64 to ASR, causing hangs/timeouts
+- Added ffmpeg audio extraction before ASR: `ffmpeg -i <video> -vn -acodec libmp3lame -ab 16k -ac 1 -ar 16000` to extract clean mono MP3 audio
+- Applied fix to both `/api/videos/[id]/transcribe` and `/api/videos/[id]/captions` routes
+- Added graceful fallback if ffmpeg fails, temp file cleanup, better error logging
+- Added `sourceType` field to captions response ("asr" or "description")
+- Enhanced transcribe-dialog: 60s timeout with AbortController, Cancel button, 3-stage progress indicator, elapsed timer, better error messages
+- Fixed video-captions language selector: changed `onClick` to `onSelect` on DropdownMenuItem (Radix UI fix)
+- Fixed stale closure issue with captionCache using useRef pattern
+- Added `forceRefresh` parameter to `fetchCaptions`, added Refresh button, source type awareness notice
+
+#### Stage Summary:
+- **Modified files**: `src/app/api/videos/[id]/transcribe/route.ts`, `src/app/api/videos/[id]/captions/route.ts`, `src/components/transcribe-dialog.tsx`, `src/components/video-captions.tsx`
+- TypeScript: 0 errors in src/
+- ESLint: 0 errors
+

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, Copy, Check, Loader2, Mic, AlertCircle } from 'lucide-react';
+import { FileText, Copy, Check, Loader2, Mic, AlertCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface TranscribeDialogProps {
@@ -21,6 +21,23 @@ interface TranscribeDialogProps {
   videoId: string;
   videoTitle: string;
 }
+
+type LoadingStage = 'extracting' | 'transcribing' | 'processing';
+
+const LOADING_MESSAGES: Record<LoadingStage, { title: string; description: string }> = {
+  extracting: {
+    title: 'Extracting audio...',
+    description: 'Separating audio track from the video file. This may take a moment for longer videos.',
+  },
+  transcribing: {
+    title: 'Transcribing speech...',
+    description: 'Analyzing audio and converting speech to text using AI.',
+  },
+  processing: {
+    title: 'Processing results...',
+    description: 'Cleaning up and formatting the transcription.',
+  },
+};
 
 export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: TranscribeDialogProps) {
   const { toast } = useToast();
@@ -32,23 +49,135 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingStage, setLoadingStage] = useState<LoadingStage>('extracting');
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Timer effect while loading
+  useEffect(() => {
+    if (loading) {
+      timerRef.current = setInterval(() => {
+        setElapsedTime((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setElapsedTime(0);
+    }
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [loading]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  };
+
+  const resetState = () => {
+    setTranscription(null);
+    setRawTranscription(null);
+    setWordCount(0);
+    setCharacterCount(0);
+    setReadingTime(0);
+    setLoading(false);
+    setCopied(false);
+    setError(null);
+    setLoadingStage('extracting');
+    setElapsedTime(0);
+  };
+
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setLoading(false);
+    setError('Transcription was cancelled by the user.');
+  };
 
   const handleTranscribe = async () => {
     if (transcription) return; // Already transcribed
 
+    resetState();
     setLoading(true);
-    setError(null);
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    // Progress stages simulation
+    setLoadingStage('extracting');
+    const stageTimeout1 = setTimeout(() => {
+      if (abortController.signal.aborted) return;
+      setLoadingStage('transcribing');
+    }, 5000);
+
+    const stageTimeout2 = setTimeout(() => {
+      if (abortController.signal.aborted) return;
+      setLoadingStage('processing');
+    }, 25000);
+
+    // Overall timeout: 60 seconds
+    const overallTimeout = setTimeout(() => {
+      if (abortController.signal.aborted) return;
+      abortController.abort();
+      if (!error) {
+        setLoading(false);
+        setError(
+          'Transcription timed out. The video may be too long or the audio may be unclear. Please try again or use a shorter clip.'
+        );
+      }
+    }, 60000);
+
+    timeoutRef.current = overallTimeout;
 
     try {
       const res = await fetch(`/api/videos/${videoId}/transcribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: abortController.signal,
       });
+
+      clearTimeout(stageTimeout1);
+      clearTimeout(stageTimeout2);
+      clearTimeout(overallTimeout);
+      timeoutRef.current = null;
+
+      if (abortController.signal.aborted) return;
+
+      setLoadingStage('processing');
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.error || 'Transcription failed');
+        setError(data.error || 'Transcription failed. The video may not contain speech or the audio may be in an unsupported format.');
         return;
       }
 
@@ -57,10 +186,20 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
       setWordCount(data.data.wordCount);
       setCharacterCount(data.data.characterCount);
       setReadingTime(data.data.estimatedReadingTime);
-    } catch {
+    } catch (err) {
+      clearTimeout(stageTimeout1);
+      clearTimeout(stageTimeout2);
+      clearTimeout(overallTimeout);
+      timeoutRef.current = null;
+
+      if (abortController.signal.aborted) {
+        // Already handled by handleCancel or timeout
+        return;
+      }
       setError('Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -79,18 +218,27 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      // Reset state when closing
-      // Keep transcription so it persists if reopened quickly
+      // Cancel any in-progress request when closing
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     }
     onOpenChange(newOpen);
   };
+
+  const currentMessage = LOADING_MESSAGES[loadingStage];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
               <Mic className="w-4 h-4 text-white" />
             </div>
             Video Transcription
@@ -104,8 +252,8 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
           {/* Not yet started */}
           {!transcription && !loading && !error && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50 flex items-center justify-center mb-4">
-                <FileText className="w-8 h-8 text-blue-500" />
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-950/50 dark:to-amber-950/50 flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-orange-500" />
               </div>
               <h3 className="font-semibold mb-1">Ready to Transcribe</h3>
               <p className="text-sm text-muted-foreground max-w-sm mb-1">
@@ -117,19 +265,72 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
             </div>
           )}
 
-          {/* Loading state */}
+          {/* Loading state with progress */}
           {loading && (
             <div className="space-y-4 py-4">
-              <div className="flex items-center gap-3 mb-6">
-                <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-                <div>
-                  <p className="text-sm font-medium">Transcribing video...</p>
-                  <p className="text-xs text-muted-foreground">Analyzing audio and converting speech to text. This may take a moment.</p>
+              <div className="flex items-center gap-3 mb-4">
+                <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{currentMessage.title}</p>
+                  <p className="text-xs text-muted-foreground">{currentMessage.description}</p>
                 </div>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {formatTime(elapsedTime)}
+                </span>
               </div>
+
+              {/* Progress stages indicator */}
+              <div className="flex items-center gap-1 mb-4">
+                {(['extracting', 'transcribing', 'processing'] as LoadingStage[]).map((stage, idx) => {
+                  const stageOrder = ['extracting', 'transcribing', 'processing'];
+                  const currentIdx = stageOrder.indexOf(loadingStage);
+                  const isActive = stage === loadingStage;
+                  const isDone = currentIdx > idx;
+                  return (
+                    <div key={stage} className="flex items-center gap-1 flex-1">
+                      <div
+                        className={`h-1.5 rounded-full flex-1 transition-colors duration-500 ${
+                          isDone
+                            ? 'bg-orange-500'
+                            : isActive
+                            ? 'bg-orange-400 animate-pulse'
+                            : 'bg-muted'
+                        }`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Stage labels */}
+              <div className="flex justify-between text-[10px] text-muted-foreground mb-4">
+                <span className={loadingStage === 'extracting' ? 'text-orange-500 font-medium' : ''}>
+                  Extract Audio
+                </span>
+                <span className={loadingStage === 'transcribing' ? 'text-orange-500 font-medium' : ''}>
+                  Transcribe
+                </span>
+                <span className={loadingStage === 'processing' ? 'text-orange-500 font-medium' : ''}>
+                  Process
+                </span>
+              </div>
+
               {[...Array(6)].map((_, i) => (
                 <Skeleton key={i} className="h-4 w-full" />
               ))}
+
+              {/* Cancel button during loading */}
+              <div className="flex justify-center pt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground hover:text-destructive gap-1.5"
+                  onClick={handleCancel}
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  Cancel Transcription
+                </Button>
+              </div>
             </div>
           )}
 
@@ -140,7 +341,10 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
                 <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
               <h3 className="font-semibold mb-2">Transcription Unavailable</h3>
-              <p className="text-sm text-muted-foreground max-w-sm">{error}</p>
+              <p className="text-sm text-muted-foreground max-w-sm mb-4">{error}</p>
+              <p className="text-xs text-muted-foreground max-w-sm">
+                Tip: Make sure the video contains clear speech. Very long videos or videos with heavy background noise may not transcribe well.
+              </p>
             </div>
           )}
 
@@ -187,7 +391,7 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
           {!transcription && !loading && (
             <Button
               onClick={handleTranscribe}
-              className="w-full sm:w-auto gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white"
+              className="w-full sm:w-auto gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
             >
               <Mic className="w-4 h-4" />
               Start Transcription
@@ -222,7 +426,7 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
 
           <Button
             variant="ghost"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             className="w-full sm:w-auto"
           >
             Close

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import { existsSync } from 'fs';
 import { join } from 'path';
+import { execSync } from 'child_process';
 import { db } from '@/lib/db';
 import ZAI from 'z-ai-web-dev-sdk';
 
@@ -65,6 +66,7 @@ export async function GET(
     }
 
     let sourceText = '';
+    let sourceType: 'asr' | 'description' = 'description';
 
     // 2. Determine source text
     if (video.videoUrl.startsWith('/uploads/')) {
@@ -74,16 +76,44 @@ export async function GET(
       if (!existsSync(filepath)) {
         // Fallback to description
         sourceText = video.description || video.title;
+        sourceType = 'description';
       } else {
         const fileBuffer = await fs.readFile(filepath);
-        const base64Audio = fileBuffer.toString('base64');
-
-        // Check file size (limit to 100MB for ASR)
         const fileSizeMB = fileBuffer.length / (1024 * 1024);
-        if (fileSizeMB > 100) {
+        if (fileSizeMB > 500) {
           sourceText = video.description || video.title;
+          sourceType = 'description';
         } else {
           try {
+            // Extract audio using ffmpeg before sending to ASR
+            let base64Audio: string;
+            const tempAudioPath = join(process.cwd(), 'public', 'uploads', `temp_audio_${Date.now()}_${Math.random().toString(36).slice(2)}.mp3`);
+
+            try {
+              // Convert to mp3, mono, 16kHz — optimal for ASR
+              execSync(
+                `ffmpeg -i "${filepath}" -vn -acodec libmp3lame -ab 16k -ac 1 -ar 16000 -y "${tempAudioPath}" 2>/dev/null`,
+                { timeout: 60000 } // 60s timeout for extraction
+              );
+
+              if (existsSync(tempAudioPath)) {
+                const audioBuffer = await fs.readFile(tempAudioPath);
+                base64Audio = audioBuffer.toString('base64');
+              } else {
+                throw new Error('ffmpeg produced no output file');
+              }
+            } catch (ffmpegError) {
+              console.warn('ffmpeg audio extraction failed, falling back to original file:', ffmpegError);
+              base64Audio = fileBuffer.toString('base64');
+            } finally {
+              // Clean up temp file
+              try {
+                await fs.unlink(tempAudioPath);
+              } catch {
+                // Ignore cleanup errors
+              }
+            }
+
             const zai = await ZAI.create();
             const response = await zai.audio.asr.create({
               file_base64: base64Audio,
@@ -92,19 +122,24 @@ export async function GET(
             const transcription = response.text || '';
             if (transcription.trim()) {
               sourceText = transcription.trim();
+              sourceType = 'asr';
             } else {
               // ASR returned empty — fallback to description
               sourceText = video.description || video.title;
+              sourceType = 'description';
             }
-          } catch {
+          } catch (asrError) {
+            console.error('ASR failed for captions:', asrError);
             // ASR failed — fallback to description
             sourceText = video.description || video.title;
+            sourceType = 'description';
           }
         }
       }
     } else {
       // External video (YouTube, Vimeo, etc.) — use description as source
       sourceText = video.description || video.title;
+      sourceType = 'description';
     }
 
     if (!sourceText.trim()) {
@@ -159,6 +194,7 @@ export async function GET(
         target: finalText,
         segments,
         language: targetLanguage,
+        sourceType,
       },
     });
   } catch (error: unknown) {

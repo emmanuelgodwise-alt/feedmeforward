@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,8 @@ import {
   ChevronUp,
   AlertCircle,
   Languages,
+  RefreshCw,
+  Info,
 } from 'lucide-react';
 import { useLocaleStore } from '@/stores/locale-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -49,6 +51,7 @@ interface CaptionData {
   target: string;
   segments: string[];
   language: string;
+  sourceType: 'asr' | 'description';
 }
 
 interface VideoCaptionsProps {
@@ -67,22 +70,32 @@ export function VideoCaptions({ videoId, videoUrl, description }: VideoCaptionsP
   );
   const [showSource, setShowSource] = useState(false);
 
-  // Cache: { [languageCode]: CaptionData | null }
+  // Use a ref for caption cache to avoid stale closure issues with useCallback
+  const captionCacheRef = useRef<Record<string, CaptionData | 'unavailable'>>({});
+  // Use state for rendering triggers
   const [captionCache, setCaptionCache] = useState<Record<string, CaptionData | 'unavailable'>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingLang, setLoadingLang] = useState<string | null>(null);
 
   const currentCaption =
     captionCache[selectedLang] === 'unavailable' ? null : captionCache[selectedLang] || null;
   const isUnavailable = captionCache[selectedLang] === 'unavailable';
+  const sourceType = currentCaption?.sourceType || null;
+
+  const updateCache = useCallback((langCode: string, value: CaptionData | 'unavailable') => {
+    captionCacheRef.current[langCode] = value;
+    setCaptionCache((prev) => ({ ...prev, [langCode]: value }));
+  }, []);
 
   const fetchCaptions = useCallback(
-    async (langCode: string) => {
-      // Check cache first
-      if (captionCache[langCode] !== undefined) return;
+    async (langCode: string, forceRefresh = false) => {
+      // Check cache first (unless forcing refresh)
+      if (!forceRefresh && captionCacheRef.current[langCode] !== undefined) return;
 
       setIsLoading(true);
       setError(null);
+      setLoadingLang(langCode);
 
       try {
         const params = new URLSearchParams({ targetLanguage: langCode });
@@ -98,24 +111,41 @@ export function VideoCaptions({ videoId, videoUrl, description }: VideoCaptionsP
         }
 
         if (data.success && data.captions) {
-          setCaptionCache((prev) => ({ ...prev, [langCode]: data.captions }));
+          updateCache(langCode, data.captions);
         } else {
-          setCaptionCache((prev) => ({ ...prev, [langCode]: 'unavailable' }));
+          updateCache(langCode, 'unavailable');
         }
       } catch {
         setError('Network error. Please try again.');
       } finally {
         setIsLoading(false);
+        setLoadingLang(null);
       }
     },
-    [videoId, currentUser?.id, captionCache]
+    [videoId, currentUser?.id, updateCache]
   );
 
-  const handleLanguageSelect = (langCode: LanguageCode) => {
-    setSelectedLang(langCode);
-    // Fetch if not cached
-    fetchCaptions(langCode);
-  };
+  const handleLanguageSelect = useCallback(
+    (langCode: LanguageCode) => {
+      setSelectedLang(langCode);
+      setError(null);
+      // Fetch if not cached
+      fetchCaptions(langCode);
+    },
+    [fetchCaptions]
+  );
+
+  const handleRefresh = useCallback(() => {
+    // Clear cache for current language and re-fetch
+    delete captionCacheRef.current[selectedLang];
+    setCaptionCache((prev) => {
+      const next = { ...prev };
+      delete next[selectedLang];
+      return next;
+    });
+    setError(null);
+    fetchCaptions(selectedLang, true);
+  }, [selectedLang, fetchCaptions]);
 
   const handleTogglePanel = () => {
     setShowPanel((prev) => {
@@ -171,17 +201,33 @@ export function VideoCaptions({ videoId, videoUrl, description }: VideoCaptionsP
                     ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400'
                     : ''
                 }`}
-                onClick={() => handleLanguageSelect(lang.code)}
+                onSelect={() => handleLanguageSelect(lang.code)}
               >
                 <span className="text-base">{lang.flag}</span>
                 <span>{lang.name}</span>
                 {selectedLang === lang.code && (
                   <span className="ml-auto text-orange-500 font-semibold text-[10px]">✓</span>
                 )}
+                {loadingLang === lang.code && (
+                  <Loader2 className="w-3 h-3 animate-spin text-orange-500 ml-auto" />
+                )}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Refresh button */}
+        {showPanel && !isLoading && (currentCaption || isUnavailable || error) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-orange-500"
+            onClick={handleRefresh}
+            title="Refresh captions"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </Button>
+        )}
       </div>
 
       {/* Caption display panel */}
@@ -255,7 +301,7 @@ export function VideoCaptions({ videoId, videoUrl, description }: VideoCaptionsP
                       variant="ghost"
                       size="sm"
                       className="h-6 text-xs mt-1 text-red-500 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => fetchCaptions(selectedLang)}
+                      onClick={() => fetchCaptions(selectedLang, true)}
                     >
                       Retry
                     </Button>
@@ -276,6 +322,16 @@ export function VideoCaptions({ videoId, videoUrl, description }: VideoCaptionsP
               {/* Caption text */}
               {!isLoading && !error && currentCaption && (
                 <div className="space-y-3">
+                  {/* Source type notice */}
+                  {sourceType === 'description' && (
+                    <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40">
+                      <Info className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                        AI speech-to-text captions were unavailable for this video. The text below is sourced from the video description instead.
+                      </p>
+                    </div>
+                  )}
+
                   {showSource && currentCaption.source !== currentCaption.target && (
                     <div className="p-3 rounded-lg bg-white dark:bg-card border border-orange-100 dark:border-orange-900/30">
                       <p className="text-[10px] uppercase font-semibold text-muted-foreground mb-1.5 tracking-wider">

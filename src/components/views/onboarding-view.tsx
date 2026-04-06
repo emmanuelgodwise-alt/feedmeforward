@@ -116,7 +116,10 @@ export function OnboardingView({ onComplete, onNavigate }: OnboardingViewProps) 
             Step {stepIndex + 1} of {STEPS.length}
           </p>
         </div>
-        <div className="shrink-0">
+        <div className="shrink-0 flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={handleSkip} className="text-muted-foreground">
+            Skip
+          </Button>
           {stepIndex < STEPS.length - 1 ? (
             <Button
               size="sm"

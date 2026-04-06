@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Plus, X, Eye, DollarSign, Calendar, Users, Play, HelpCircle, AlertCircle, Wallet, Upload, FileVideo, CheckCircle, Target, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, Plus, X, Eye, DollarSign, Calendar, Users, Play, HelpCircle, AlertCircle, Wallet, Upload, FileVideo, CheckCircle, Target, ChevronDown, ChevronUp, ImageIcon, Link2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useAudienceStore } from '@/stores/audience-store';
 import { useVideoStore } from '@/stores/video-store';
@@ -85,6 +85,11 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
 
+  // Thumbnail state
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+
   // Load segment criteria from audience store when navigated from segments view
   useEffect(() => {
     if (selectedSegmentCriteria && hasActiveCriteria(selectedSegmentCriteria)) {
@@ -134,6 +139,11 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
       if (json.success && json.data) {
         updateForm('videoUrl', json.data.videoUrl);
         setUploadedFile(file.name);
+        // Auto-set thumbnail if generated
+        if (json.data.thumbnailUrl) {
+          updateForm('thumbnailUrl', json.data.thumbnailUrl);
+          setThumbnailPreview(json.data.thumbnailUrl);
+        }
         toast({ title: 'Video uploaded!', description: `${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)` });
       } else {
         toast({ title: 'Upload failed', description: json.error || 'Unknown error', variant: 'destructive' });
@@ -160,6 +170,51 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
   const handleRemoveUpload = () => {
     setUploadedFile(null);
     updateForm('videoUrl', '');
+    // Also clear thumbnail if it was auto-generated from this upload
+    if (thumbnailPreview && form.thumbnailUrl === thumbnailPreview) {
+      setThumbnailPreview(null);
+      updateForm('thumbnailUrl', '');
+    }
+  };
+
+  const handleThumbnailUpload = async (file: File) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({ title: 'Invalid file type', description: 'Accepted: JPEG, PNG, WebP', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Maximum thumbnail size is 5MB', variant: 'destructive' });
+      return;
+    }
+    setUploadingThumbnail(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch('/api/videos/upload-thumbnail', {
+        method: 'POST',
+        headers: { 'X-User-Id': currentUser?.id || '' },
+        body: formData,
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        updateForm('thumbnailUrl', json.data.thumbnailUrl);
+        setThumbnailPreview(json.data.thumbnailUrl);
+        toast({ title: 'Thumbnail uploaded!' });
+      } else {
+        toast({ title: 'Upload failed', description: json.error || 'Unknown error', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Upload error', description: 'Check your connection', variant: 'destructive' });
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
+
+  const handleRemoveThumbnail = () => {
+    setThumbnailPreview(null);
+    updateForm('thumbnailUrl', '');
+    setShowUrlInput(false);
   };
 
   const updateForm = (field: string, value: string) => {
@@ -490,14 +545,124 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
                   {errors.videoUrl && <p className="text-xs text-destructive">{errors.videoUrl}</p>}
                 </div>
 
+                {/* Thumbnail Section */}
                 <div className="space-y-2">
-                  <Label htmlFor="lead-thumbnail">Thumbnail URL (optional)</Label>
-                  <Input
-                    id="lead-thumbnail"
-                    placeholder="https://example.com/thumbnail.jpg"
-                    value={form.thumbnailUrl}
-                    onChange={(e) => updateForm('thumbnailUrl', e.target.value)}
-                  />
+                  <Label className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-orange-500" />
+                    Thumbnail (optional)
+                  </Label>
+
+                  {thumbnailPreview ? (
+                    <div className="relative group rounded-xl overflow-hidden border border-border">
+                      <img
+                        src={thumbnailPreview}
+                        alt="Thumbnail preview"
+                        className="w-full h-40 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleThumbnailUpload(file);
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="bg-white/90 hover:bg-white text-foreground"
+                            onClick={() => {}}
+                            disabled={uploadingThumbnail}
+                          >
+                            {uploadingThumbnail ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                            Change
+                          </Button>
+                        </label>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="bg-white/90 hover:bg-white text-destructive"
+                          onClick={handleRemoveThumbnail}
+                        >
+                          <X className="w-3 h-3" />
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-muted-foreground/25 p-4 flex flex-col items-center gap-3">
+                      <div className="flex items-center gap-3 w-full">
+                        <label className="cursor-pointer flex-1">
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleThumbnailUpload(file);
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-2"
+                            disabled={uploadingThumbnail}
+                            onClick={() => {}}
+                          >
+                            {uploadingThumbnail ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Upload className="w-4 h-4" />
+                            )}
+                            {uploadingThumbnail ? 'Uploading...' : 'Upload Image'}
+                          </Button>
+                        </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1 text-muted-foreground"
+                          onClick={() => setShowUrlInput(!showUrlInput)}
+                        >
+                          <Link2 className="w-3.5 h-3.5" />
+                          Paste URL
+                        </Button>
+                      </div>
+                      {uploading && (
+                        <p className="text-xs text-muted-foreground">Auto-thumbnail will be generated after upload...</p>
+                      )}
+                      {showUrlInput && (
+                        <div className="w-full space-y-1">
+                          <Input
+                            placeholder="https://example.com/thumbnail.jpg"
+                            value={form.thumbnailUrl}
+                            onChange={(e) => {
+                              updateForm('thumbnailUrl', e.target.value);
+                              if (e.target.value.trim()) {
+                                setThumbnailPreview(e.target.value.trim());
+                              } else {
+                                setThumbnailPreview(null);
+                              }
+                            }}
+                            className="h-8 text-sm"
+                          />
+                          <p className="text-[10px] text-muted-foreground">
+                            {form.thumbnailUrl ? (
+                              <span className="text-emerald-600">Preview updated</span>
+                            ) : (
+                              'Enter an image URL to use as thumbnail'
+                            )}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
