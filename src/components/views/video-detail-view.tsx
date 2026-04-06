@@ -34,6 +34,7 @@ import {
   DollarSign,
   Star,
   TrendingUp,
+  Flame,
   Loader2,
   Download,
   Type,
@@ -88,6 +89,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
   const [transcribeOpen, setTranscribeOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [analyticsPollId, setAnalyticsPollId] = useState<string | null>(null);
+  const [isTrending, setIsTrending] = useState(false);
   const { updateWalletBalance } = useAuthStore();
   const pollRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -101,6 +103,16 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
       })
       .catch(() => {})
       .finally(() => setLoadingResponses(false));
+
+    // Check if video is trending
+    fetch(`/api/videos/trending?period=24h&limit=50`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          setIsTrending(json.data.some((v: { id: string }) => v.id === videoId));
+        }
+      })
+      .catch(() => {});
 
     return () => {
       clearCurrentVideo();
@@ -464,6 +476,12 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
               <Eye className="w-4 h-4" />
               {video.viewCount} views
             </span>
+            {isTrending && (
+              <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs gap-1 border-0">
+                <Flame className="w-3 h-3" />
+                Trending
+              </Badge>
+            )}
             <span className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
               {timeAgo(video.createdAt)}

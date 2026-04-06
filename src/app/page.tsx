@@ -38,6 +38,7 @@ import { CircleDetailView } from '@/components/views/circle-detail-view';
 import { ModerationView } from '@/components/views/moderation-view';
 import { OnboardingView } from '@/components/views/onboarding-view';
 import { HashtagFeedView } from '@/components/views/hashtag-feed-view';
+import { TrendingVideos } from '@/components/trending-videos';
 import { GlobalSearch } from '@/components/global-search';
 import { SkipToContent } from '@/components/skip-to-content';
 import { NotificationBell } from '@/components/notification-bell';
@@ -1331,6 +1332,17 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
             </div>
           </CardContent>
         </Card>
+      </motion.div>
+
+      {/* What's Trending Section */}
+      <motion.div variants={staggerItem} className="mb-8">
+        <TrendingVideos
+          onVideoClick={(id) => {
+            window.dispatchEvent(new CustomEvent('navigate-video', { detail: { videoId: id } }));
+          }}
+          onSeeAll={() => onNavigate('explore')}
+          variant="compact"
+        />
       </motion.div>
 
       {/* Footer */}

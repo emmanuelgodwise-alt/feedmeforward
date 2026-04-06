@@ -11,6 +11,7 @@ import { VideoCard } from '@/components/video-card';
 import { FilterBar } from '@/components/filter-bar';
 import { QuickNav } from '@/components/quick-nav';
 import { TrendingHashtags } from '@/components/trending-hashtags';
+import { TrendingVideos } from '@/components/trending-videos';
 
 interface ExploreViewProps {
   onNavigate: (view: string) => void;
@@ -80,6 +81,20 @@ export function ExploreView({ onNavigate, setVideoId }: ExploreViewProps) {
           )}
         </div>
       </motion.div>
+
+      {/* Trending Videos Section */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-6"
+      >
+        <TrendingVideos
+          onVideoClick={handleVideoClick}
+        />
+      </motion.div>
+
+      {/* Divider */}
+      <div className="border-b mb-6" />
 
       {/* Quick Nav */}
       <QuickNav onNavigate={onNavigate} activeView="explore" />

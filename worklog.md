@@ -3001,3 +3001,75 @@ Implement conversation-based messaging system, WebRTC voice/video calls with DB 
 - `npm run lint` passes with zero errors and zero warnings
 - Dev server compiles successfully
 - TypeScript strict typing throughout
+---
+## Task ID: prompt-3 - main-agent (Trending Videos Section)
+### Work Task
+Build a prominent "Trending Now" feature with trending algorithm API, horizontal scrollable trending video cards, integration into explore view and dashboard, and trending badge on video detail.
+
+### Work Summary
+
+#### 1. API: GET `/api/videos/trending/route.ts` — Created
+- Query params: `period` ('24h'|'7d'|'30d', default '24h'), `limit` (default 10, max 50), `category` (optional filter)
+- Fetches videos created within the period with Prisma include for counts (likes, comments, responses) and poll votes
+- Trending score formula: `weightedScore = (views × 1) + (likes × 5) + (comments × 4) + (responses × 8) + (votes × 3) × recentBoost`
+- Recent boost multiplier: 2.0x for newest 25% of period, 1.5x for 50%, 1.2x for 75%, 1.0 for rest
+- Returns videos sorted by trendingScore desc with rank numbers
+- Each video includes: creator info (username, displayName, avatarUrl, isVerified), engagement metrics, calculated trendingScore
+- Proper error handling with 500 status codes
+
+#### 2. TrendingVideoCard (`src/components/trending-video-card.tsx`) — Created
+- Memoized card component specialized for trending row
+- Larger landscape 16:9 aspect ratio thumbnail with gradient fallback
+- "Trending" badge with Flame icon in top-left (orange-to-red gradient)
+- Rank number badge (#1 gold, #2 silver, #3 bronze, rest muted) in top-right
+- Bold title (2 lines max), creator row with avatar initial + username + verified badge
+- Stats row: eye+views, heart+likes, message+comments
+- Trending score indicator with TrendingUp icon
+- Supports `compact` prop for dashboard variant (smaller cards)
+- Hover effect: scale 1.03 via framer-motion
+
+#### 3. TrendingVideos (`src/components/trending-videos.tsx`) — Created
+- Header with TrendingUp icon, "Trending Now" title, animated Flame icon
+- Time period filter tabs: 24h / 7 Days / 30 Days (active tab has orange gradient)
+- "See All" link button
+- Horizontal scroll container with snap scrolling, hidden scrollbar
+- Left/right scroll buttons (appear when scrollable) with edge fade gradients
+- Loading skeleton (5 card placeholders), empty state, error state
+- Auto-refetch when period changes
+- Supports two variants:
+  - `full`: Horizontal scrollable row with 10 cards
+  - `compact`: Static 2x2 / 4-col grid showing top 4 cards (for dashboard)
+
+#### 4. Explore View Integration (`src/components/views/explore-view.tsx`) — Modified
+- TrendingVideos component placed at TOP of explore view, above Quick Nav and filter bar
+- Subtle border divider separates trending from regular feed
+- Animated entrance with framer-motion
+
+#### 5. Dashboard Integration (`src/app/page.tsx`) — Modified
+- Added "What's Trending" section below Quick Wallet Actions card
+- Uses compact variant: 2×2 / 4-col grid of top 4 trending videos
+- "Explore Trending" link navigates to explore view
+- Clicking a video dispatches navigate-video custom event
+
+#### 6. Video Detail Trending Badge (`src/components/views/video-detail-view.tsx`) — Modified
+- Added `isTrending` state
+- On video load, fetches `/api/videos/trending?period=24h&limit=50` and checks if current video is in results
+- If trending, shows gradient orange-to-red "Trending" badge with Flame icon next to view count
+- Added `Flame` import from lucide-react
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- `npx next build` passes with **zero errors**
+- Dev log shows successful compilation (`✓ Compiled in 128ms`) with no runtime errors
+- TypeScript strict typing throughout all files
+- Warm orange/amber/red theme maintained (no blue/indigo)
+
+#### Files Created/Modified
+```
+src/app/api/videos/trending/route.ts (created)
+src/components/trending-video-card.tsx (created)
+src/components/trending-videos.tsx (created)
+src/components/views/explore-view.tsx (modified - added trending section)
+src/components/views/video-detail-view.tsx (modified - added trending badge)
+src/app/page.tsx (modified - added dashboard trending section + import)
+```
