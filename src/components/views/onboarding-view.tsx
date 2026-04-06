@@ -179,6 +179,86 @@ function WelcomeStep() {
         <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto leading-relaxed">
           Where every video starts a conversation. This quick guide will show you how to get the most out of your experience and unlock opportunities to earn.
         </p>
+
+        {/* ── How It Works ────────────────────────────────────── */}
+        <div className="mb-8">
+          <h2 className="text-base font-bold mb-5 text-foreground/90">Here&apos;s How It Works</h2>
+
+          {/* Lead Clip */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="max-w-md mx-auto text-left mb-3"
+          >
+            <div className="flex items-start gap-3 p-4 rounded-2xl bg-white dark:bg-card border border-orange-200 dark:border-orange-800/40 shadow-sm">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shrink-0 shadow-sm">
+                <Clapperboard className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm mb-1">Someone Posts a Lead Clip</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  A user uploads a video — either their own or one they found — sharing a topic, asking a question, or seeking opinions on something that matters to them.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Arrow */}
+          <div className="flex justify-center my-1">
+            <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
+              <ArrowRight className="w-3.5 h-3.5 text-orange-500 rotate-90" />
+            </div>
+          </div>
+
+          {/* Response Clip */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="max-w-md mx-auto text-left mb-3"
+          >
+            <div className="flex items-start gap-3 p-4 rounded-2xl bg-white dark:bg-card border border-amber-200 dark:border-amber-800/40 shadow-sm">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shrink-0 shadow-sm">
+                <MessageCircle className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm mb-1">You Respond with Your Video</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  You watch the clip and record your own video response sharing your thoughts, perspective, or answer — sparking a face-to-face dialogue.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Arrow */}
+          <div className="flex justify-center my-1">
+            <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
+              <ArrowRight className="w-3.5 h-3.5 text-orange-500 rotate-90" />
+            </div>
+          </div>
+
+          {/* Conversation grows */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="max-w-md mx-auto text-left mb-2"
+          >
+            <div className="flex items-start gap-3 p-4 rounded-2xl bg-white dark:bg-card border border-emerald-200 dark:border-emerald-800/40 shadow-sm">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shrink-0 shadow-sm">
+                <Users className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm mb-1">The Conversation Grows</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Others join in with their own video responses. The best responses rise to the top, earn you points and recognition, and can even lead to paid opportunities.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-xl mx-auto">
           <MiniFeature icon={Video} title="Video Polls" desc="Share opinions face-to-face" color="orange" />
           <MiniFeature icon={Award} title="Get Scored" desc="Build your reputation" color="amber" />
