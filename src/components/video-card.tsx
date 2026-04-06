@@ -1,10 +1,11 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Heart, MessageCircle, Users, CheckCircle2 } from 'lucide-react';
+import { Play, Heart, MessageCircle, Users, CheckCircle2, Bookmark } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth-store';
 import type { Video } from '@/types';
 import { STATUS_COLORS, THUMBNAIL_GRADIENTS } from '@/types';
 
@@ -37,16 +38,45 @@ interface VideoCardProps {
   video: Video;
   onClick: (videoId: string) => void;
   onCreatorClick?: (creatorId: string) => void;
+  showSave?: boolean;
 }
 
-function VideoCardComponent({ video, onClick, onCreatorClick }: VideoCardProps) {
+function VideoCardComponent({ video, onClick, onCreatorClick, showSave = false }: VideoCardProps) {
+  const { currentUser } = useAuthStore();
+  const [isSaved, setIsSaved] = useState(false);
   const gradient = getGradient(video.id);
+
+  // Check save status when component mounts or video changes
+  useEffect(() => {
+    if (!showSave || !currentUser) return;
+    fetch(`/api/videos/${video.id}/save-status`, {
+      headers: { 'X-User-Id': currentUser.id },
+    })
+      .then((r) => r.json())
+      .then((json) => { if (json.success) setIsSaved(json.saved); })
+      .catch(() => {});
+  }, [video.id, showSave, currentUser?.id]);
 
   const handleCreatorClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onCreatorClick && video.creator?.id) {
       onCreatorClick(video.creator.id);
     }
+  };
+
+  const handleSave = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentUser) return;
+    fetch(`/api/videos/${video.id}/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUser.id }),
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setIsSaved(json.saved);
+      })
+      .catch(() => {});
   };
 
   return (
@@ -102,6 +132,16 @@ function VideoCardComponent({ video, onClick, onCreatorClick }: VideoCardProps) 
               {video.type === 'lead' ? 'Lead Clip' : 'Response'}
             </Badge>
           </div>
+
+          {/* Save/Bookmark Button */}
+          {showSave && currentUser && (
+            <button
+              onClick={handleSave}
+              className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors z-10"
+            >
+              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-blue-400 text-blue-400' : 'text-white'}`} />
+            </button>
+          )}
         </div>
 
         <CardContent className="p-3 space-y-2">

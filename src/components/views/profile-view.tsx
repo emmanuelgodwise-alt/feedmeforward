@@ -48,6 +48,8 @@ import {
   Save,
   Pencil,
   X,
+  BookmarkCheck,
+  Bookmark,
 } from 'lucide-react';
 import { VideoCard } from '@/components/video-card';
 import { FollowButton } from '@/components/follow-button';
@@ -84,6 +86,8 @@ interface ProfileData {
   responseCount: number;
   followerCount: number;
   followingCount: number;
+  likedCount: number;
+  savedCount: number;
   rank: number;
   breakdown: {
     engagement: number;
@@ -224,6 +228,10 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [activeTab, setActiveTab] = useState('videos');
+  const [likedVideos, setLikedVideos] = useState<Video[]>([]);
+  const [savedVideos, setSavedVideos] = useState<Video[]>([]);
+  const [loadingLiked, setLoadingLiked] = useState(false);
+  const [loadingSaved, setLoadingSaved] = useState(false);
 
   // Edit profile dialog state
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -380,6 +388,28 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
       .catch(() => {})
       .finally(() => setLoadingVideos(false));
   }, [userId]);
+
+  // Fetch liked videos (own profile only)
+  useEffect(() => {
+    if (!isOwnProfile) return;
+    setLoadingLiked(true);
+    fetch(`/api/users/${userId}/liked-videos?limit=30`)
+      .then((r) => r.json())
+      .then((json) => { if (json.success) setLikedVideos(json.data || []); })
+      .catch(() => {})
+      .finally(() => setLoadingLiked(false));
+  }, [userId, isOwnProfile]);
+
+  // Fetch saved videos (own profile only)
+  useEffect(() => {
+    if (!isOwnProfile) return;
+    setLoadingSaved(true);
+    fetch(`/api/users/${userId}/saved-videos?limit=30`)
+      .then((r) => r.json())
+      .then((json) => { if (json.success) setSavedVideos(json.data || []); })
+      .catch(() => {})
+      .finally(() => setLoadingSaved(false));
+  }, [userId, isOwnProfile]);
 
   // Fetch audience profile data when profile loads
   useEffect(() => {
@@ -598,7 +628,7 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
               <Separator className="my-4" />
 
               {/* Stats */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="text-center">
                   <p className="text-lg font-bold">{profileData.videoCount}</p>
                   <p className="text-xs text-muted-foreground">Videos</p>
@@ -607,6 +637,12 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                   <p className="text-lg font-bold">{profileData.responseCount}</p>
                   <p className="text-xs text-muted-foreground">Responses</p>
                 </div>
+                {isOwnProfile && (
+                  <div className="text-center">
+                    <p className="text-lg font-bold">{profileData.likedCount || 0}</p>
+                    <p className="text-xs text-muted-foreground">Liked</p>
+                  </div>
+                )}
                 <div
                   className="text-center cursor-pointer hover:text-orange-500 transition-colors"
                   onClick={(e) => {
@@ -631,6 +667,12 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                   <p className="text-lg font-bold">{profileData.followingCount}</p>
                   <p className="text-xs text-muted-foreground">Following</p>
                 </div>
+                {isOwnProfile && (
+                  <div className="text-center">
+                    <p className="text-lg font-bold">{profileData.savedCount || 0}</p>
+                    <p className="text-xs text-muted-foreground">Saved</p>
+                  </div>
+                )}
               </div>
 
               {/* Follow Button (for other profiles) */}
@@ -1066,28 +1108,49 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
             </motion.div>
           )}
 
-          {/* Activity Tabs */}
+          {/* Video Compartments */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="w-full">
-                <TabsTrigger value="videos" className="flex-1 gap-1">
-                  <Video className="w-3.5 h-3.5" />
-                  Videos ({leadVideos.length})
-                </TabsTrigger>
-                <TabsTrigger value="responses" className="flex-1 gap-1">
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  Responses ({responseVideos.length})
-                </TabsTrigger>
-                <TabsTrigger value="all" className="flex-1 gap-1">
-                  <Crown className="w-3.5 h-3.5" />
-                  All ({videos.length})
-                </TabsTrigger>
-              </TabsList>
+              <div className="overflow-x-auto -mx-1 px-1">
+                <TabsList className="w-full min-w-max inline-flex">
+                  <TabsTrigger value="videos" className="flex-1 min-w-[100px] gap-1.5">
+                    <Video className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Lead Clips</span>
+                    <span className="sm:hidden">Clips</span>
+                    <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">{leadVideos.length}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="responses" className="flex-1 min-w-[100px] gap-1.5">
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    Responses
+                    <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">{responseVideos.length}</Badge>
+                  </TabsTrigger>
+                  {isOwnProfile && (
+                    <TabsTrigger value="liked" className="flex-1 min-w-[80px] gap-1.5">
+                      <Heart className="w-3.5 h-3.5 text-rose-500" />
+                      Liked
+                      <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">{likedVideos.length}</Badge>
+                    </TabsTrigger>
+                  )}
+                  {isOwnProfile && (
+                    <TabsTrigger value="saved" className="flex-1 min-w-[80px] gap-1.5">
+                      <BookmarkCheck className="w-3.5 h-3.5 text-blue-500" />
+                      Saved
+                      <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">{savedVideos.length}</Badge>
+                    </TabsTrigger>
+                  )}
+                  <TabsTrigger value="all" className="flex-1 min-w-[60px] gap-1.5">
+                    <Crown className="w-3.5 h-3.5" />
+                    All
+                    <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">{videos.length}</Badge>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
+              {/* Lead Clips Tab */}
               <TabsContent value="videos" className="mt-4">
                 {loadingVideos ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1103,18 +1166,20 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                   <Card className="border-dashed">
                     <CardContent className="p-8 text-center">
                       <Video className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">No lead clips yet</p>
+                      <p className="text-sm text-muted-foreground mb-1">No lead clips yet</p>
+                      <p className="text-xs text-muted-foreground">Create your first lead clip to start a conversation</p>
                     </CardContent>
                   </Card>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {leadVideos.map((v) => (
-                      <VideoCard key={v.id} video={v} onClick={handleVideoClick} />
+                      <VideoCard key={v.id} video={v} onClick={handleVideoClick} showSave={isOwnProfile} />
                     ))}
                   </div>
                 )}
               </TabsContent>
 
+              {/* Responses Tab */}
               <TabsContent value="responses" className="mt-4">
                 {loadingVideos ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1130,18 +1195,82 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                   <Card className="border-dashed">
                     <CardContent className="p-8 text-center">
                       <MessageCircle className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">No response clips yet</p>
+                      <p className="text-sm text-muted-foreground mb-1">No response clips yet</p>
+                      <p className="text-xs text-muted-foreground">Respond to lead clips with your opinion</p>
                     </CardContent>
                   </Card>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {responseVideos.map((v) => (
-                      <VideoCard key={v.id} video={v} onClick={handleVideoClick} />
+                      <VideoCard key={v.id} video={v} onClick={handleVideoClick} showSave={isOwnProfile} />
                     ))}
                   </div>
                 )}
               </TabsContent>
 
+              {/* Liked Tab (own profile only) */}
+              {isOwnProfile && (
+                <TabsContent value="liked" className="mt-4">
+                  {loadingLiked ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {[...Array(4)].map((_, i) => (
+                        <div key={i} className="space-y-2">
+                          <Skeleton className="aspect-video rounded-lg" />
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-3 w-1/2" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : likedVideos.length === 0 ? (
+                    <Card className="border-dashed">
+                      <CardContent className="p-8 text-center">
+                        <Heart className="w-10 h-10 text-rose-300 mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground mb-1">No liked videos yet</p>
+                        <p className="text-xs text-muted-foreground">Videos you like will appear here</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {likedVideos.map((v) => (
+                        <VideoCard key={v.id} video={v} onClick={handleVideoClick} showSave={isOwnProfile} />
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              )}
+
+              {/* Saved Tab (own profile only) */}
+              {isOwnProfile && (
+                <TabsContent value="saved" className="mt-4">
+                  {loadingSaved ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {[...Array(4)].map((_, i) => (
+                        <div key={i} className="space-y-2">
+                          <Skeleton className="aspect-video rounded-lg" />
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-3 w-1/2" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : savedVideos.length === 0 ? (
+                    <Card className="border-dashed">
+                      <CardContent className="p-8 text-center">
+                        <BookmarkCheck className="w-10 h-10 text-blue-300 mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground mb-1">No saved videos yet</p>
+                        <p className="text-xs text-muted-foreground">Bookmark videos to watch later</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {savedVideos.map((v) => (
+                        <VideoCard key={v.id} video={v} onClick={handleVideoClick} showSave={isOwnProfile} />
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              )}
+
+              {/* All Tab */}
               <TabsContent value="all" className="mt-4">
                 {loadingVideos ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1157,13 +1286,14 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                   <Card className="border-dashed">
                     <CardContent className="p-8 text-center">
                       <Video className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">No videos yet</p>
+                      <p className="text-sm text-muted-foreground mb-1">No videos yet</p>
+                      <p className="text-xs text-muted-foreground">Get started by creating your first video</p>
                     </CardContent>
                   </Card>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {videos.map((v) => (
-                      <VideoCard key={v.id} video={v} onClick={handleVideoClick} />
+                      <VideoCard key={v.id} video={v} onClick={handleVideoClick} showSave={isOwnProfile} />
                     ))}
                   </div>
                 )}

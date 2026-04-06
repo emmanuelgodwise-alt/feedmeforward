@@ -22,6 +22,11 @@ export async function GET(
         memberScore: true,
         isVerified: true,
         createdAt: true,
+        ageRange: true,
+        location: true,
+        gender: true,
+        language: true,
+        interests: true,
         _count: {
           select: {
             videos: true,
@@ -42,6 +47,15 @@ export async function GET(
     // Count response videos separately
     const responseCount = await db.video.count({
       where: { creatorId: userId, type: 'response' },
+    });
+
+    // Count liked and saved videos
+    const likedCount = await db.like.count({
+      where: { userId },
+    });
+
+    const savedCount = await db.savedVideo.count({
+      where: { userId },
     });
 
     // Calculate score breakdown (also persists updated score)
@@ -66,10 +80,17 @@ export async function GET(
         memberScore: calculatedScore,
         isVerified: calculatedScore >= 500,
         createdAt: user.createdAt,
+        ageRange: user.ageRange,
+        location: user.location,
+        gender: user.gender,
+        language: user.language,
+        interests: user.interests,
         videoCount: user._count.videos,
         responseCount,
         followerCount: user._count.followers,
         followingCount: user._count.following,
+        likedCount,
+        savedCount,
         rank: rank + 1,
         breakdown,
       },

@@ -39,6 +39,7 @@ model User {
   comments          Comment[]
   commentLikes      CommentLike[]   @relation("UserCommentLikes")
   likes             Like[]          @relation("UserLikes")
+  savedVideos        SavedVideo[]    @relation("UserSavedVideos")
   invitations       Invitation[]    @relation("UserInvitations")
   createdCircles    Circle[]        @relation("CircleCreator")
   circleMemberships CircleMember[]  @relation("UserCircleMemberships")
@@ -82,6 +83,7 @@ model Video {
   polls        Poll[]
   comments     Comment[]
   likes        Like[]
+  savedBy      SavedVideo[]
   reports      Report[]
   invitations     Invitation[]
   circleShares    CircleVideo[]
@@ -219,6 +221,19 @@ model Like {
   createdAt DateTime @default(now())
 
   user  User  @relation("UserLikes", fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+}
+
+// ─── Saved Video Model (Bookmark) ───────────────────────────────────────
+model SavedVideo {
+  id        String   @id @default(cuid())
+  userId    String
+  videoId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation("UserSavedVideos", fields: [userId], references: [id], onDelete: Cascade)
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@unique([userId, videoId])

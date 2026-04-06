@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Heart,
+  Bookmark,
   MessageCircle,
   Share2,
   Play,
@@ -90,6 +91,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
   const [shareOpen, setShareOpen] = useState(false);
   const [analyticsPollId, setAnalyticsPollId] = useState<string | null>(null);
   const [isTrending, setIsTrending] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const { updateWalletBalance } = useAuthStore();
   const pollRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -113,6 +115,16 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
         }
       })
       .catch(() => {});
+
+    // Check save status
+    if (currentUser) {
+      fetch(`/api/videos/${videoId}/save-status`, {
+        headers: { 'X-User-Id': currentUser.id },
+      })
+        .then((res) => res.json())
+        .then((json) => { if (json.success) setIsSaved(json.saved); })
+        .catch(() => {});
+    }
 
     return () => {
       clearCurrentVideo();
@@ -273,6 +285,27 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
     }
     if (setParentVideoId) setParentVideoId(videoId);
     onNavigate('create-response');
+  };
+
+  const handleSave = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`/api/videos/${videoId}/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setIsSaved(json.saved);
+        toast({
+          title: json.saved ? 'Video saved!' : 'Video unsaved',
+          description: json.saved ? 'Added to your saved videos' : 'Removed from saved videos',
+        });
+      }
+    } catch {
+      toast({ title: 'Failed to save', variant: 'destructive' });
+    }
   };
 
   const handleResponseClick = (responseId: string) => {
@@ -571,6 +604,22 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                 <DollarSign className="w-4 h-4" />
                 <Heart className="w-3 h-3" />
                 Tip
+              </Button>
+            )}
+            {/* Save/Bookmark button */}
+            {currentUser && (
+              <Button
+                variant={isSaved ? 'default' : 'outline'}
+                size="sm"
+                className={`gap-2 ${
+                  isSaved
+                    ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                    : 'hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-500 hover:border-blue-300'
+                }`}
+                onClick={handleSave}
+              >
+                <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-white' : ''}`} />
+                {isSaved ? 'Saved' : 'Save'}
               </Button>
             )}
           </div>
