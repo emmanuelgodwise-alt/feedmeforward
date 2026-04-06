@@ -69,20 +69,21 @@ export async function POST(
       });
     }
 
-    // For private circles, create an invitation
-    const invitation = await db.invitation.create({
-      data: {
-        inviterId,
-        inviteeEmail: invitee.username, // Store username for identification
-        circleId: id,
-        status: 'sent',
-      },
-    });
+    // For private circles, create a pending member (invited status)
+    const [newMember] = await db.$transaction([
+      db.circleMember.create({
+        data: { circleId: id, userId: inviteeId, role: 'invited' },
+      }),
+      db.circle.update({
+        where: { id },
+        data: { memberCount: { increment: 1 } },
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,
       message: `Invitation sent to ${invitee.username}`,
-      invitation,
+      member: newMember,
     });
   } catch (error) {
     console.error('Error inviting user:', error);

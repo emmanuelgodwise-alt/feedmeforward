@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    let tiers = [];
+    let tiers: Array<{ tier: string; name: string; price: number; benefits: string[] }> = [];
     try {
       tiers = JSON.parse(user.subscriptionTiers || '[]');
     } catch {

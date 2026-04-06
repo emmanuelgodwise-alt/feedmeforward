@@ -103,7 +103,22 @@ export async function GET(request: NextRequest) {
     }).slice(0, 3);
 
     // Deduct $0.01 per impression and increment impression count
-    const results = [];
+    const results: Array<{
+      id: string;
+      isPromoted: boolean;
+      video: {
+        id: string;
+        title: string;
+        description: string | null;
+        videoUrl: string;
+        thumbnailUrl: string | null;
+        category: string | null;
+        viewCount: number;
+        createdAt: string;
+        creator: { id: string; username: string; displayName: string | null; avatarUrl: string | null; isVerified: boolean };
+        stats: { likes: number; comments: number; responses: number };
+      };
+    }> = [];
     for (const pv of filtered) {
       const impressionCost = 0.01;
 

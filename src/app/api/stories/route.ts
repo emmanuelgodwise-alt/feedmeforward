@@ -110,7 +110,11 @@ export async function GET(request: NextRequest) {
       creatorMap.get(story.creatorId)!.push(story);
     }
 
-    const storyGroups = [];
+    const storyGroups: Array<{
+      creator: { username: string; id: string; displayName: string | null; avatarUrl: string | null; isVerified: boolean };
+      stories: Array<{ id: string; type: string; text: string | null; imageUrl: string | null; videoUrl: string | null; viewCount: number; createdAt: Date; expiresAt: Date; isViewed: boolean }>;
+      hasUnviewed: boolean;
+    }> = [];
 
     // Self stories first
     if (creatorMap.has(userId)) {

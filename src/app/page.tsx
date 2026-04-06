@@ -826,7 +826,7 @@ function LoginForm({ onNavigate }: { onNavigate: (view: View) => void }) {
 }
 
 // ─── Dashboard ─────────────────────────────────────────────────────
-function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) => void; setProfileUserId: (id: string) => void }) {
+function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: string) => void; setProfileUserId: (id: string) => void }) {
   const { currentUser, logout } = useAuthStore();
 
   const handleLogout = () => {
@@ -1406,7 +1406,7 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
       </motion.div>
 
       {/* Follow Suggestions Mini Section */}
-      <DashboardFollowSuggestions onNavigate={navigate} setProfileUserId={handleSetProfileUserId} />
+      <DashboardFollowSuggestions onNavigate={onNavigate} setProfileUserId={setProfileUserId} />
 
       {/* Footer */}
       <motion.div variants={staggerItem} className="text-center py-6">
@@ -1419,7 +1419,7 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
 }
 
 // ─── Follow Suggestions for Dashboard ─────────────────────────────
-function DashboardFollowSuggestions({ onNavigate, setProfileUserId }: { onNavigate: (view: View) => void; setProfileUserId: (id: string) => void }) {
+function DashboardFollowSuggestions({ onNavigate, setProfileUserId }: { onNavigate: (view: string) => void; setProfileUserId: (id: string) => void }) {
   const { currentUser } = useAuthStore();
   const [suggestions, setSuggestions] = useState<Array<{
     id: string; username: string; displayName: string | null; avatarUrl: string | null;
@@ -1853,8 +1853,8 @@ export default function Home() {
   const [currentHashtag, setCurrentHashtag] = useState<string>('');
   const [currentLiveSessionId, setCurrentLiveSessionId] = useState<string>('');
 
-  const navigate = useCallback((newView: View) => {
-    setView(newView);
+  const navigate = useCallback((newView: string) => {
+    setView(newView as View);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 

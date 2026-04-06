@@ -74,10 +74,10 @@ export async function GET(req: NextRequest) {
       },
       orderBy: [
         { status: 'asc' },
-        ...(status === 'live' ? [{ viewerCount: 'desc' }] : []),
-        ...(status === 'upcoming' ? [{ scheduledAt: 'asc' }] : []),
-        ...(status === 'ended' ? [{ startedAt: 'desc' }] : []),
-        { createdAt: 'desc' }],
+        ...(status === 'live' ? [{ viewerCount: 'desc' as const }] : []),
+        ...(status === 'upcoming' ? [{ scheduledAt: 'asc' as const }] : []),
+        ...(status === 'ended' ? [{ startedAt: 'desc' as const }] : []),
+        { createdAt: 'desc' as const }],
       take: limit,
       skip: offset,
     });

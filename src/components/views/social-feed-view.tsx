@@ -11,7 +11,7 @@ import {
   Rss,
   TrendingUp,
   RefreshCw,
-  Video,
+  Video as VideoIcon,
   Users,
   Search,
   Loader2,
@@ -29,7 +29,8 @@ import { QuickNav } from '@/components/quick-nav';
 import { StoriesBar } from '@/components/stories-bar';
 import { StoryViewer } from '@/components/story-viewer';
 import { CreateStoryDialog } from '@/components/create-story-dialog';
-import type { Video } from '@/types';
+import type { Video as VideoType } from '@/types';
+type Video = VideoType;
 
 interface SocialFeedViewProps {
   onNavigate: (view: string) => void;
@@ -747,7 +748,7 @@ export function SocialFeedView({
                 {feedPage < feedTotalPages && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center mt-8">
                     <Button variant="outline" size="lg" onClick={handleLoadMore} disabled={isLoadingMore} className="gap-2 min-w-[160px]">
-                      {isLoadingMore ? (<><Loader2 className="w-4 h-4 animate-spin" />Loading...</>) : (<><Video className="w-4 h-4" />Load More Videos</>)}
+                      {isLoadingMore ? (<><Loader2 className="w-4 h-4 animate-spin" />Loading...</>) : (<><VideoIcon className="w-4 h-4" />Load More Videos</>)}
                     </Button>
                   </motion.div>
                 )}
@@ -806,7 +807,7 @@ export function SocialFeedView({
               {feedPage < feedTotalPages && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center mt-8">
                   <Button variant="outline" size="lg" onClick={handleLoadMore} disabled={isLoadingMore} className="gap-2 min-w-[160px]">
-                    {isLoadingMore ? (<><Loader2 className="w-4 h-4 animate-spin" />Loading...</>) : (<><Video className="w-4 h-4" />Load More Videos</>)}
+                    {isLoadingMore ? (<><Loader2 className="w-4 h-4 animate-spin" />Loading...</>) : (<><VideoIcon className="w-4 h-4" />Load More Videos</>)}
                   </Button>
                 </motion.div>
               )}

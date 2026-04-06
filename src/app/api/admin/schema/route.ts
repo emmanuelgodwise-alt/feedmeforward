@@ -261,7 +261,7 @@ export async function GET() {
     // We use raw query to count each model
     for (const modelName of modelNames) {
       try {
-        const result = await (db as Record<string, { count: () => Promise<number> }>)[modelName].count();
+        const result = await (db as unknown as Record<string, { count: () => Promise<number> }>)[modelName].count();
         counts[modelName] = typeof result === 'number' ? result : 0;
       } catch {
         counts[modelName] = 0;

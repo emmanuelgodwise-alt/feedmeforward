@@ -99,7 +99,7 @@ export async function recalculateScore(userId: string): Promise<{
       creatorId: userId,
       type: 'response',
       isTextOnly: false,
-      description: { not: null, not: '' },
+      description: { not: null },
     },
     select: { description: true },
   });

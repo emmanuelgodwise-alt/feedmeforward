@@ -36,9 +36,6 @@ export function broadcastToSession(sessionId: string, event: string, data: unkno
   }
 }
 
-// Helper to be called from other API routes to broadcast events
-export { broadcastToSession };
-
 // GET /api/live/sessions/[id]/sse — SSE endpoint for real-time updates
 export async function GET(
   req: NextRequest,

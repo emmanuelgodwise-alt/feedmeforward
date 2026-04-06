@@ -213,7 +213,7 @@ export function ImportFriendsView({ onNavigate }: ViewProps) {
     setContactsLoading(true);
 
     try {
-      const contactsApi = (navigator as unknown as Record<string, unknown>).contacts;
+      const contactsApi = (navigator as unknown as { contacts?: { select: (fields: string[], opts?: { multiple?: boolean }) => Promise<Array<{ name?: string[]; email?: string[] }>> } }).contacts;
       if (!contactsApi || !contactsApi.select) {
         toast({
           title: 'Contact Picker not available',
@@ -275,11 +275,11 @@ export function ImportFriendsView({ onNavigate }: ViewProps) {
       const invitedSet = new Set(data.invited);
 
       // Build final contact list with platform status
-      const enrichedContacts: ContactItem[] = contactItems.map((c: ContactItem) => ({
+      const enrichedContacts = contactItems.map((c: ContactItem) => ({
         ...c,
         onPlatform: onPlatformMap.has(c.email!),
-        platformUser: onPlatformMap.get(c.email!),
-      }));
+        platformUser: onPlatformMap.get(c.email!) as PlatformUser | undefined,
+      })) as ContactItem[];
 
       setContacts(enrichedContacts);
       // Auto-select non-platform contacts that haven't been invited yet

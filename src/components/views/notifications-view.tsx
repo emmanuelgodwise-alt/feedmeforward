@@ -179,7 +179,7 @@ const containerVariants = {
       staggerChildren: 0.04,
     },
   },
-};
+} as const;
 
 const itemVariants = {
   initial: { opacity: 0, y: 12, scale: 0.98 },
@@ -188,7 +188,7 @@ const itemVariants = {
     y: 0,
     scale: 1,
     transition: {
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 400,
       damping: 30,
     },
@@ -627,7 +627,7 @@ function NotificationList({
             onAvatarClick={(e) => onAvatarClick(e, notification.fromUser?.id || '')}
             onVideoClick={
               notification.video
-                ? (e) => onVideoClick(e, notification.video.id)
+                ? (e) => onVideoClick(e, notification.video!.id)
                 : undefined
             }
             isMarking={markingIds.has(notification.id)}

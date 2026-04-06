@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
       where: {
         creatorId: userId,
         ...(search && {
-          name: { contains: search, mode: 'insensitive' as const },
+          name: { contains: search },
         }),
       },
       orderBy: { updatedAt: 'desc' },

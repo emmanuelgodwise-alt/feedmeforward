@@ -41,7 +41,7 @@ interface RewardTransaction {
 }
 
 interface ViewProps {
-  onNavigate: (view: 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards') => void;
+  onNavigate: (view: string) => void;
 }
 
 const staggerContainer = {

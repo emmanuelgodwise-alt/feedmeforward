@@ -146,7 +146,7 @@ export async function GET(request: Request) {
       .map(([name, count]) => ({ name, count }));
 
     // Subscriber growth — last 7 days
-    const subscriberGrowth = [];
+    const subscriberGrowth: Array<{ date: string; newSubscribers: number }> = [];
     for (let i = 6; i >= 0; i--) {
       const dayStart = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       dayStart.setHours(0, 0, 0, 0);
@@ -195,7 +195,7 @@ export async function GET(request: Request) {
         amount: true,
         description: true,
         createdAt: true,
-        fromUser: {
+        user: {
           select: { username: true, displayName: true, avatarUrl: true },
         },
       },
@@ -249,6 +249,7 @@ export async function GET(request: Request) {
           amount: t.amount,
           description: t.description,
           createdAt: t.createdAt.toISOString(),
+          fromUser: t.user,
         })),
       },
     });

@@ -15,18 +15,17 @@ export async function GET(request: NextRequest) {
 
     // Calculate the date threshold for period filtering
     const now = new Date();
-    let createdAtFilter: Prisma.DateTimeNullableFilter | undefined;
-    if (period === '7d') {
-      createdAtFilter = { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) };
-    } else if (period === '30d') {
-      createdAtFilter = { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) };
-    } else if (period === '90d') {
-      createdAtFilter = { gte: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000) };
-    }
+    const dateThreshold = period === '7d'
+      ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      : period === '30d'
+        ? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        : period === '90d'
+          ? new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+          : null;
 
     const videoWhere: Prisma.VideoWhereInput = {
       creatorId: userId,
-      ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
+      ...(dateThreshold ? { createdAt: { gte: dateThreshold } } : {}),
     };
 
     // Fetch all creator's videos with counts
@@ -67,11 +66,11 @@ export async function GET(request: NextRequest) {
         type: 'earning',
         status: 'completed',
         description: { contains: 'Tip from' },
-        ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
+        ...(dateThreshold ? { createdAt: { gte: dateThreshold } } : {}),
       },
       _sum: { amount: true },
     });
-    const totalTips = tipResult._sum.amount || 0;
+    const totalTips = tipResult._sum?.amount || 0;
 
     // Total revenue (earnings + rewards)
     const revenueResult = await db.transaction.aggregate({
@@ -79,17 +78,17 @@ export async function GET(request: NextRequest) {
         userId,
         type: { in: ['earning', 'reward'] },
         status: 'completed',
-        ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
+        ...(dateThreshold ? { createdAt: { gte: dateThreshold } } : {}),
       },
       _sum: { amount: true },
     });
-    const totalRevenue = revenueResult._sum.amount || 0;
+    const totalRevenue = revenueResult._sum?.amount || 0;
 
     // Total polls
     const totalPolls = await db.poll.count({
       where: {
         video: { creatorId: userId },
-        ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
+        ...(dateThreshold ? { createdAt: { gte: dateThreshold } } : {}),
       },
     });
 
@@ -128,7 +127,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fill all 30 days
-    const dailyViews = [];
+    const dailyViews: Array<{ date: string; views: number }> = [];
     for (let i = 29; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const dateKey = d.toISOString().split('T')[0];

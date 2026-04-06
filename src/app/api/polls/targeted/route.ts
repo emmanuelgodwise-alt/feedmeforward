@@ -63,7 +63,24 @@ export async function GET(request: NextRequest) {
     });
 
     // Filter: check if user matches each poll's targeting criteria
-    const matchedPolls = [];
+    const matchedPolls: Array<{
+      id: string;
+      question: string;
+      isPaid: boolean;
+      rewardPerResponse: number | null;
+      totalRewardPool: number | null;
+      responseCount: number;
+      maxResponses: number | null;
+      closesAt: Date | null;
+      createdAt: Date;
+      targetingCriteria: SegmentCriteria;
+      video: {
+        id: string;
+        title: string;
+        thumbnailUrl: string | null;
+        creator: { id: string; username: string; isVerified: boolean };
+      };
+    }> = [];
 
     for (const poll of allTargetedPolls) {
       // Skip if already voted

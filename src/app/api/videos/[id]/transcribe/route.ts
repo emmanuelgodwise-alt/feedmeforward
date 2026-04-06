@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readFile, existsSync } from 'fs';
+import { promises as fs } from 'fs';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { db } from '@/lib/db';
 import ZAI from 'z-ai-web-dev-sdk';
@@ -39,7 +40,7 @@ export async function POST(
         return NextResponse.json({ success: false, error: 'Video file not found on disk' }, { status: 404 });
       }
 
-      const fileBuffer = await readFile(filepath);
+      const fileBuffer = await fs.readFile(filepath);
       const base64Audio = fileBuffer.toString('base64');
 
       // Check file size (limit to 100MB for ASR)

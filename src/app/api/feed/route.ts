@@ -284,7 +284,7 @@ export async function GET(request: NextRequest) {
 
     // Format the feed
     const feed = videos.map((video) => {
-      let pollData = null;
+      let pollData: Record<string, unknown> | null = null;
       if (video.polls.length > 0) {
         const mainPoll = video.polls[0];
         const options = mainPoll.options ? JSON.parse(mainPoll.options) : [];

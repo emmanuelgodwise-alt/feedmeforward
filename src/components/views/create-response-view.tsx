@@ -14,10 +14,8 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useVideoStore } from '@/stores/video-store';
 import { useToast } from '@/hooks/use-toast';
 import { QuickNav } from '@/components/quick-nav';
-import type { View } from '@/app/page';
-
 interface CreateResponseViewProps {
-  onNavigate: (view: View) => void;
+  onNavigate: (view: string) => void;
   parentVideoId: string;
   parentVideoTitle?: string;
   parentVideoCreator?: string;

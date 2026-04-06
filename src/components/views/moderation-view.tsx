@@ -33,10 +33,8 @@ import {
   User,
   Flag,
 } from 'lucide-react';
-import type { View } from '@/app/page';
-
 interface ModerationViewProps {
-  onNavigate: (view: View) => void;
+  onNavigate: (view: string) => void;
 }
 
 interface ReportItem {

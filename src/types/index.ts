@@ -53,6 +53,8 @@ export interface Poll {
   closesAt: string | null;
   userVoted?: boolean;
   userVoteOptionId?: string | null;
+  status?: string;
+  targetingCriteria?: string;
 }
 
 // ─── Video Detail Type ────────────────────────────────────────────

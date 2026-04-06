@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       totalResponses: p.responseCount,
       totalRewardPool: p.totalRewardPool,
       rewardPerResponse: p.rewardPerResponse,
-      spentToDate: Math.min(p.responseCount * p.rewardPerResponse, p.totalRewardPool),
+      spentToDate: Math.min(p.responseCount * (p.rewardPerResponse ?? 0), p.totalRewardPool ?? 0),
       conversionRate: p.video.viewCount > 0 ? ((p.responseCount / p.video.viewCount) * 100).toFixed(1) : '0',
       status: p.closesAt && new Date(p.closesAt) < now ? 'closed' : 'active',
       createdAt: p.createdAt.toISOString(),

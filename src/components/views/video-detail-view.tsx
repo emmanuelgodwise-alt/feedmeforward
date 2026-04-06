@@ -27,7 +27,7 @@ import {
   Clock,
   Tag,
   Users,
-  Video,
+  Video as VideoIcon,
   ExternalLink,
   Copy,
   Check,
@@ -65,10 +65,12 @@ import { RepostButton } from '@/components/repost-button';
 import { timeAgo, getGradient } from '@/components/video-card';
 import { AdBanner } from '@/components/ad-banner';
 import { WorthyBadge } from '@/components/worthy-badge';
-import type { Video, VideoDetail } from '@/types';
+import type { Video as VideoType, VideoDetail } from '@/types';
+type Video = VideoType;
 import type { View } from '@/app/page';
 import { STATUS_COLORS } from '@/types';
 import { useWalletStore } from '@/stores/wallet-store';
+import { useAdStore } from '@/stores/ad-store';
 
 interface VideoDetailViewProps {
   onNavigate: (view: View) => void;
@@ -104,6 +106,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
   const [repostCount, setRepostCount] = useState(0);
   const [isReposted, setIsReposted] = useState(false);
   const { updateWalletBalance } = useAuthStore();
+  const { isWorthy } = useAdStore();
   const pollRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -450,7 +453,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <VideoIcon className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Video not found</h2>
           <p className="text-muted-foreground mb-4">This video may have been removed or doesn&apos;t exist.</p>
           <Button variant="ghost" onClick={() => onNavigate('explore')} className="shrink-0">
@@ -555,7 +558,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
       )}
 
       {/* ─── Ad Banner (only on worthy videos) ────────────────────── */}
-      <AdBanner videoId={videoId} placementType="banner_overlay" />
+      <AdBanner videoId={videoId} placementId="banner_overlay" />
 
       {/* ─── Download & Transcribe Buttons for local videos ───────── */}
       {video.videoUrl.startsWith('/uploads/') && (
@@ -617,7 +620,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                 Trending
               </Badge>
             )}
-            <WorthyBadge videoId={videoId} variant="badge" size="sm" />
+            <WorthyBadge isWorthy={!!isWorthy} variant="badge" size="sm" />
             <span className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
               {timeAgo(video.createdAt)}
@@ -762,7 +765,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                 className="gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
                 onClick={handleRespond}
               >
-                <Video className="w-4 h-4" />
+                <VideoIcon className="w-4 h-4" />
                 Respond with Video Clip
               </Button>
               <Button
@@ -808,7 +811,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
           className="mt-8 space-y-4"
         >
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <Video className="w-5 h-5 text-amber-500" />
+            <VideoIcon className="w-5 h-5 text-amber-500" />
             Response Clips ({video.responseCount})
           </h2>
           {loadingResponses ? (
@@ -824,7 +827,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
           ) : responses.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="p-8 text-center">
-                <Video className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                <VideoIcon className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground mb-1">No responses yet. Be the first to respond!</p>
                 <p className="text-xs text-muted-foreground mb-4">Share your opinion with a video clip or text response</p>
                 {currentUser && (
@@ -834,7 +837,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                       className="gap-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white"
                       onClick={handleRespond}
                     >
-                      <Video className="w-3 h-3" />
+                      <VideoIcon className="w-3 h-3" />
                       Respond Now
                     </Button>
                   </div>
@@ -1019,7 +1022,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                       <Target className="w-3.5 h-3.5" />
                       Target Audience
                     </div>
-                    <TargetingCriteriaDisplay criteria={poll.targetingCriteria} compact />
+                    <TargetingCriteriaDisplay criteria={JSON.parse(poll.targetingCriteria)} compact />
                   </div>
                 </div>
               )}
@@ -1061,7 +1064,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
               </Button>
             </div>
             <p className="text-[11px] text-muted-foreground -mt-2 flex items-center gap-1">
-              <Video className="w-3 h-3" />
+              <VideoIcon className="w-3 h-3" />
               Prefer video responses over text for stronger impact
             </p>
             <CommentSection videoId={videoId} />
@@ -1114,7 +1117,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                 </span>
                 {video.type === 'lead' && (
                   <span className="flex items-center gap-1">
-                    <Video className="w-3.5 h-3.5" />
+                    <VideoIcon className="w-3.5 h-3.5" />
                     {video.responseCount} responses
                   </span>
                 )}

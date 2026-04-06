@@ -31,10 +31,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create hashtags (skip duplicates)
-    await db.hashtag.createMany({
-      data: normalizedTags.map((tag: string) => ({ tag })),
-      skipDuplicates: true,
-    });
+    for (const tag of normalizedTags) {
+      try {
+        await db.hashtag.create({ data: { tag } });
+      } catch {
+        // Tag already exists, skip
+      }
+    }
 
     // Fetch all matching hashtags with their IDs
     const hashtags = await db.hashtag.findMany({
@@ -46,17 +49,20 @@ export async function POST(request: NextRequest) {
     // Create VideoHashtag relations (skip duplicates)
     const relations = normalizedTags
       .map((tag: string) => hashtagMap.get(tag))
-      .filter(Boolean)
+      .filter((v): v is string => Boolean(v))
       .map((hashtagId: string) => ({
         videoId,
         hashtagId,
       }));
 
     if (relations.length > 0) {
-      await db.videoHashtag.createMany({
-        data: relations,
-        skipDuplicates: true,
-      });
+      for (const rel of relations) {
+        try {
+          await db.videoHashtag.create({ data: rel });
+        } catch {
+          // Relation already exists, skip
+        }
+      }
     }
 
     // Increment useCount for each hashtag (only for newly created relations)

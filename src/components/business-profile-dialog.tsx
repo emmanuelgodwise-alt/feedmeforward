@@ -136,7 +136,7 @@ export function BusinessProfileDialog({
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': currentUser?.id,
+          'X-User-Id': currentUser?.id ?? '',
         },
         body: JSON.stringify(form),
       });

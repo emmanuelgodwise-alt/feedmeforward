@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Parse tiers
-      let tiers = [];
+      let tiers: Array<{ tier: string; name: string; price: number; benefits: string[] }> = [];
       try {
         tiers = JSON.parse(creator.subscriptionTiers || '[]');
       } catch {

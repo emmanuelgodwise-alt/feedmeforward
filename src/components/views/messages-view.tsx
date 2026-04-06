@@ -288,8 +288,8 @@ export function MessagesView({ onNavigate, setProfileUserId }: MessagesViewProps
         {activeCall?.type === 'voice' && !activeCall.isIncoming && (
           <VoiceCallUI
             call={activeCall}
-            recipientName={recipient?.displayName || otherMember?.displayName}
-            recipientAvatar={recipient?.avatarUrl || otherMember?.avatarUrl}
+            recipientName={recipient?.displayName || otherMember?.displayName || undefined}
+            recipientAvatar={recipient?.avatarUrl || otherMember?.avatarUrl || undefined}
             recipientId={recipientId || otherMember?.id}
           />
         )}
@@ -300,8 +300,8 @@ export function MessagesView({ onNavigate, setProfileUserId }: MessagesViewProps
         {activeCall?.type === 'video' && !activeCall.isIncoming && (
           <VideoCallUI
             call={activeCall}
-            recipientName={recipient?.displayName || otherMember?.displayName}
-            recipientAvatar={recipient?.avatarUrl || otherMember?.avatarUrl}
+            recipientName={recipient?.displayName || otherMember?.displayName || undefined}
+            recipientAvatar={recipient?.avatarUrl || otherMember?.avatarUrl || undefined}
             recipientId={recipientId || otherMember?.id}
           />
         )}

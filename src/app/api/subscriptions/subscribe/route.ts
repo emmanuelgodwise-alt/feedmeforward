@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     }
 
     // Parse and validate tiers
-    let tiers = [];
+    let tiers: Array<{ tier: string; name: string; price: number; benefits: string[] }> = [];
     try {
       tiers = JSON.parse(creator.subscriptionTiers || '[]');
     } catch {
@@ -108,6 +108,7 @@ export async function POST(request: Request) {
                 expiresAt,
                 cancelledAt: null,
               },
+              select: { id: true, subscriberId: true, creatorId: true, tier: true, amount: true, status: true, startedAt: true, expiresAt: true, cancelledAt: true, createdAt: true },
             }),
           ]
         : [
@@ -120,6 +121,7 @@ export async function POST(request: Request) {
                 status: 'active',
                 expiresAt,
               },
+              select: { id: true, subscriberId: true, creatorId: true, tier: true, amount: true, status: true, startedAt: true, expiresAt: true, cancelledAt: true, createdAt: true },
             }),
           ]),
       db.user.update({
@@ -127,7 +129,7 @@ export async function POST(request: Request) {
         data: { walletBalance: { decrement: amount } },
         select: { walletBalance: true },
       }),
-    ]);
+    ]) as [{ id: string; subscriberId: string; creatorId: string; tier: string; amount: number; status: string; startedAt: Date; expiresAt: Date; cancelledAt: Date | null; createdAt: Date }, { walletBalance: number }];
 
     // Create earning transaction for creator
     await db.transaction.create({

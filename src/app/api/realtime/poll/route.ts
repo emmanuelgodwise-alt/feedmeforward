@@ -14,7 +14,15 @@ export async function GET(request: NextRequest) {
         where: { userId, isRead: false },
       }),
       db.message.count({
-        where: { receiverId: userId, isRead: false },
+        where: {
+          conversation: {
+            members: {
+              some: { userId },
+            },
+          },
+          senderId: { not: userId },
+          isRead: false,
+        },
       }),
     ]);
 

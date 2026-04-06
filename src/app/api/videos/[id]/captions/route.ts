@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readFile, existsSync } from 'fs';
+import { promises as fs } from 'fs';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { db } from '@/lib/db';
 import ZAI from 'z-ai-web-dev-sdk';
@@ -74,7 +75,7 @@ export async function GET(
         // Fallback to description
         sourceText = video.description || video.title;
       } else {
-        const fileBuffer = await readFile(filepath);
+        const fileBuffer = await fs.readFile(filepath);
         const base64Audio = fileBuffer.toString('base64');
 
         // Check file size (limit to 100MB for ASR)

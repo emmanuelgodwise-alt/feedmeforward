@@ -24,10 +24,8 @@ import { useToast } from '@/hooks/use-toast';
 import { QuickNav } from '@/components/quick-nav';
 import { CATEGORIES } from '@/types';
 import { type SegmentCriteria, hasActiveCriteria, criteriaToBreakdown } from '@/lib/build-where-clause';
-import type { View } from '@/app/page';
-
 interface CreateLeadViewProps {
-  onNavigate: (view: View) => void;
+  onNavigate: (view: string) => void;
 }
 
 const AGE_RANGES = ['18-24', '25-34', '35-44', '45-54', '55+'];
@@ -342,7 +340,7 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
           totalRewardPool: isPaidPoll ? parseFloat(paidPollSettings.totalRewardPool) || undefined : undefined,
           maxResponses: paidPollSettings.maxResponses ? parseInt(paidPollSettings.maxResponses, 10) : undefined,
           closesAt: paidPollSettings.closesAt || undefined,
-          targetingCriteria: activeCriteria || undefined,
+          targetingCriteria: (activeCriteria || undefined) as Record<string, unknown> | undefined,
         });
       }
     }
@@ -672,7 +670,7 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
                               variant="outline"
                               size="sm"
                               className="ml-auto text-xs shrink-0 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/30"
-                              onClick={() => onNavigate('wallet' as View)}
+                              onClick={() => onNavigate('wallet')}
                             >
                               <Wallet className="w-3 h-3" />
                               Wallet

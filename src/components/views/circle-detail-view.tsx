@@ -90,6 +90,11 @@ interface VideoItem {
   status: string;
   category: string | null;
   createdAt: string;
+  creatorId: string;
+  tags: string[];
+  duration: number;
+  viewCount: number;
+  isPublic: boolean;
   creator: { id: string; username: string; displayName: string | null; avatarUrl: string | null; isVerified: boolean };
   _count: { likes: number; comments: number; polls: number };
 }
@@ -735,7 +740,7 @@ export function CircleDetailView({ onNavigate, circleId, setProfileUserId, setVi
               {videos.map((video) => (
                 <motion.div key={video.id} variants={staggerItem} className="relative group">
                   <VideoCard
-                    video={video}
+                    video={video as unknown as import('@/types').Video}
                     onClick={(id) => { setVideoId(id); onNavigate('video-detail'); }}
                     onCreatorClick={(id) => { setProfileUserId(id); onNavigate('profile'); }}
                   />
@@ -835,7 +840,7 @@ export function CircleDetailView({ onNavigate, circleId, setProfileUserId, setVi
                         )}
 
                         {/* Admin actions */}
-                        {isAdmin && member.userId !== currentUser.id && member.userId !== circle.creatorId && (
+                        {isAdmin && member.userId !== currentUser?.id && member.userId !== circle.creatorId && (
                           <div className="flex items-center gap-1">
                             {/* Role change dropdown - simple buttons */}
                             {member.role !== 'admin' && (

@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     // Default: PNG
     const pngBuffer = await QRCode.toBuffer(url, {
-      type: 'image/png',
+      type: 'png',
       width: clampedSize,
       margin: clampedMargin,
       color: {
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       errorCorrectionLevel: 'M',
     });
 
-    return new NextResponse(pngBuffer, {
+    return new NextResponse(new Uint8Array(pngBuffer), {
       headers: {
         'Content-Type': 'image/png',
         'Cache-Control': 'public, max-age=86400',

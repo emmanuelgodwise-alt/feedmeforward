@@ -38,7 +38,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────
 interface ViewProps {
-  onNavigate: (view: 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations') => void;
+  onNavigate: (view: string) => void;
 }
 
 interface InvitationStats {

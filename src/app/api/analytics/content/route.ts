@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
           id: true, title: true, description: true, type: true, status: true,
           createdAt: true, viewCount: true, thumbnailUrl: true, isPublic: true,
           _count: { select: { likes: true, comments: true, savedBy: true, reactions: true, reposts: true } },
-          poll: { select: { id: true, question: true, responseCount: true, isPaid: true, options: true, closesAt: true } },
+          polls: { select: { id: true, question: true, responseCount: true, isPaid: true, options: true, closesAt: true } },
           reactions: { select: { type: true } },
         },
       }),
@@ -58,16 +58,17 @@ export async function GET(request: NextRequest) {
       }
 
       // Poll data
-      let pollData = null;
-      if (v.poll) {
-        const options = JSON.parse(v.poll.options as string) as Array<{ id: string; text: string; voteCount: number }>;
-        const totalVotes = v.poll.responseCount;
+      let pollData: { id: string; question: string; totalVotes: number; isPaid: boolean; leadingOption: string | null; leadingPercentage: string } | null = null;
+      if (v.polls.length > 0) {
+        const mainPoll = v.polls[0];
+        const options = JSON.parse(mainPoll.options as string) as Array<{ id: string; text: string; voteCount: number }>;
+        const totalVotes = mainPoll.responseCount;
         const leading = [...options].sort((a, b) => b.voteCount - a.voteCount)[0];
         pollData = {
-          id: v.poll.id,
-          question: v.poll.question,
+          id: mainPoll.id,
+          question: mainPoll.question,
           totalVotes,
-          isPaid: v.poll.isPaid,
+          isPaid: mainPoll.isPaid,
           leadingOption: leading ? leading.text : null,
           leadingPercentage: leading && totalVotes > 0 ? ((leading.voteCount / totalVotes) * 100).toFixed(1) : '0',
         };

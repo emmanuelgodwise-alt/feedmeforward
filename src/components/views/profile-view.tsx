@@ -30,7 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   CheckCircle2,
   Calendar,
-  Video,
+  Video as VideoIcon,
   Users,
   MessageCircle,
   Award,
@@ -79,11 +79,12 @@ import {
   getNextLevelThreshold,
   getPreviousLevelThreshold,
 } from '@/types';
-import type { Video } from '@/types';
+import type { Video as VideoType } from '@/types';
+type Video = VideoType;
 import type { View } from '@/app/page';
 
 interface ProfileViewProps {
-  onNavigate: (view: View) => void;
+  onNavigate: (view: string) => void;
   userId: string;
 }
 
@@ -334,9 +335,9 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
   useEffect(() => {
     if (profileData) {
       let interestsText = '';
-      if ((profileData as Record<string, unknown>).interests) {
+      if ((profileData as unknown as Record<string, unknown>).interests) {
         try {
-          const raw = (profileData as Record<string, unknown>).interests;
+          const raw = (profileData as unknown as Record<string, unknown>).interests;
           const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
           interestsText = Array.isArray(parsed) ? parsed.join(', ') : '';
         } catch {
@@ -359,9 +360,9 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
   const handleEditProfileOpen = (open: boolean) => {
     if (open && profileData) {
       let interestsText = '';
-      if ((profileData as Record<string, unknown>).interests) {
+      if ((profileData as unknown as Record<string, unknown>).interests) {
         try {
-          const raw = (profileData as Record<string, unknown>).interests;
+          const raw = (profileData as unknown as Record<string, unknown>).interests;
           const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
           interestsText = Array.isArray(parsed) ? parsed.join(', ') : '';
         } catch {
@@ -824,7 +825,7 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                   <FollowButton
                     targetUserId={userId}
                     targetUsername={profileData.username}
-                    size="lg"
+                    size="default"
                     variant="full"
                     className="w-full"
                   />
@@ -930,7 +931,7 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                   <FollowButton
                     targetUserId={userId}
                     targetUsername={profileData.username}
-                    size="lg"
+                    size="default"
                     variant="full"
                     className="w-full"
                   />
@@ -1484,7 +1485,7 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
               <div className="overflow-x-auto -mx-1 px-1">
                 <TabsList className="w-full min-w-max inline-flex">
                   <TabsTrigger value="videos" className="flex-1 min-w-[100px] gap-1.5">
-                    <Video className="w-3.5 h-3.5" />
+                    <VideoIcon className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Lead Clips</span>
                     <span className="sm:hidden">Clips</span>
                     <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">{leadVideos.length}</Badge>
@@ -1531,7 +1532,7 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                 ) : leadVideos.length === 0 ? (
                   <Card className="border-dashed">
                     <CardContent className="p-8 text-center">
-                      <Video className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                      <VideoIcon className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground mb-1">No lead clips yet</p>
                       <p className="text-xs text-muted-foreground">Create your first lead clip to start a conversation</p>
                     </CardContent>
@@ -1651,7 +1652,7 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                 ) : videos.length === 0 ? (
                   <Card className="border-dashed">
                     <CardContent className="p-8 text-center">
-                      <Video className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                      <VideoIcon className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground mb-1">No videos yet</p>
                       <p className="text-xs text-muted-foreground">Get started by creating your first video</p>
                     </CardContent>

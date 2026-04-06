@@ -107,7 +107,7 @@ export function SubscriptionTiersManager({
     if (open && (!propTiers || propTiers.length === 0)) {
       setLoading(true);
       fetch('/api/creator/tiers', {
-        headers: { 'X-User-Id': currentUser?.id },
+        headers: { 'X-User-Id': currentUser?.id ?? '' },
       })
         .then((r) => r.json())
         .then((json) => {
@@ -168,7 +168,7 @@ export function SubscriptionTiersManager({
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': currentUser?.id,
+          'X-User-Id': currentUser?.id ?? '',
         },
         body: JSON.stringify({ tiers }),
       });

@@ -27,12 +27,12 @@ import {
   getPreviousLevelThreshold,
 } from '@/types';
 import type { LeaderboardEntry } from '@/types';
-import type { View } from '@/app/page';
+
 import { useAuthStore } from '@/stores/auth-store';
 import { QuickNav } from '@/components/quick-nav';
 
 interface LeaderboardViewProps {
-  onNavigate: (view: View) => void;
+  onNavigate: (view: string) => void;
   setProfileUserId?: (id: string) => void;
 }
 
@@ -52,7 +52,7 @@ function PodiumUser({
 }: {
   entry: LeaderboardEntry;
   position: number;
-  onNavigate: (view: View) => void;
+  onNavigate: (view: string) => void;
   setProfileUserId?: (id: string) => void;
 }) {
   const isCenter = position === 1;
@@ -153,7 +153,7 @@ function LeaderboardRow({
 }: {
   entry: LeaderboardEntry;
   currentUser?: { id: string } | null;
-  onNavigate: (view: View) => void;
+  onNavigate: (view: string) => void;
   setProfileUserId?: (id: string) => void;
 }) {
   const level = getScoreLevel(entry.memberScore);

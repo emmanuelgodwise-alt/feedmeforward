@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const engagers = await db.user.findMany({
       where: {
         OR: [
-          { likedVideos: { some: { video: { creatorId: userId }, createdAt: { gte: periodStart } } } },
+          { likes: { some: { video: { creatorId: userId }, createdAt: { gte: periodStart } } } },
           { comments: { some: { video: { creatorId: userId }, createdAt: { gte: periodStart } } } },
           { reactions: { some: { video: { creatorId: userId }, createdAt: { gte: periodStart } } } },
         ],
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ─── Follower growth over time ─────────────────────────────
-    const followerGrowth = [];
+    const followerGrowth: Array<{ date: string; newFollowers: number }> = [];
     for (let i = 29; i >= 0; i--) {
       const dayStart = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       dayStart.setHours(0, 0, 0, 0);

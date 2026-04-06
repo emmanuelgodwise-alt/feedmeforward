@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true, title: true, viewCount: true, createdAt: true, type: true, status: true,
         _count: { select: { likes: true, comments: true, reactions: true } },
-        poll: { select: { responseCount: true, question: true, isPaid: true } },
+        polls: { select: { responseCount: true, question: true, isPaid: true } },
       },
     });
 
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
           likes: v._count.likes,
           comments: v._count.comments,
           reactions: v._count.reactions,
-          pollResponses: v.poll?.responseCount || 0,
+          pollResponses: v.polls?.[0]?.responseCount || 0,
         })),
         reactions: reactions.map((r) => ({ type: r.type, count: r._count })),
         reach,

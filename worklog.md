@@ -4234,3 +4234,124 @@ Stage Summary:
 - AI-powered insights engine for actionable recommendations
 - Platform benchmarking for competitive analysis
 - Zero new TypeScript errors in modified files
+
+---
+## Task ID: TS-FIX-BATCH - sub-agent (Batch TypeScript Error Fixes)
+### Work Task
+Fix remaining TypeScript errors across 20+ source files in the FeedMeForward Next.js project, covering 11 categories of errors.
+
+### Changes Applied
+
+#### 1. fs/promises existsSync (3 files)
+- **Files**: `src/app/api/videos/[id]/captions/route.ts`, `download/route.ts`, `transcribe/route.ts`
+- **Fix**: Changed `import { readFile, existsSync } from 'fs/promises'` to `import { promises as fs } from 'fs'` + `import { existsSync } from 'fs'`. Changed `readFile()` calls to `fs.readFile()`.
+
+#### 2. onNavigate prop type (8 files)
+- **Files**: `create-lead-view.tsx`, `create-response-view.tsx`, `leaderboard-view.tsx`, `moderation-view.tsx`, `invitations-view.tsx`, `profile-view.tsx`, `rewards-view.tsx`
+- **Fix**: Changed `onNavigate: (view: View) => void` and specific string literal unions to `onNavigate: (view: string) => void` in all component interfaces and internal sub-component props. Removed unused `import type { View }`.
+
+#### 3. Duplicate Video identifier (3 files)
+- **Files**: `profile-view.tsx`, `social-feed-view.tsx`, `video-detail-view.tsx`
+- **Fix**: Renamed lucide `Video` icon import to `VideoIcon` via `Video as VideoIcon`. Created type alias: `import type { Video as VideoType } from '@/types'; type Video = VideoType;`. Updated all JSX usages from `<Video` to `<VideoIcon`. Also restored accidentally removed `ExternalLink` import in `video-detail-view.tsx`.
+
+#### 4. VideoItem missing properties
+- **File**: `circle-detail-view.tsx`
+- **Fix**: Added missing fields to `VideoItem` interface: `creatorId`, `tags`, `duration`, `viewCount`, `isPublic`. Cast `video as unknown as import('@/types').Video` when passing to `VideoCard`.
+
+#### 5. SegmentCriteria cast
+- **File**: `create-lead-view.tsx:345`
+- **Fix**: Cast `activeCriteria || undefined` to `Record<string, unknown> | undefined` via `as Record<string, unknown> | undefined`.
+
+#### 6. string | null | undefined
+- **File**: `messages-view.tsx:291,303`
+- **Fix**: Added `|| undefined` to `recipientName` and `recipientAvatar` props to coerce `null` to `undefined`.
+
+#### 7. notification.video possibly null
+- **File**: `notifications-view.tsx:630`
+- **Fix**: Used non-null assertion `notification.video!.id` inside the truthiness-checked callback.
+
+#### 8. Framer-motion variants type (2 files)
+- **Files**: `notifications-view.tsx`, `conversation-list.tsx`
+- **Fix**: Added `as const` to `containerVariants` and `itemVariants` objects, and `type: 'spring' as const` to narrow string literal types for framer-motion `Variants` compatibility.
+
+#### 9. shadcn component overload (4 files)
+- **Files**: `business-profile-dialog.tsx:137`, `promote-video-dialog.tsx:119`, `subscription-tiers-manager.tsx:110,169`
+- **Fix**: Changed `currentUser?.id` to `currentUser?.id ?? ''` in all fetch headers to satisfy `Record<string, string>` type for `HeadersInit`.
+
+#### 10. .select on empty object type
+- **File**: `import-friends-view.tsx:217`
+- **Fix**: Replaced `Record<string, unknown>` cast with proper typed cast including `select` method signature for the Contact Picker API.
+
+#### 11. ProfileData to Record<string, unknown> cast
+- **File**: `profile-view.tsx:337,339,362,364`
+- **Fix**: Changed `(profileData as Record<string, unknown>)` to `(profileData as unknown as Record<string, unknown>)` per TypeScript's recommended double-cast pattern.
+
+### Results
+- **Before**: 38 errors in src/ (from initial tsc run)
+- **After**: 11 errors in src/ (12 total including 1 in skills/)
+- All 11 specified error categories have been resolved
+- Remaining 11 src/ errors are pre-existing issues not listed in this task (Poll type properties, AdBanner/WorthyBadge props, FollowButton size, ContactItem type, RealtimeState property, score-engine duplicate property)
+---
+## Task ID: TS-FIX - main-agent (TypeScript Error Cleanup)
+### Work Task
+Fix all TypeScript compilation errors across the entire FeedMeForward codebase to achieve a clean build.
+
+### Work Summary
+
+#### Errors Fixed (40+ errors across 30+ files)
+
+**Analytics API Routes (4 files)**
+- `api/analytics/audience/route.ts`: Fixed `likedVideos` → `likes` (UserWhereInput), typed `followerGrowth` array
+- `api/analytics/content/route.ts`: Fixed `poll` → `polls` in Video select, typed `pollData` properly, handled polls as array
+- `api/analytics/overview/route.ts`: Fixed `poll` → `polls` in Video select, updated poll access to array notation
+- `api/analytics/revenue/route.ts`: Added null coalescing for `rewardPerResponse` and `totalRewardPool`
+
+**Creator API Routes (3 files)**
+- `api/creator/analytics/route.ts`: Replaced `Prisma.DateTimeNullableFilter` with `Date | null` pattern, added null checks for `_sum?.amount`, typed `dailyViews` array
+- `api/creator/dashboard/route.ts`: Fixed `fromUser` → `user` in Transaction select, typed `subscriberGrowth` array
+- `api/creator/tiers/route.ts`: Explicitly typed `tiers` array
+
+**Core API Routes (8 files)**
+- `api/circles/[id]/invite/route.ts`: Replaced invalid `Invitation.create` with `CircleMember.create` (role='invited')
+- `api/feed/promoted/route.ts`: Explicitly typed `results` array, fixed `displayName` nullable
+- `api/feed/route.ts`: Typed `pollData` as `Record<string, unknown> | null`
+- `api/hashtags/sync/route.ts`: Replaced `createMany({skipDuplicates})` with try/catch `create` loop, fixed `filter(Boolean)` type narrowing
+- `api/live/sessions/route.ts`: Added `as const` to sort order objects
+- `api/live/sessions/[id]/sse/route.ts`: Removed duplicate `export { broadcastToSession }`
+- `api/qr/generate/route.ts`: Changed `'image/png'` → `'png'` for QRCode type, Buffer → Uint8Array
+- `api/admin/schema/route.ts`: Added `unknown` intermediate cast for PrismaClient
+- `api/realtime/poll/route.ts`: Fixed `receiverId` → conversation members query
+- `api/scores/calculate/route.ts`: Fixed `typeof result.breakdown` in else branch
+- `api/segments/route.ts`: Removed `mode: 'insensitive'` (not supported in SQLite)
+- `api/polls/targeted/route.ts`: Explicitly typed `matchedPolls` array
+- `api/subscriptions/route.ts` & `api/subscriptions/subscribe/route.ts`: Explicitly typed `tiers` arrays, added `select` to transaction queries with type assertion
+
+**Video API Routes (3 files)**
+- `api/videos/[id]/captions/route.ts`: Changed `import { readFile } from 'fs'` → `import { promises as fs } from 'fs'` + `import { existsSync } from 'fs'`
+- `api/videos/[id]/download/route.ts`: Same fs/promises fix
+- `api/videos/[id]/transcribe/route.ts`: Same fs/promises fix
+
+**Components (12 files)**
+- `page.tsx`: Fixed `navigate`/`handleSetProfileUserId` → `onNavigate`/`setProfileUserId`, changed navigate signature to accept `string`
+- `video-detail-view.tsx`: Added `status` and `targetingCriteria` to Poll type, fixed AdBanner props, WorthyBadge props, added ad store import
+- `profile-view.tsx`: Fixed FollowButton `size="lg"` → `"default"`, fixed Video icon naming conflict
+- `circle-detail-view.tsx`: Fixed VideoItem type mismatch
+- `create-lead-view.tsx`: Fixed SegmentCriteria cast, onNavigate type
+- `create-response-view.tsx`: Fixed onNavigate type
+- `leaderboard-view.tsx`: Fixed onNavigate type
+- `moderation-view.tsx`: Fixed onNavigate type
+- `invitations-view.tsx`: Fixed onNavigate type
+- `import-friends-view.tsx`: Fixed ContactItem type cast for enriched contacts
+- `messages-view.tsx`: Fixed null → undefined coalescing
+- `notifications-view.tsx`: Fixed optional chaining for notification.video
+
+**Stores & Libs (3 files)**
+- `stores/realtime-store.ts`: Added `livePollVotes` state and `updateLivePollVote` action
+- `lib/score-engine.ts`: Fixed duplicate property `not` in description filter
+- `types/index.ts`: Added `status` and `targetingCriteria` to Poll interface
+
+#### Quality Checks
+- `npx tsc --noEmit` → **0 errors in src/** (only 1 pre-existing in skills/ which is not project code)
+- `npm run build` → **Success** with all 60+ API routes compiled
+- All files maintain strict TypeScript typing
+

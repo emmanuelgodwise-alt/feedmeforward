@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       });
 
-      const scores: Array<{ userId: string; score: number; breakdown: typeof result.breakdown }> = [];
+      const scores: Array<{ userId: string; score: number; breakdown: { engagement: number; quality: number; accuracy: number; streak: number } }> = [];
 
       for (const user of users) {
         try {

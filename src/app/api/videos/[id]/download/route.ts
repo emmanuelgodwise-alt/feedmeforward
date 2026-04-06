@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readFile, existsSync } from 'fs';
+import { promises as fs } from 'fs';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { db } from '@/lib/db';
 
@@ -38,7 +39,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Video file not found' }, { status: 404 });
     }
 
-    const fileBuffer = await readFile(filepath);
+    const fileBuffer = await fs.readFile(filepath);
 
     // Determine content type from extension
     const ext = video.videoUrl.split('.').pop()?.toLowerCase();

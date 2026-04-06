@@ -72,12 +72,12 @@ interface ConversationListProps {
 
 const containerVariants = {
   animate: { transition: { staggerChildren: 0.03 } },
-};
+} as const;
 
 const itemVariants = {
   initial: { opacity: 0, y: 8, scale: 0.98 },
-  animate: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 400, damping: 30 } },
-};
+  animate: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring' as const, stiffness: 400, damping: 30 } },
+} as const;
 
 // ─── Component ───────────────────────────────────────────────────
 
