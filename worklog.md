@@ -3382,3 +3382,58 @@ Build comprehensive follow/subscriber system: Zustand follow store, enhanced Fol
 - npm run lint: 0 errors, 2 pre-existing warnings
 - All files TypeScript strict typed
 
+
+---
+## Task ID: upgrades-1-2-3
+Agent: full-stack-developer
+Task: 3 Upgrades — Video Captioning, Onboarding Next Button Top/Bottom, Auto-Scroll
+
+Work Log:
+- Read existing codebase: video-detail-view.tsx, onboarding-view.tsx, transcribe route, locale-store, Prisma schema
+- Created captions API route at `src/app/api/videos/[id]/captions/route.ts`
+  - GET endpoint with `targetLanguage` query param and `X-User-Id` auth
+  - For local uploads (`/uploads/`): reads file, converts to base64, uses ASR from z-ai-web-dev-sdk
+  - For external videos (YouTube/Vimeo): uses video description as source text
+  - If targetLanguage !== "en", translates via AI chat completions
+  - Splits final text into segments by sentence terminators
+  - Returns `{ success, captions: { source, target, segments, language } }`
+  - Returns `{ success, captions: null, message }` for unavailable videos
+- Created `src/components/video-captions.tsx` component
+  - CC toggle button to show/hide caption panel
+  - Globe language selector dropdown with 15 languages (en, fr, es, hi, de, pt, it, ja, ko, zh-CN, zh-TW, ar, ru, tr, nl)
+  - Defaults to current locale from useLocaleStore
+  - Caption display card with gradient border (orange/amber theme)
+  - Shows "Translated to [Language] 🇫🇷" badge
+  - "Show Source" toggle for original English text
+  - Loading skeleton states, error with retry, unavailable message
+  - Client-side caching per language to avoid re-fetching
+  - AnimatePresence for smooth panel open/close
+- Integrated VideoCaptions into video-detail-view.tsx
+  - Placed directly below video player container, before Download & Transcribe buttons
+  - Only shown for non-text-only videos
+  - Passes videoId, videoUrl, and description as props
+- Added top Continue/Get Started button to onboarding-view.tsx
+  - Progress bar and button in flex row with justify-between
+  - Top button uses size="sm" for compact appearance
+  - Same orange gradient styling as bottom button
+  - Shows "Continue" on non-last step, "Get Started" on last step
+- Added auto-scroll to top on bottom button click
+  - Added useRef for root container div
+  - Added scrollToTop helper using containerRef + window.scrollTo
+  - handleNext accepts "top"|"bottom" parameter
+  - handleComplete also accepts source parameter
+  - Only scrolls when source="bottom" (not when top button clicked)
+  - handleBack also scrolls to top
+  - 50ms setTimeout to allow step change animation to start first
+- Ran lint: 0 errors, 0 new warnings (2 pre-existing warnings in broadcaster-view.tsx)
+- Dev log confirms successful compilation
+
+Stage Summary:
+- Upgrade 1 (Video Captioning): ✅ API route + component + integration complete
+- Upgrade 2 (Top Continue Button): ✅ Added to progress bar area
+- Upgrade 3 (Auto-Scroll): ✅ Bottom button triggers scroll, top button does not
+- Files created: src/app/api/videos/[id]/captions/route.ts, src/components/video-captions.tsx
+- Files modified: src/components/views/video-detail-view.tsx, src/components/views/onboarding-view.tsx
+- Lint: ✅ 0 errors
+- Build: ✅ Successful compilation
+

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -55,8 +55,16 @@ type Step = (typeof STEPS)[number];
 export function OnboardingView({ onComplete, onNavigate }: OnboardingViewProps) {
   const [currentStep, setCurrentStep] = useState<Step>('welcome');
   const stepIndex = STEPS.indexOf(currentStep);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleComplete = async () => {
+  const scrollToTop = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleComplete = async (source?: 'top' | 'bottom') => {
     try {
       await fetch('/api/onboarding', { method: 'POST' });
       onComplete();
@@ -65,10 +73,13 @@ export function OnboardingView({ onComplete, onNavigate }: OnboardingViewProps) 
     }
   };
 
-  const handleNext = () => {
+  const handleNext = (source?: 'top' | 'bottom') => {
     const idx = STEPS.indexOf(currentStep);
     if (idx < STEPS.length - 1) {
       setCurrentStep(STEPS[idx + 1]);
+      if (source === 'bottom') {
+        setTimeout(scrollToTop, 50);
+      }
     }
   };
 
@@ -76,6 +87,7 @@ export function OnboardingView({ onComplete, onNavigate }: OnboardingViewProps) 
     const idx = STEPS.indexOf(currentStep);
     if (idx > 0) {
       setCurrentStep(STEPS[idx - 1]);
+      setTimeout(scrollToTop, 50);
     }
   };
 
@@ -84,24 +96,47 @@ export function OnboardingView({ onComplete, onNavigate }: OnboardingViewProps) 
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8">
-      {/* Progress bar */}
-      <div className="w-full max-w-2xl mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          {STEPS.map((step, idx) => (
-            <div
-              key={step}
-              className={`h-1.5 flex-1 rounded-full transition-colors ${
-                idx <= stepIndex
-                  ? 'bg-gradient-to-r from-orange-400 to-amber-500'
-                  : 'bg-muted'
-              }`}
-            />
-          ))}
+    <div ref={containerRef} className="min-h-screen flex flex-col items-center justify-center px-4 py-8">
+      {/* Progress bar + Top Continue button */}
+      <div className="w-full max-w-2xl mb-8 flex items-center justify-between gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            {STEPS.map((step, idx) => (
+              <div
+                key={step}
+                className={`h-1.5 flex-1 rounded-full transition-colors ${
+                  idx <= stepIndex
+                    ? 'bg-gradient-to-r from-orange-400 to-amber-500'
+                    : 'bg-muted'
+                }`}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            Step {stepIndex + 1} of {STEPS.length}
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground text-center">
-          Step {stepIndex + 1} of {STEPS.length}
-        </p>
+        <div className="shrink-0">
+          {stepIndex < STEPS.length - 1 ? (
+            <Button
+              size="sm"
+              onClick={() => handleNext('top')}
+              className="gap-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
+            >
+              Continue
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => handleComplete('top')}
+              className="gap-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
+            >
+              Get Started
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
@@ -140,7 +175,7 @@ export function OnboardingView({ onComplete, onNavigate }: OnboardingViewProps) 
           </Button>
           {stepIndex < STEPS.length - 1 ? (
             <Button
-              onClick={handleNext}
+              onClick={() => handleNext('bottom')}
               className="gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
             >
               Continue
@@ -148,7 +183,7 @@ export function OnboardingView({ onComplete, onNavigate }: OnboardingViewProps) 
             </Button>
           ) : (
             <Button
-              onClick={handleComplete}
+              onClick={() => handleComplete('bottom')}
               className="gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
             >
               Get Started

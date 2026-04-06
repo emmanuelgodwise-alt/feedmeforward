@@ -59,6 +59,7 @@ import { PollCard } from '@/components/poll-card';
 import { PollAnalytics } from '@/components/poll-analytics';
 import { CommentSection } from '@/components/comment-section';
 import { TargetingCriteriaDisplay } from '@/components/targeting-criteria-display';
+import { VideoCaptions } from '@/components/video-captions';
 import { timeAgo, getGradient } from '@/components/video-card';
 import type { Video, VideoDetail } from '@/types';
 import type { View } from '@/app/page';
@@ -456,6 +457,15 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
           )}
         </div>
       </motion.div>
+
+      {/* ─── Video Captions & Translation ─────────────────────────── */}
+      {!video.isTextOnly && (
+        <VideoCaptions
+          videoId={videoId}
+          videoUrl={video.videoUrl}
+          description={video.description || undefined}
+        />
+      )}
 
       {/* ─── Download & Transcribe Buttons for local videos ───────── */}
       {video.videoUrl.startsWith('/uploads/') && (
