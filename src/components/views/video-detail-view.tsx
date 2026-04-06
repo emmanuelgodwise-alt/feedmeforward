@@ -63,6 +63,8 @@ import { VideoCaptions } from '@/components/video-captions';
 import { ReactionBar, getReactionSummary } from '@/components/reaction-bar';
 import { RepostButton } from '@/components/repost-button';
 import { timeAgo, getGradient } from '@/components/video-card';
+import { AdBanner } from '@/components/ad-banner';
+import { WorthyBadge } from '@/components/worthy-badge';
 import type { Video, VideoDetail } from '@/types';
 import type { View } from '@/app/page';
 import { STATUS_COLORS } from '@/types';
@@ -552,6 +554,9 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
         />
       )}
 
+      {/* ─── Ad Banner (only on worthy videos) ────────────────────── */}
+      <AdBanner videoId={videoId} placementType="banner_overlay" />
+
       {/* ─── Download & Transcribe Buttons for local videos ───────── */}
       {video.videoUrl.startsWith('/uploads/') && (
         <motion.div
@@ -612,6 +617,7 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                 Trending
               </Badge>
             )}
+            <WorthyBadge videoId={videoId} variant="badge" size="sm" />
             <span className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
               {timeAgo(video.createdAt)}
@@ -649,6 +655,24 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
 
         {/* ─── Action Buttons ────────────────────────────────────── */}
         <div className="space-y-3">
+          {/* Ad Revenue indicator for creators */}
+          {isCreator && video.type === 'lead' && (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200 dark:border-emerald-800/50">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-emerald-500" />
+                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Ad Revenue Available</span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 text-xs border-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+                onClick={() => onNavigate('advertiser-dashboard' as View)}
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                Ad Manager
+              </Button>
+            </div>
+          )}
           {/* Row 1: Like, Comment, Share, Tip, Edit */}
           <div className="flex flex-wrap items-center gap-2">
             <Button

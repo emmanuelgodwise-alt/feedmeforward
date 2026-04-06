@@ -32,6 +32,7 @@ model User {
   subscriptions       Subscription[]     @relation("CreatorSubscriptions")
   subscriberOf        Subscription[]     @relation("UserSubscriptions")
   promotedVideos      PromotedVideo[]    @relation("UserPromotedVideos")
+  adCampaigns         AdCampaign[]       @relation("UserAdCampaigns")
   // Audience Segmentation
   ageRange       String?
   location       String?
@@ -107,6 +108,7 @@ model Video {
   reactions    Reaction[]   @relation("VideoReactions")
   reposts      Repost[]     @relation("VideoReposts")
   promotedVideo       PromotedVideo?    @relation("PromotedVideos")
+  adPlacements        AdPlacement[]     @relation("AdPlacements")
 
   // Self-referential for response clips
   parentVideoId String?
@@ -674,4 +676,120 @@ model AudienceSegment {
   updatedAt   DateTime @updatedAt
 
   creator User @relation("UserAudienceSegments", fields: [creatorId], references: [id])
+}
+
+// ─── Ad Campaign Model (Advertiser creates campaigns) ────────────────
+model AdCampaign {
+  id                String   @id @default(cuid())
+  advertiserId      String
+  title             String
+  description       String?
+  imageUrl          String?              // banner/creative URL
+  targetUrl         String               // where clicks go
+  adType            String   @default("banner") // "banner", "pre_roll", "post_vote"
+  budget            Float               // total budget in USD
+  spent             Float    @default(0.0)
+  cpmBid            Float    @default(2.0)   // max cost per 1000 impressions
+  cpcBid            Float    @default(0.50)   // max cost per click
+  impressions       Int      @default(0)
+  clicks            Int      @default(0)
+  conversions       Int      @default(0)
+  status            String   @default("draft") // "draft", "active", "paused", "exhausted", "completed"
+  targetingCriteria String?  // JSON: {age, location, gender, interests, categories, minScore}
+  startsAt          DateTime @default(now())
+  endsAt            DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  advertiser    User            @relation("UserAdCampaigns", fields: [advertiserId], references: [id], onDelete: Cascade)
+  placements    AdPlacement[]
+  adImpressions AdImpression[]
+  adClicks      AdClick[]
+  revenueShares AdRevenueShare[]
+
+  @@index([status, startsAt])
+  @@index([advertiserId])
+}
+
+// ─── Ad Placement Model (Ad placed on specific worthy video) ─────────
+model AdPlacement {
+  id           String   @id @default(cuid())
+  campaignId   String
+  videoId      String
+  placementType String  @default("banner") // "pre_roll", "banner_overlay", "post_vote"
+  status       String   @default("active") // "active", "paused", "removed"
+  impressions  Int      @default(0)
+  clicks       Int      @default(0)
+  revenueEarned Float   @default(0.0)
+  startsAt     DateTime @default(now())
+  endsAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  campaign AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  video    Video      @relation("AdPlacements", fields: [videoId], references: [id])
+  adImpressions AdImpression[]
+  adClicks      AdClick[]
+
+  @@unique([campaignId, videoId, placementType])
+  @@index([videoId, status])
+  @@index([campaignId, status])
+}
+
+// ─── Ad Impression Model (Track every ad view) ──────────────────────
+model AdImpression {
+  id          String   @id @default(cuid())
+  campaignId  String
+  placementId String?
+  videoId     String
+  viewerId    String?  // null for anonymous
+  viewerAge   String?
+  viewerLocation String?
+  viewerGender   String?
+  adType      String
+  revenue     Float    @default(0.0) // revenue generated from this impression
+  createdAt   DateTime @default(now())
+
+  campaign AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  placement AdPlacement? @relation(fields: [placementId], references: [id])
+
+  @@index([campaignId, createdAt])
+  @@index([videoId, createdAt])
+  @@index([viewerId])
+}
+
+// ─── Ad Click Model (Track every ad click) ──────────────────────────
+model AdClick {
+  id          String   @id @default(cuid())
+  campaignId  String
+  placementId String?
+  videoId     String
+  clickerId   String?
+  adType      String
+  revenue     Float    @default(0.0)
+  createdAt   DateTime @default(now())
+
+  campaign AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  placement AdPlacement? @relation(fields: [placementId], references: [id])
+
+  @@index([campaignId, createdAt])
+  @@index([videoId, createdAt])
+}
+
+// ─── Ad Revenue Share Model (Revenue distribution tracking) ──────────
+model AdRevenueShare {
+  id              String   @id @default(cuid())
+  campaignId      String
+  videoId         String
+  recipientId     String   // User who receives the share
+  recipientRole   String   // "platform", "creator", "voter"
+  amount          Float
+  percentage      Float    // 30, 45, or 25
+  transactionId   String?  // linked wallet transaction
+  createdAt       DateTime @default(now())
+
+  campaign AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([recipientId, createdAt])
+  @@index([campaignId])
 }

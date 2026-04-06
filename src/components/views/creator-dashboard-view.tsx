@@ -767,6 +767,14 @@ export function CreatorDashboardView({ onNavigate }: CreatorDashboardViewProps) 
         </Button>
         <Button
           variant="outline"
+          className="gap-2 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
+          onClick={() => onNavigate('advertiser-dashboard')}
+        >
+          <Megaphone className="w-4 h-4" />
+          Ad Manager
+        </Button>
+        <Button
+          variant="outline"
           className="gap-2"
           onClick={() => onNavigate('creator-dashboard')}
         >

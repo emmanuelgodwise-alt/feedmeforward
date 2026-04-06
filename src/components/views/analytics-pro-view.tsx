@@ -6,9 +6,9 @@ import {
   BarChart3, TrendingUp, TrendingDown, Eye, Heart, MessageCircle, Users,
   DollarSign, Target, Activity, Shield, ShieldCheck, Award, Zap,
   Download, ChevronDown, ChevronUp, Loader2, AlertCircle, ArrowUpRight,
-  ArrowDownRight, Minus, PieChart, Clock, Globe, Star, Lock, Unlock,
-  FileText, Layers, Percent, BarChart, RefreshCw, CheckCircle2, XCircle,
-  Info, Sparkles, Vote, Filter, Search,
+  ArrowDownRight, Minus, PieChart as PieChartIcon, Clock, Globe, Star, Lock, Unlock,
+  FileText, Layers, Percent, RefreshCw, CheckCircle2, XCircle,
+  Info, Sparkles, Vote, Filter, Search, Trophy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -812,7 +812,7 @@ export function AnalyticsProView({ onNavigate }: ViewProps) {
               {/* Revenue Breakdown + Subscriptions */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><PieChart className="w-4 h-4 text-purple-500" />Revenue Breakdown</CardTitle></CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><PieChartIcon className="w-4 h-4 text-purple-500" />Revenue Breakdown</CardTitle></CardHeader>
                   <CardContent>
                     <div className="h-48">
                       <ResponsiveContainer width="100%" height="100%">
@@ -945,7 +945,7 @@ export function AnalyticsProView({ onNavigate }: ViewProps) {
 
               {/* Trust Distribution */}
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><PieChart className="w-4 h-4 text-emerald-500" />Trust Grade Distribution</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><PieChartIcon className="w-4 h-4 text-emerald-500" />Trust Grade Distribution</CardTitle></CardHeader>
                 <CardContent>
                   <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">

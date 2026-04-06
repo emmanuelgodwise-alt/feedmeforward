@@ -3718,3 +3718,249 @@ Stage Summary:
 - Creator Studio accessible from Dashboard for creator-role users
 - Full navigation flow working: Dashboard → Creator Studio → Promote Video Dialog
 - Promote Video Dialog integrated with 4-step campaign wizard (select video, budget, duration, targeting)
+
+---
+## Task ID: 7 - main-agent (Ad Placement System — UI Components)
+### Work Task
+Build 7 UI components for the FeedMeForward Ad Placement system: Zustand ad store, in-stream banner ad, pre-roll ad overlay, post-vote interstitial ad, ad-worthy badge, multi-step campaign creation dialog, and ad stats card.
+
+### Work Summary
+
+#### 1. Ad Store (`src/stores/ad-store.ts`) — Created
+- Complete Zustand store with all required types and methods
+- **Types defined**: AdType ('banner'|'preroll'|'post_vote'|'native'), AdStatus ('draft'|'active'|'paused'|'completed'|'rejected'), BiddingModel ('cpm'|'cpc'), AdCampaign (full campaign model with 18 fields), ServedAd (served ad with 8 fields), WorthyStatus (score + reasons), AdRevenue (6 revenue metrics), CreateCampaignData (with optional targeting sub-object)
+- **State**: campaigns array, isWorthy boolean, worthyStatus, currentAd, revenue, loading flags
+- **Methods**: fetchCampaigns, createCampaign, checkWorthy, serveAd, trackClick, fetchRevenue, clearCurrentAd, clearCache
+- All methods use `X-User-Id` header for authentication, following existing patterns
+
+#### 2. Ad Banner (`src/components/ad-banner.tsx`) — Created
+- In-stream banner overlay for worthy videos
+- Displays: Sponsored badge (emerald), advertiser image, headline, description, "Learn More" CTA button
+- Close/dismiss button (appears on hover via group-hover opacity transition)
+- Tracks clicks via store's trackClick method, opens target URL in new tab
+- Animated entrance via framer-motion (fade in + slide down)
+- Supports both prop-driven mode (pass `ad` prop) and auto-serve mode (fetches via store)
+- Mobile responsive layout with responsive text truncation and button sizing
+- Emerald/teal color theme for ad elements
+
+#### 3. Pre-Roll Ad (`src/components/pre-roll-ad.tsx`) — Created
+- Full-screen overlay (fixed inset-0 z-50) with backdrop blur
+- 5-second countdown timer with visible countdown badge
+- "Skip Ad" button appears after configurable skipDelay (default 3s) with animated entrance
+- Loading state with spinner while ad is being fetched
+- Auto-completes when countdown reaches 0
+- Shows: advertiser logo/brand, Sponsored badge, headline, description, advertiser name, CTA button
+- Optional background image with gradient overlay for cinematic effect
+- Smooth fade transitions on enter/exit (0.5s ease-in-out)
+- Emerald-to-teal gradient on CTA with shadow glow effect
+
+#### 4. Post-Vote Interstitial (`src/components/post-vote-ad.tsx`) — Created
+- Inline card (not full-screen) appearing after user votes on polls
+- "Thanks for voting! Check this out" message with sparkle icon
+- Compact layout: sponsor badge + X dismiss on header row, image + copy + CTA in body
+- Quick dismiss with X button, calls onDismiss callback
+- Loading is non-intrusive (returns null instead of skeleton)
+- Gradient accent line at top (emerald→teal→amber)
+- Emerald/teal themed throughout
+
+#### 5. Worthy Badge (`src/components/worthy-badge.tsx`) — Created
+- Memoized component with 3 variant modes: 'badge' (Sparkles + "Worthy"), 'pill' (DollarSign + "Ad Eligible"), 'icon' (Sparkles only with hover animation)
+- 2 size options: 'sm' and 'md'
+- Emerald color theme (badge bg/text, tooltip icon)
+- Tooltip explaining what "worthy" means: "This video meets the quality & engagement threshold to display advertisements. The creator earns revenue from ad impressions."
+- Returns null if isWorthy is false
+
+#### 6. Ad Campaign Dialog (`src/components/ad-campaign-dialog.tsx`) — Created
+- Multi-step wizard (5 steps) following PromoteVideoDialog patterns
+- **Step 1: Basics** — Title (100 char limit), description (300 char limit), ad type selection (4 types with icons and descriptions in 2×2 grid), destination URL
+- **Step 2: Creative** — Image URL with live preview (16:9 aspect ratio), mock ad preview card showing how the ad will look
+- **Step 3: Budget** — Wallet balance display with insufficient funds warning, preset budget chips ($25–$1000), custom budget input, optional daily budget, CPM/CPC bidding model toggle with bid input
+- **Step 4: Targeting** — Age range (min/max), location, gender select, interests (comma-separated), video categories (from CATEGORIES constant), min member score — all optional
+- **Step 5: Review** — Complete summary card with all campaign details, targeting badges, budget utilization warning if insufficient
+- Step indicator with numbered circles and connecting lines (emerald gradient for completed steps)
+- Validation at each step (disabled Next if requirements not met)
+- Loading state on Launch button with spinner
+- Emerald/teal gradient buttons throughout
+
+#### 7. Ad Stats Card (`src/components/ad-stats-card.tsx`) — Created
+- Memoized component for advertiser dashboard
+- **Stats grid (3×2)**: Impressions, Clicks, CTR, Spent, Remaining Budget, eCPM — each with icon, tooltip, and percentage change indicator
+- ChangeIndicator sub-component shows up/down/neutral with colored arrows
+- MiniSparkline sub-component renders animated bar chart (7 bars, last 7 days)
+- Budget utilization progress bar with color gradient (green→amber→red based on usage)
+- Campaign status badge with contextual colors
+- Campaign title, ad type, and advertiser name in header
+- Tooltips on all stats explaining what they mean
+
+#### Quality Checks
+- `npm run lint` passes with **zero new errors** (1 pre-existing error in analytics-pro-view.tsx, 1 false positive jsx-a11y/alt-text on Lucide `<Image>` icon component)
+- All components use `'use client'` directive where needed
+- TypeScript strict typing throughout all files
+- All components follow existing project patterns (shadcn/ui, emerald theme for ads, framer-motion animations, X-User-Id auth)
+- All framer-motion animations properly configured with transitions
+
+#### Files Created
+```
+src/stores/ad-store.ts (created - 201 lines)
+src/components/ad-banner.tsx (created - 117 lines)
+src/components/pre-roll-ad.tsx (created - 301 lines)
+src/components/post-vote-ad.tsx (created - 154 lines)
+src/components/worthy-badge.tsx (created - 76 lines)
+src/components/ad-campaign-dialog.tsx (created - 732 lines)
+src/components/ad-stats-card.tsx (created - 247 lines)
+```
+---
+## Task ID: ads-api - backend-agent (Ad Placement API Routes)
+### Work Task
+Build 12 Ad Placement API routes for FeedMeForward including: campaign CRUD, eligible video detection (worthy criteria), ad serving, click tracking, revenue distribution, analytics dashboard, and worthy status checking.
+
+### Work Summary
+
+#### 1. Worthy Video Criteria Engine (`src/lib/ad-worthy.ts`) — Created
+- `checkVideoWorthy(videoId)` function returns detailed `WorthyBreakdown` object
+- Criteria implemented:
+  - **500+ views**: `viewCount >= 500`
+  - **Engagement**: `pollVotes >= 10` OR `reactionCount >= 50`
+  - **Creator score**: `memberScore >= 200` (Silver+)
+  - **Lead type**: Video must be `type === 'lead'`
+  - **Has poll**: At least one poll attached
+  - **No pending reports**: Zero reports with `status === 'pending'`
+- Fetches video with creator, polls, reactions, and pending reports in a single query
+- Counts poll votes via `PollVote.groupBy` across all video polls
+
+#### 2. POST /api/ads/campaigns — Create Ad Campaign
+- Validates: title, targetUrl (valid URL), budget ($5 minimum), adType
+- Deducts budget from wallet via `db.$transaction` (atomic balance decrement + transaction record)
+- Auto-sets status to "active" if startsAt <= now, else "draft"
+- Validates optional cpmBid, cpcBid (non-negative), startsAt/endsAt dates
+- Stores targetingCriteria as JSON string
+
+#### 3. GET /api/ads/campaigns — List Advertiser's Campaigns
+- Auth via X-User-Id header
+- Optional status filter (validates against: draft, active, paused, exhausted, completed)
+- Includes placement count, impressions, clicks, CTR calculation
+- Computes budgetRemaining (max 0 to avoid negative)
+
+#### 4. GET /api/ads/campaigns/[id] — Campaign Detail
+- Ownership check (403 if not advertiser)
+- Includes all placements with video info and stats
+- Daily impressions/clicks for last 30 days (fills in missing dates with 0s)
+- Parses targetingCriteria JSON
+
+#### 5. PATCH /api/ads/campaigns/[id] — Update Campaign
+- Valid state transitions: active→paused/completed, paused→active, draft→active/paused
+- Budget extension: deducts from wallet, creates transaction, auto-reactivates exhausted campaigns
+- Can update: title, description, imageUrl, endsAt, targetingCriteria
+
+#### 6. GET /api/ads/eligible-videos — List Worthy Videos
+- Fetches lead type videos with polls, ordered by viewCount desc
+- Filters for each candidate via checkVideoWorthy()
+- Returns engagement metrics (pollVotes, reactions), worthiness breakdown
+- Paginated (page, limit, category filter)
+- Includes approximate total worthy count via Prisma count query
+
+#### 7. POST /api/ads/placement — Place Ad on Worthy Video
+- Validates campaign (active/paused, budget remaining), ownership
+- Verifies video worthiness via checkVideoWorthy()
+- Checks for duplicate placement (unique constraint: campaignId+videoId+placementType)
+- Returns 409 on duplicate
+
+#### 8. GET /api/ads/serve — Serve Ad for Video
+- No auth required (viewer may be anonymous via userId query param)
+- Finds active placements with remaining budget for the video
+- Optional placementType filter
+- Targeting scoring: age/location/gender match + CPM bid weight + budget remaining weight
+- Records AdImpression with viewer demographics
+- Increments campaign.spent by CPM-based revenue
+- Auto-marks campaign as "exhausted" when spent >= budget
+- Fire-and-forget revenue distribution via /api/ads/distribute-revenue
+
+#### 9. POST /api/ads/click — Record Ad Click
+- Records AdClick with CPC bid as revenue
+- Updates campaign and placement click counters
+- Handles exhausted campaigns gracefully (records click without charging)
+- Auto-marks campaign as "exhausted" when spent >= budget
+
+#### 10. GET /api/ads/worthy-status/[videoId] — Check Worthy Status
+- Returns isWorthy boolean, detailed criteria with thresholds and actual values
+- Summary with totalCriteria, metCriteria, unmetCriteria, percentage
+
+#### 11. GET /api/ads/revenue/[userId] — Get Ad Revenue for User
+- Aggregates all AdRevenueShare records for the user
+- Breaks down by role (creator, voter, platform) with counts and totals
+- Groups by video with video metadata
+- Links to transaction statuses (pending vs paid)
+- Sorted by revenue descending
+
+#### 12. POST /api/ads/distribute-revenue — Distribute Revenue
+- Revenue sharing formula: Platform 30%, Creator 45%, Voters 25%
+- Platform share recorded (no wallet credit)
+- Creator share: creates earning transaction, credits wallet
+- Voter shares: split proportionally among all unique poll voters
+- Duplicate detection via impressionId
+- All operations in db.$transaction for atomicity
+- Creates AdRevenueShare records for each recipient
+
+#### 13. GET /api/ads/analytics — Advertiser Analytics Dashboard
+- Period filter: 7d, 30d, 90d
+- Optional campaignId filter
+- Summary metrics: total campaigns, impressions, clicks, CTR, CPM, CPC, budget utilization
+- Per-campaign performance breakdown
+- Demographics: age groups, locations (top 20), gender distribution
+- Daily trend: impressions, clicks, CTR, spent for each day in period
+- Top performing videos by revenue (top 10)
+
+#### Pre-existing Bug Fix
+- Fixed `analytics-pro-view.tsx`: Renamed lucide `PieChart` import to `PieChartIcon` to avoid conflict with recharts `PieChart`. Removed unused lucide `BarChart` import (conflict with recharts `BarChart`). Added missing `Trophy` import.
+
+#### Quality Checks
+- `npm run lint` passes with **0 errors, 1 warning** (pre-existing alt-text warning in ad-campaign-dialog.tsx)
+- TypeScript strict type checking: **0 errors** in all ads files
+- Verified GET /api/ads/campaigns returns `{"success":true,"data":[]}`
+- Verified GET /api/ads/analytics returns full dashboard structure
+
+#### Files Created (11 new + 1 lib)
+```
+src/lib/ad-worthy.ts (created - WorthyBreakdown engine)
+src/app/api/ads/campaigns/route.ts (created - POST create, GET list)
+src/app/api/ads/campaigns/[id]/route.ts (created - GET detail, PATCH update)
+src/app/api/ads/eligible-videos/route.ts (created - GET list worthy)
+src/app/api/ads/placement/route.ts (created - POST place ad)
+src/app/api/ads/serve/route.ts (created - GET serve ad)
+src/app/api/ads/click/route.ts (created - POST record click)
+src/app/api/ads/worthy-status/[videoId]/route.ts (created - GET check worthy)
+src/app/api/ads/revenue/[userId]/route.ts (created - GET user revenue)
+src/app/api/ads/distribute-revenue/route.ts (created - POST distribute)
+src/app/api/ads/analytics/route.ts (created - GET dashboard)
+```
+
+#### Files Modified
+```
+src/components/views/analytics-pro-view.tsx (fixed PieChart/BarChart import conflict, added Trophy import)
+src/lib/db.ts (temporarily disabled query logging to reduce output, restored singleton pattern)
+```
+---
+Task ID: 1
+Agent: Main
+Task: Implement YouTube-like Ad Placement System for Worthy Videos
+
+Work Log:
+- Added 5 new Prisma models: AdCampaign, AdPlacement, AdImpression, AdClick, AdRevenueShare
+- Added adPlacements relation to Video model, adCampaigns relation to User model
+- Ran prisma db push to sync database
+- Built 11 API route files + 1 shared library for ad-worthy engine
+- Built 7 UI components: ad-store, ad-banner, pre-roll-ad, post-vote-ad, worthy-badge, ad-campaign-dialog, ad-stats-card
+- Built advertiser-dashboard-view.tsx (full-featured dashboard)
+- Registered advertiser-dashboard view in page.tsx navigation
+- Integrated ad-banner into video-detail-view.tsx
+- Integrated worthy-badge into video-detail-view.tsx
+- Added Ad Manager button to Creator Dashboard
+- Added Ad Revenue Available indicator for creators in video detail view
+
+Stage Summary:
+- Complete ad placement system with 12 API routes, 7 UI components, 1 full dashboard view
+- Revenue sharing: Platform 30%, Creator 45%, Voters 25%
+- Worthy criteria: 500+ views, 10+ poll votes OR 50+ reactions, creator score 200+, lead type with poll, no pending reports
+- Zero TypeScript errors in all new files
+- Ad types: pre-roll, banner overlay, post-vote interstitial
+
