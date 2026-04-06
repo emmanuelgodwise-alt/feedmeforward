@@ -27,6 +27,8 @@ import { LeaderboardView } from '@/components/views/leaderboard-view';
 import { WalletView } from '@/components/views/wallet-view';
 import { RewardsView } from '@/components/views/rewards-view';
 import { InvitationsView } from '@/components/views/invitations-view';
+import { ImportFriendsView } from '@/components/views/import-friends-view';
+import { ReferralBanner } from '@/components/referral-banner';
 import { AudienceInsightsView } from '@/components/views/audience-insights-view';
 import { SegmentsView } from '@/components/views/segments-view';
 import { SocialFeedView } from '@/components/views/social-feed-view';
@@ -87,7 +89,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'import-friends' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -1261,6 +1263,35 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Invite Friends Card */}
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow border-2 border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/80 to-orange-50/50 dark:from-amber-950/20 dark:to-amber-950/10"
+            onClick={() => onNavigate('import-friends')}
+          >
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-sm">
+                  <UserPlus className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Invite Friends</CardTitle>
+                  <CardDescription>Import & earn $2</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Import contacts, share links, and earn rewards for every sign-up.
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                <span className="text-sm font-medium">Import Friends</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </motion.div>
 
       {/* Moderation Card — only show for moderators and admins */}
@@ -1333,6 +1364,9 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Referral Banner — show on dashboard */}
+      <ReferralBanner onNavigate={(v) => onNavigate(v as View)} />
 
       {/* What's Trending Section */}
       <motion.div variants={staggerItem} className="mb-8">
@@ -1820,6 +1854,12 @@ export default function Home() {
         {view === 'invitations' && (
           <InvitationsView
             key="invitations"
+            onNavigate={navigate}
+          />
+        )}
+        {view === 'import-friends' && (
+          <ImportFriendsView
+            key="import-friends"
             onNavigate={navigate}
           />
         )}

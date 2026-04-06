@@ -3073,3 +3073,91 @@ src/components/views/explore-view.tsx (modified - added trending section)
 src/components/views/video-detail-view.tsx (modified - added trending badge)
 src/app/page.tsx (modified - added dashboard trending section + import)
 ```
+
+---
+## Task ID: prompt-4 - main-agent (Import Friends from Contacts/Email/Social)
+### Work Task
+Build Prompt 4: Import Friends from Contacts/Email/Social — a comprehensive feature allowing members to import and invite friends from phone contacts, email, and social media platforms with referral tracking and rewards.
+
+### Work Summary
+
+#### 1. API Routes Created (5 new endpoints)
+
+**POST `/api/invitations/check-existing`** (`src/app/api/invitations/check-existing/route.ts`)
+- Accepts array of email addresses
+- Checks which emails are already registered on the platform
+- Returns `onPlatform` array (with userId, username, displayName, avatarUrl, isVerified) and `notOnPlatform` array
+- Max 200 emails per request, deduplication included
+
+**POST `/api/invitations/contacts`** (`src/app/api/invitations/contacts/route.ts`)
+- Processes imported phone contact data (name + email pairs)
+- Normalizes emails, checks platform membership
+- Checks daily quota (50/day), skips already-pending invitations
+- Creates batch invitations for new contacts
+- Awards 10 member score points per invitation created
+- Returns categorized results: onPlatform, invited, alreadyInvited, skipped
+
+**GET `/api/invitations/social-share-links`** (`src/app/api/invitations/social-share-links/route.ts`)
+- Generates referral code from user's username
+- Returns pre-configured share URLs for: WhatsApp, X/Twitter, Facebook, LinkedIn, Telegram, Email
+- Each share link includes pre-filled invitation message and referral URL
+- Referral URL format: `https://feedmeforward.com/?ref=username`
+
+**POST `/api/invitations/csv-import`** (`src/app/api/invitations/csv-import/route.ts`)
+- Parses CSV text content, auto-detects email column from headers
+- Supports multi-column CSV with header detection (email, e-mail, mail, address)
+- Falls back to regex scanning entire lines for email patterns
+- Handles quoted CSV fields properly
+- Returns parsed, valid, and invalid email arrays with metadata
+- Max 100KB input, does NOT create invitations (preview only)
+
+**GET `/api/invitations/referral-stats`** (`src/app/api/invitations/referral-stats/route.ts`)
+- Returns detailed referral statistics: totalInvited, totalAccepted, totalOnPlatform, totalEarned, conversionRate (%)
+- Includes recentInvitations (last 10) with status and reward info
+
+#### 2. ImportFriendsView Component (`src/components/views/import-friends-view.tsx`)
+- **3 tabs** with animated transitions (orange underline active tab):
+  - **Phone Contacts**: Browser Contact Picker API integration with graceful fallback for unsupported browsers; review screen with on-platform badges (green "On FeedMeForward" vs orange "Invite"); checkbox selection; batch invitation sending
+  - **Email Import**: Manual text entry (regex email detection) and CSV file upload sub-tabs; preview screen with select-all; batched sending in groups of 10
+  - **Social Media**: Referral link display with copy-to-clipboard; 6 social share buttons (WhatsApp, X/Twitter, Facebook, LinkedIn, Telegram, Email) with platform-specific colors; reward info card
+- **Referral stats cards** at top: Invited, Accepted, Earned, Rate
+- **Multi-step flows**: idle → review → sending → success with framer-motion animations
+- Respects existing daily invitation limit (50/day)
+- Back navigation to dashboard
+
+#### 3. ReferralBanner Component (`src/components/referral-banner.tsx`)
+- Promotional gradient banner (orange/amber with dot pattern overlay)
+- Shows: "Invite friends, earn $2 per sign-up! 🎉"
+- Displays friends invited count and money earned
+- "Invite Now" button navigates to import-friends view
+- Dismissible with localStorage persistence (re-shows after 7 days)
+- Only visible for users with < 5 invitations sent
+
+#### 4. Dashboard Integration (`src/app/page.tsx`)
+- Added `'import-friends'` to View type union
+- Added `ImportFriendsView` and `ReferralBanner` imports
+- Added `ImportFriendsView` render block for `view === 'import-friends'`
+- Added ReferralBanner below action cards, above trending section in Dashboard
+- Added "Invite Friends" action card in dashboard grid
+
+#### 5. QuickNav Integration (`src/components/quick-nav.tsx`)
+- Added "Import Friends" nav item with Contact icon pointing to `import-friends` view
+
+#### Files Created
+- `src/app/api/invitations/check-existing/route.ts`
+- `src/app/api/invitations/contacts/route.ts`
+- `src/app/api/invitations/social-share-links/route.ts`
+- `src/app/api/invitations/csv-import/route.ts`
+- `src/app/api/invitations/referral-stats/route.ts`
+- `src/components/views/import-friends-view.tsx`
+- `src/components/referral-banner.tsx`
+
+#### Files Modified
+- `src/app/page.tsx` (View type, imports, routing, dashboard banner + card)
+- `src/components/quick-nav.tsx` (Import Friends nav item)
+
+#### Quality Checks
+- `npm run lint` passes with zero errors and zero warnings
+- Dev server compiles successfully
+- No new npm packages installed (used existing stack)
+- TypeScript strict typing throughout

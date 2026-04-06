@@ -14,6 +14,7 @@ import {
   BarChart3,
   Circle,
   LayoutDashboard,
+  Contact,
 } from 'lucide-react';
 
 interface QuickNavProps {
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { icon: Wallet, label: 'Wallet', view: 'wallet' },
   { icon: Circle, label: 'Communities', view: 'circles' },
   { icon: UserPlus, label: 'Invite', view: 'invitations' },
+  { icon: Contact, label: 'Import Friends', view: 'import-friends' },
   { icon: LayoutDashboard, label: 'Dashboard', view: 'dashboard' },
   { icon: BarChart3, label: 'Insights', view: 'audience' },
 ];
