@@ -48,6 +48,7 @@ import { GlobalSearch } from '@/components/global-search';
 import { SkipToContent } from '@/components/skip-to-content';
 import { NotificationBell } from '@/components/notification-bell';
 import { useRealtime } from '@/hooks/use-realtime';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Plus } from 'lucide-react';
 import {
   Eye,
@@ -91,6 +92,7 @@ import {
   Rss,
   ShieldCheck,
 } from 'lucide-react';
+import { FollowButton } from '@/components/follow-button';
 
 export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'import-friends' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed' | 'live' | 'live-session' | 'broadcaster';
 
@@ -1382,12 +1384,106 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
         />
       </motion.div>
 
+      {/* Follow Suggestions Mini Section */}
+      <DashboardFollowSuggestions onNavigate={navigate} setProfileUserId={handleSetProfileUserId} />
+
       {/* Footer */}
       <motion.div variants={staggerItem} className="text-center py-6">
         <p className="text-xs text-muted-foreground">
           FeedMeForward &mdash; Where Every Video Starts a Conversation
         </p>
       </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── Follow Suggestions for Dashboard ─────────────────────────────
+function DashboardFollowSuggestions({ onNavigate, setProfileUserId }: { onNavigate: (view: View) => void; setProfileUserId: (id: string) => void }) {
+  const { currentUser } = useAuthStore();
+  const [suggestions, setSuggestions] = useState<Array<{
+    id: string; username: string; displayName: string | null; avatarUrl: string | null;
+    followerCount: number; isVerified: boolean;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch('/api/users/suggestions', {
+      headers: { 'X-User-Id': currentUser.id },
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.suggestions) setSuggestions(json.suggestions.slice(0, 3));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [currentUser]);
+
+  if (!currentUser || suggestions.length === 0) return null;
+
+  return (
+    <motion.div variants={staggerItem} className="mb-8">
+      <Card className="border-2 border-orange-200 dark:border-orange-800/40 bg-gradient-to-br from-orange-50/80 to-amber-50/50 dark:from-orange-950/20 dark:to-amber-950/10">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-sm">
+                <UserPlus className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">People You May Know</CardTitle>
+                <CardDescription>Grow your community</CardDescription>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex gap-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex-1 flex items-center gap-3 p-3">
+                  <Skeleton className="w-10 h-10 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                  <Skeleton className="h-7 w-16" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-3">
+              {suggestions.map((user) => (
+                <div key={user.id} className="flex-1 flex items-center gap-3 p-3 rounded-lg bg-background/50 hover:bg-background transition-colors">
+                  <button
+                    className="shrink-0"
+                    onClick={() => { setProfileUserId(user.id); onNavigate('profile'); }}
+                  >
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.username} className="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-sm font-bold">
+                        {user.username.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate flex items-center gap-1">
+                      {user.displayName || user.username}
+                      {user.isVerified && <CheckCircle2 className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
+                    <p className="text-[10px] text-muted-foreground">{user.followerCount} followers</p>
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <FollowButton targetUserId={user.id} targetUsername={user.username} variant="compact" size="sm" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }
@@ -1730,6 +1826,8 @@ export default function Home() {
   const [parentVideoCreator, setParentVideoCreator] = useState<string>('');
   const [parentVideoThumbnail, setParentVideoThumbnail] = useState<string>('');
   const [profileUserId, setProfileUserId] = useState<string>('');
+  const [profileUsername, setProfileUsername] = useState<string>('');
+  const [usersListTab, setUsersListTab] = useState<'followers' | 'following'>('followers');
   const [circleId, setCircleId] = useState<string>('');
   const [currentHashtag, setCurrentHashtag] = useState<string>('');
   const [currentLiveSessionId, setCurrentLiveSessionId] = useState<string>('');
@@ -1750,13 +1848,17 @@ export default function Home() {
       }
     };
     window.addEventListener('navigate-video', handler);
-    window.addEventListener('navigate-users-list', (e: Event) => {
+    const navigateUsersListHandler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       setProfileUserId(detail.userId);
-      // Store the tab info temporarily (we'll handle this in UsersListView)
+      setUsersListTab(detail.tab || 'followers');
+      if (detail.username) {
+        setProfileUsername(detail.username);
+      }
       setView('users-list');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    };
+    window.addEventListener('navigate-users-list', navigateUsersListHandler);
     // Listen for hashtag navigation
     const hashtagHandler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -1769,6 +1871,7 @@ export default function Home() {
     window.addEventListener('navigate-hashtag', hashtagHandler);
     return () => {
       window.removeEventListener('navigate-video', handler);
+      window.removeEventListener('navigate-users-list', navigateUsersListHandler);
       window.removeEventListener('navigate-hashtag', hashtagHandler);
     };
   }, []);
@@ -1897,10 +2000,12 @@ export default function Home() {
         )}
         {view === 'users-list' && profileUserId && (
           <UsersListView
-            key="users-list"
+            key={`users-list-${profileUserId}-${usersListTab}`}
             onNavigate={navigate}
             setProfileUserId={handleSetProfileUserId}
             targetUserId={profileUserId}
+            targetUsername={profileUsername || undefined}
+            initialTab={usersListTab}
           />
         )}
         {view === 'messages' && (

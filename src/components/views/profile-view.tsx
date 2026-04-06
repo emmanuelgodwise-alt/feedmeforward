@@ -51,6 +51,10 @@ import {
   BookmarkCheck,
   Bookmark,
   QrCode,
+  Sparkles,
+  ChevronRight,
+  UserCheck,
+  Clock,
 } from 'lucide-react';
 import { QRCodeDialog } from '@/components/qr/qr-code-dialog';
 import { VideoCard } from '@/components/video-card';
@@ -58,6 +62,7 @@ import { FollowButton } from '@/components/follow-button';
 import { UserBlockButton } from '@/components/user-block-button';
 import { QuickNav } from '@/components/quick-nav';
 import { useAuthStore } from '@/stores/auth-store';
+import { useFollowStore } from '@/stores/follow-store';
 import { useOnlinePresence } from '@/hooks/use-online-presence';
 import {
   getScoreLevel,
@@ -91,6 +96,7 @@ interface ProfileData {
   likedCount: number;
   savedCount: number;
   rank: number;
+  mutualFollowCount?: number;
   breakdown: {
     engagement: number;
     quality: number;
@@ -234,6 +240,20 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
   const [savedVideos, setSavedVideos] = useState<Video[]>([]);
   const [loadingLiked, setLoadingLiked] = useState(false);
   const [loadingSaved, setLoadingSaved] = useState(false);
+
+  // Follow suggestions state
+  const [suggestions, setSuggestions] = useState<Array<{
+    id: string; username: string; displayName: string | null; avatarUrl: string | null;
+    bio: string | null; memberScore: number; isVerified: boolean; followerCount: number; isFollowing: boolean;
+  }>>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+  // Recent followers state (own profile only)
+  const [recentFollowers, setRecentFollowers] = useState<Array<{
+    id: string; username: string; displayName: string | null; avatarUrl: string | null;
+    isVerified: boolean; followedAt: string; isFollowing: boolean;
+  }>>([]);
+  const [loadingRecentFollowers, setLoadingRecentFollowers] = useState(false);
 
   // Edit profile dialog state
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -445,6 +465,32 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
       .catch(() => {});
   }, [profileData, userId]);
 
+  // Fetch follow suggestions (for other profiles)
+  useEffect(() => {
+    if (isOwnProfile || !currentUser) return;
+    setLoadingSuggestions(true);
+    fetch('/api/users/suggestions', {
+      headers: { 'X-User-Id': currentUser.id },
+    })
+      .then((r) => r.json())
+      .then((json) => { if (json.suggestions) setSuggestions(json.suggestions); })
+      .catch(() => {})
+      .finally(() => setLoadingSuggestions(false));
+  }, [userId, isOwnProfile, currentUser]);
+
+  // Fetch recent followers (own profile only)
+  useEffect(() => {
+    if (!isOwnProfile || !currentUser) return;
+    setLoadingRecentFollowers(true);
+    fetch(`/api/users/${userId}/recent-followers`, {
+      headers: { 'X-User-Id': currentUser.id },
+    })
+      .then((r) => r.json())
+      .then((json) => { if (json.followers) setRecentFollowers(json.followers); })
+      .catch(() => {})
+      .finally(() => setLoadingRecentFollowers(false));
+  }, [userId, isOwnProfile, currentUser]);
+
   const handleSaveAudience = async () => {
     if (!currentUser) return;
     setSavingAudience(true);
@@ -630,52 +676,57 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
 
               <Separator className="my-4" />
 
-              {/* Stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div className="text-center">
-                  <p className="text-lg font-bold">{profileData.videoCount}</p>
-                  <p className="text-xs text-muted-foreground">Videos</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-bold">{profileData.responseCount}</p>
-                  <p className="text-xs text-muted-foreground">Responses</p>
-                </div>
-                {isOwnProfile && (
-                  <div className="text-center">
-                    <p className="text-lg font-bold">{profileData.likedCount || 0}</p>
-                    <p className="text-xs text-muted-foreground">Liked</p>
-                  </div>
-                )}
-                <div
-                  className="text-center cursor-pointer hover:text-orange-500 transition-colors"
+              {/* Conspicuous Follower/Following Count Cards */}
+              <div className="flex gap-3 justify-center">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.97 }}
+                  className={`flex-1 cursor-pointer rounded-xl p-3 text-center transition-all ${profileData.followerCount > 0 ? 'bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/20 border border-orange-200/60 dark:border-orange-800/30' : 'bg-muted/30 border border-transparent'}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     window.dispatchEvent(new CustomEvent('navigate-users-list', {
-                      detail: { userId: profileData.id, tab: 'followers' },
+                      detail: { userId: profileData.id, tab: 'followers', username: profileData.username },
                     }));
                   }}
                 >
-                  <p className="text-lg font-bold">{profileData.followerCount}</p>
-                  <p className="text-xs text-muted-foreground">Followers</p>
-                </div>
-                <div
-                  className="text-center cursor-pointer hover:text-orange-500 transition-colors"
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{profileData.followerCount}</p>
+                  <p className="text-[11px] text-muted-foreground font-medium">Followers</p>
+                  {profileData.mutualFollowCount && profileData.mutualFollowCount > 0 && !isOwnProfile && (
+                    <Badge variant="secondary" className="text-[9px] px-1.5 py-0 mt-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                      {profileData.mutualFollowCount} mutual
+                    </Badge>
+                  )}
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.97 }}
+                  className={`flex-1 cursor-pointer rounded-xl p-3 text-center transition-all ${profileData.followingCount > 0 ? 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200/60 dark:border-amber-800/30' : 'bg-muted/30 border border-transparent'}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     window.dispatchEvent(new CustomEvent('navigate-users-list', {
-                      detail: { userId: profileData.id, tab: 'following' },
+                      detail: { userId: profileData.id, tab: 'following', username: profileData.username },
                     }));
                   }}
                 >
-                  <p className="text-lg font-bold">{profileData.followingCount}</p>
-                  <p className="text-xs text-muted-foreground">Following</p>
+                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{profileData.followingCount}</p>
+                  <p className="text-[11px] text-muted-foreground font-medium">Following</p>
+                </motion.div>
+              </div>
+
+              {/* Small Stats Row */}
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                <div className="text-center">
+                  <p className="text-sm font-bold">{profileData.videoCount}</p>
+                  <p className="text-[10px] text-muted-foreground">Videos</p>
                 </div>
-                {isOwnProfile && (
-                  <div className="text-center">
-                    <p className="text-lg font-bold">{profileData.savedCount || 0}</p>
-                    <p className="text-xs text-muted-foreground">Saved</p>
-                  </div>
-                )}
+                <div className="text-center">
+                  <p className="text-sm font-bold">{profileData.responseCount}</p>
+                  <p className="text-[10px] text-muted-foreground">Responses</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-bold">{isOwnProfile ? profileData.likedCount || 0 : profileData.savedCount || 0}</p>
+                  <p className="text-[10px] text-muted-foreground">{isOwnProfile ? 'Liked' : 'Saved'}</p>
+                </div>
               </div>
 
               {/* QR Code Profile Share */}
@@ -1128,6 +1179,114 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                       </>
                     )}
                   </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Follow Suggestions (other profiles only) */}
+          {!isOwnProfile && suggestions.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    People You May Know
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+                    {suggestions.map((user) => (
+                      <div key={user.id} className="flex-shrink-0 w-44 rounded-xl border border-border/60 p-3 bg-gradient-to-br from-orange-50/50 to-amber-50/30 dark:from-orange-950/10 dark:to-amber-950/5">
+                        <div className="flex flex-col items-center text-center gap-2">
+                          {user.avatarUrl ? (
+                            <img src={user.avatarUrl} alt={user.username} className="w-10 h-10 rounded-full object-cover border-2 border-background" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-sm font-bold">
+                              {user.username.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0 w-full">
+                            <p className="text-xs font-semibold truncate">{user.displayName || user.username}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">@{user.username}</p>
+                            <p className="text-[10px] text-muted-foreground">{user.followerCount} followers</p>
+                          </div>
+                          <FollowButton targetUserId={user.id} targetUsername={user.username} initialFollowing={user.isFollowing} variant="compact" size="sm" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Recent Followers (own profile only) */}
+          {isOwnProfile && (recentFollowers.length > 0 || loadingRecentFollowers) && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Users className="w-4 h-4 text-orange-500" />
+                      Recent Followers
+                    </CardTitle>
+                    <button
+                      className="text-xs text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-1"
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('navigate-users-list', {
+                          detail: { userId, tab: 'followers', username: currentUser?.username },
+                        }));
+                      }}
+                    >
+                      See All <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loadingRecentFollowers ? (
+                    <div className="space-y-3">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <Skeleton className="w-8 h-8 rounded-full" />
+                          <Skeleton className="h-4 w-28" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {recentFollowers.map((follower) => (
+                        <div key={follower.id} className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-orange-50/60 dark:hover:bg-orange-950/20 transition-colors group">
+                          {follower.avatarUrl ? (
+                            <img src={follower.avatarUrl} alt={follower.username} className="w-8 h-8 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-xs font-bold">
+                              {follower.username.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                              {follower.displayName || follower.username}
+                              {follower.isVerified && <UserCheck className="w-3 h-3 text-amber-500 inline ml-1" />}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5" />
+                              followed you {timeAgo(follower.followedAt)}
+                            </p>
+                          </div>
+                          <FollowButton targetUserId={follower.id} targetUsername={follower.username} initialFollowing={follower.isFollowing} variant="compact" size="sm" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>

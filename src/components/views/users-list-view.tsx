@@ -8,10 +8,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Users, UserPlus, Loader2, UserCheck, MapPin } from 'lucide-react';
+import { Search, Users, UserPlus, Loader2, UserCheck, MapPin, UserRoundPlus } from 'lucide-react';
 import { QuickNav } from '@/components/quick-nav';
 import { FollowButton } from '@/components/follow-button';
 import { useAuthStore } from '@/stores/auth-store';
+import { useFollowStore } from '@/stores/follow-store';
 import { getScoreLevelBadge } from '@/types';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -220,11 +221,16 @@ export function UsersListView({
     onNavigate('profile');
   };
 
-  // Handle follow change — update local state
+  // Handle follow change — update local state and follow store
   const handleFollowChange = useCallback((userId: string, isNowFollowing: boolean) => {
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, followedByYou: isNowFollowing } : u))
     );
+    // Update follow store cache
+    useFollowStore.getState().setFollowStatus(userId, {
+      isFollowing: isNowFollowing,
+      isFollowedBy: useFollowStore.getState().isUserFollowedBy(userId) ?? false,
+    });
   }, []);
 
   // Client-side search filter
@@ -475,7 +481,7 @@ export function UsersListView({
                           {!isOwnProfile && activeTab === 'followers' && user.followedByYou && (
                             <Badge
                               variant="secondary"
-                              className="text-[10px] px-1.5 py-0 h-4 mt-1 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                              className="text-[10px] px-1.5 py-0 h-4 mt-1 bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/30"
                             >
                               Follows you
                             </Badge>

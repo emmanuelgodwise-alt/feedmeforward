@@ -9,6 +9,7 @@ export async function GET(
 ) {
   try {
     const { userId } = await params;
+    const currentUserId = request.headers.get('X-User-Id');
 
     const user = await db.user.findUnique({
       where: { id: userId },
@@ -68,6 +69,27 @@ export async function GET(
       },
     });
 
+    // Compute mutual follow count (followers who also follow the current viewer)
+    let mutualFollowCount = 0;
+    if (currentUserId && currentUserId !== userId) {
+      // Get target user's follower IDs
+      const targetFollowers = await db.follow.findMany({
+        where: { followingId: userId },
+        select: { followerId: true },
+      });
+      const targetFollowerIds = targetFollowers.map((f) => f.followerId);
+
+      if (targetFollowerIds.length > 0) {
+        // Count how many of those followers also follow the current viewer
+        mutualFollowCount = await db.follow.count({
+          where: {
+            followerId: { in: targetFollowerIds },
+            followingId: currentUserId,
+          },
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -93,6 +115,7 @@ export async function GET(
         savedCount,
         rank: rank + 1,
         breakdown,
+        mutualFollowCount,
       },
     });
   } catch (error) {

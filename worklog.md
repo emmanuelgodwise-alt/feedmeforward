@@ -3346,3 +3346,39 @@ Stage Summary:
 - All pre-existing lint errors (live-poll-panel, broadcaster-view) are NOT from this task
 - Lint passes with zero NEW errors, dev compiles successfully
 - Warm orange/amber color palette maintained throughout
+
+---
+## Task ID: 10 - main-agent (Following/Subscribers — Conspicuous in Profiles)
+### Work Task
+Build comprehensive follow/subscriber system: Zustand follow store, enhanced FollowButton with full variant, conspicuous follow sections in profiles, follow suggestions, recent followers timeline, bug fixes in page.tsx, enhanced UsersListView, and dashboard integration.
+
+### Work Summary
+
+#### 1. Follow Store (src/stores/follow-store.ts) — Created
+- Zustand store for centralized follow state management
+- State: followStatus: Record<string, { isFollowing, isFollowedBy }> keyed by userId
+- Actions: fetchFollowStatus, toggleFollow, isUserFollowing, isUserFollowedBy, clearCache, setFollowStatus
+
+#### 2. API: GET /api/users/suggestions — Created
+- Returns up to 6 users not followed by current user, sorted by memberScore then shuffled
+
+#### 3. API: GET /api/users/[userId]/recent-followers — Created
+- Returns 5 most recent followers with isFollowing back flag
+
+#### 4. API: GET /api/users/[userId] — Updated
+- Added mutualFollowCount field
+
+#### 5. FollowButton — Enhanced with full variant, follow store integration, Follows you badge
+
+#### 6. Profile View — Conspicuous follow cards, suggestions, recent followers timeline
+
+#### 7. UsersListView — Follow store sync, Follows you badge restyle
+
+#### 8. page.tsx — Fixed navigate-users-list tab bug, added DashboardFollowSuggestions
+
+#### 9. live-poll-panel.tsx — Fixed missing Input import
+
+#### Quality Checks
+- npm run lint: 0 errors, 2 pre-existing warnings
+- All files TypeScript strict typed
+
