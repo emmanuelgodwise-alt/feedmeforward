@@ -50,7 +50,9 @@ import {
   X,
   BookmarkCheck,
   Bookmark,
+  QrCode,
 } from 'lucide-react';
+import { QRCodeDialog } from '@/components/qr/qr-code-dialog';
 import { VideoCard } from '@/components/video-card';
 import { FollowButton } from '@/components/follow-button';
 import { UserBlockButton } from '@/components/user-block-button';
@@ -246,6 +248,7 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
     language: '',
   });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [profileQrOpen, setProfileQrOpen] = useState(false);
 
   // Audience profile form state
   const [audienceForm, setAudienceForm] = useState({
@@ -675,6 +678,19 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                 )}
               </div>
 
+              {/* QR Code Profile Share */}
+              <div className="w-full mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2 text-xs"
+                  onClick={() => setProfileQrOpen(true)}
+                >
+                  <QrCode className="w-3.5 h-3.5 text-violet-500" />
+                  Share Profile QR Code
+                </Button>
+              </div>
+
               {/* Follow Button (for other profiles) */}
               {!isOwnProfile && currentUser && (
                 <div className="w-full mt-4 space-y-2">
@@ -857,6 +873,15 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Profile QR Code Dialog */}
+          <QRCodeDialog
+            open={profileQrOpen}
+            onOpenChange={setProfileQrOpen}
+            url={typeof window !== 'undefined' ? `${window.location.origin}?profile=${userId}` : ''}
+            title={profileData.displayName || profileData.username}
+            subtitle={`Share @${profileData.username}'s profile`}
+          />
         </motion.div>
 
         {/* Score & Activity */}

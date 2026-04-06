@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { QRCodeDialog } from '@/components/qr/qr-code-dialog';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ import {
   ExternalLink,
   CheckCircle2,
   X,
+  QrCode,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -40,6 +42,7 @@ export function ShareDialog({ open, onOpenChange, videoId, videoTitle, videoUrl,
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
   const pageUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const shareUrl = `${pageUrl}?video=${videoId}`;
@@ -268,6 +271,32 @@ export function ShareDialog({ open, onOpenChange, videoId, videoTitle, videoUrl,
               </Button>
             </div>
           </div>
+
+          {/* ── QR Code Section ── */}
+          <Separator />
+          <div>
+            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <QrCode className="w-3.5 h-3.5" />
+              QR Code
+            </Label>
+            <Button
+              variant="outline"
+              className="w-full gap-2 justify-start text-sm"
+              onClick={() => setQrOpen(true)}
+            >
+              <QrCode className="w-4 h-4 text-violet-500" />
+              Generate QR Code
+            </Button>
+          </div>
+
+          {/* QR Code Dialog */}
+          <QRCodeDialog
+            open={qrOpen}
+            onOpenChange={setQrOpen}
+            url={shareUrl}
+            title={videoTitle}
+            subtitle="Share this video via QR code"
+          />
 
           {/* ── Download Section ── */}
           {isLocalUpload && (

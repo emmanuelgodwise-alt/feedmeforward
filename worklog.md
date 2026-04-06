@@ -3287,3 +3287,32 @@ Stage Summary:
 - Save/bookmark system fully functional across VideoCard and VideoDetailView
 - Audience profile data bug fixed (fields now properly returned by GET users API)
 - All files saved to /home/z/my-project/
+
+---
+Task ID: 7
+Agent: main
+Task: Implement Sharable QR Code System (Prompt 7)
+
+Work Log:
+- Installed `qrcode` and `@types/qrcode` packages
+- Created GET `/api/qr/generate` API route supporting PNG and SVG formats with customizable size (100-1000px), foreground/background colors, margin, and error correction
+- Built `QRCodeDialog` component at `src/components/qr/qr-code-dialog.tsx` with:
+  - Editable destination URL input with copy button
+  - Live QR code preview with expand/collapse toggle
+  - 8 color theme presets (Default, Ocean, Forest, Sunset, Royal, Dark, Rose, FMF Brand)
+  - Custom color picker mode with foreground/background selectors
+  - 4 size options (Small 200px, Medium 300px, Large 500px, Print 800px)
+  - Format toggle between PNG and SVG
+  - Download button with auto-generated filename
+  - Open URL button
+  - Use case badges (Printed Flyers, Event Posters, Business Cards, Social Media, Email Signatures, Live Events)
+- Integrated QR code into existing ShareDialog (via "Generate QR Code" button)
+- Added "Share Profile QR Code" button to ProfileView sidebar
+- Build verified: all routes compile, QR API route confirmed in build output
+
+Stage Summary:
+- QR code generation is available globally via the API route
+- Users can generate QR codes for any video from the Share dialog
+- Users can share their profile via QR from the profile page
+- 8 preset color themes + custom color picker, 4 size options, PNG/SVG format
+- Download functionality with proper filenames
