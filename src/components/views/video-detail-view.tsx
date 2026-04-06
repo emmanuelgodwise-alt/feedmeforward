@@ -60,6 +60,8 @@ import { PollAnalytics } from '@/components/poll-analytics';
 import { CommentSection } from '@/components/comment-section';
 import { TargetingCriteriaDisplay } from '@/components/targeting-criteria-display';
 import { VideoCaptions } from '@/components/video-captions';
+import { ReactionBar, getReactionSummary } from '@/components/reaction-bar';
+import { RepostButton } from '@/components/repost-button';
 import { timeAgo, getGradient } from '@/components/video-card';
 import type { Video, VideoDetail } from '@/types';
 import type { View } from '@/app/page';
@@ -95,6 +97,10 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
   const [analyticsPollId, setAnalyticsPollId] = useState<string | null>(null);
   const [isTrending, setIsTrending] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({});
+  const [userReactions, setUserReactions] = useState<string[]>([]);
+  const [repostCount, setRepostCount] = useState(0);
+  const [isReposted, setIsReposted] = useState(false);
   const { updateWalletBalance } = useAuthStore();
   const pollRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -126,6 +132,40 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
       })
         .then((res) => res.json())
         .then((json) => { if (json.success) setIsSaved(json.saved); })
+        .catch(() => {});
+
+      // Fetch reactions
+      fetch(`/api/videos/${videoId}/reactions`, {
+        headers: { 'X-User-Id': currentUser.id },
+      })
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.reactions) setReactionCounts(json.reactions);
+          if (json.userReactions) setUserReactions(json.userReactions);
+        })
+        .catch(() => {});
+
+      // Fetch repost count and status
+      fetch(`/api/videos/${videoId}/repost`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id }),
+      })
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success) {
+            // Toggle was applied, so the actual state is opposite
+            // Re-toggle to restore original state
+            fetch(`/api/videos/${videoId}/repost`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: currentUser.id }),
+            }).catch(() => {});
+            // Use the reposted value before toggle (opposite of result)
+            setIsReposted(!json.reposted);
+            setRepostCount(json.reposted ? json.repostCount - 1 : json.repostCount + 1);
+          }
+        })
         .catch(() => {});
     }
 
@@ -308,6 +348,51 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
       }
     } catch {
       toast({ title: 'Failed to save', variant: 'destructive' });
+    }
+  };
+
+  const handleReact = async (type: string) => {
+    if (!currentUser) {
+      toast({ title: 'Sign in required', description: 'Please sign in to react', variant: 'destructive' });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/videos/${videoId}/react`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id, type }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setReactionCounts(json.reactionCounts);
+        setUserReactions((prev) =>
+          json.reacted
+            ? prev.includes(type)
+              ? prev.filter((r) => r !== type)
+              : [...prev, type]
+            : prev.filter((r) => r !== type)
+        );
+      }
+    } catch {
+      toast({ title: 'Failed to react', variant: 'destructive' });
+    }
+  };
+
+  const handleRepost = async (quote?: string) => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`/api/videos/${videoId}/repost`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id, quote }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setIsReposted(json.reposted);
+        setRepostCount(json.repostCount);
+      }
+    } catch {
+      // Silently fail — RepostButton handles its own toast
     }
   };
 
@@ -634,6 +719,15 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
                 {isSaved ? 'Saved' : 'Save'}
               </Button>
             )}
+            {/* Repost button */}
+            {currentUser && (
+              <RepostButton
+                videoId={videoId}
+                repostCount={repostCount}
+                isReposted={isReposted}
+                onRepost={(q) => handleRepost(q)}
+              />
+            )}
           </div>
 
           {/* Row 2: Respond buttons (only for lead type, only for authenticated) */}
@@ -663,6 +757,21 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
               <a onClick={() => onNavigate('login' as View)} className="cursor-pointer text-orange-500 hover:underline font-medium">Sign in</a> to respond to this clip
             </p>
           )}
+
+          {/* Reaction Summary + Reaction Bar */}
+          <div className="mt-2 space-y-1.5">
+            {Object.values(reactionCounts).reduce((sum: number, c) => sum + (c || 0), 0) > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {getReactionSummary(reactionCounts, 5)}
+              </p>
+            )}
+            <ReactionBar
+              videoId={videoId}
+              reactionCounts={reactionCounts}
+              userReactions={userReactions}
+              onReact={handleReact}
+            />
+          </div>
         </div>
       </motion.div>
 

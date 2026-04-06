@@ -55,8 +55,16 @@ import {
   ChevronRight,
   UserCheck,
   Clock,
+  Briefcase,
+  ExternalLink,
+  Building2,
+  LayoutDashboard,
+  Mail,
+  DollarSign,
+  Layers,
 } from 'lucide-react';
 import { QRCodeDialog } from '@/components/qr/qr-code-dialog';
+import { SubscribeButton } from '@/components/subscribe-button';
 import { VideoCard } from '@/components/video-card';
 import { FollowButton } from '@/components/follow-button';
 import { UserBlockButton } from '@/components/user-block-button';
@@ -97,6 +105,11 @@ interface ProfileData {
   savedCount: number;
   rank: number;
   mutualFollowCount?: number;
+  businessName?: string;
+  businessCategory?: string;
+  businessEmail?: string;
+  businessWebsite?: string;
+  businessBio?: string;
   breakdown: {
     engagement: number;
     quality: number;
@@ -270,6 +283,12 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileQrOpen, setProfileQrOpen] = useState(false);
 
+  // Creator / business profile state
+  const [businessProfile, setBusinessProfile] = useState<Record<string, string> | null>(null);
+  const [subscriptionTiers, setSubscriptionTiers] = useState<Array<{ id: string; name: string; price: number; benefits: string[]; enabled: boolean }>>([]);
+  const [currentSubscription, setCurrentSubscription] = useState<any>(null);
+  const [loadingBusiness, setLoadingBusiness] = useState(false);
+
   // Audience profile form state
   const [audienceForm, setAudienceForm] = useState({
     ageRange: '',
@@ -281,6 +300,31 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
   const [savingAudience, setSavingAudience] = useState(false);
 
   const isOwnProfile = currentUser?.id === userId;
+  const isCreatorProfile = profileData?.role === 'creator';
+  const canSubscribe = !isOwnProfile && isCreatorProfile && !!currentUser;
+
+  // Fetch creator business profile data (for creator profiles)
+  useEffect(() => {
+    if (!profileData || profileData.role !== 'creator') return;
+    setLoadingBusiness(true);
+    Promise.all([
+      fetch('/api/creator/business-profile', {
+        headers: { 'X-User-Id': profileData.id },
+ }).then((r) => r.json()).catch(() => ({})),
+      fetch(`/api/creator/tiers`, {
+        headers: { 'X-User-Id': profileData.id },
+      }).then((r) => r.json()).catch(() => ({})),
+      currentUser && !isOwnProfile
+        ? fetch(`/api/subscriptions?creatorId=${userId}`, {
+            headers: { 'X-User-Id': currentUser.id },
+          }).then((r) => r.json()).catch(() => ({}))
+        : Promise.resolve({}),
+    ]).then(([bpRes, tiersRes, subRes]) => {
+      if (bpRes.profile) setBusinessProfile(bpRes.profile);
+      if (tiersRes.tiers) setSubscriptionTiers(tiersRes.tiers);
+      if (subRes.subscription) setCurrentSubscription(subRes.subscription);
+ }).finally(() => setLoadingBusiness(false));
+  }, [profileData, userId, currentUser, isOwnProfile]);
 
   // Online presence for other users' profiles
   const { isUserOnline } = useOnlinePresence(isOwnProfile ? [] : [userId]);
@@ -533,6 +577,15 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
     window.dispatchEvent(new CustomEvent('navigate-video', { detail: { videoId } }));
   };
 
+  const handleRefreshProfile = () => {
+    fetch(`/api/users/${userId}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success) setProfileData(j.data);
+      })
+      .catch(() => {});
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen px-4 py-6 max-w-4xl mx-auto">
@@ -729,6 +782,22 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                 </div>
               </div>
 
+              {/* Creator Studio Button (own profile, creator role) */}
+              {isOwnProfile && isCreatorProfile && (
+                <div className="w-full mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-2 text-xs border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/30 text-orange-600 dark:text-orange-400"
+                    onClick={() => onNavigate('creator-dashboard')}
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                    Creator Studio
+                    <ChevronRight className="w-3 h-3 ml-auto" />
+                  </Button>
+                </div>
+              )}
+
               {/* QR Code Profile Share */}
               <div className="w-full mt-4">
                 <Button
@@ -742,8 +811,121 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
                 </Button>
               </div>
 
-              {/* Follow Button (for other profiles) */}
-              {!isOwnProfile && currentUser && (
+              {/* Follow/Subscribe Button (for other creator profiles) */}
+              {!isOwnProfile && currentUser && isCreatorProfile && (
+                <div className="w-full mt-4 space-y-2">
+                  <SubscribeButton
+                    creatorId={userId}
+                    creatorName={profileData.username}
+                    tiers={subscriptionTiers}
+                    currentSubscription={currentSubscription}
+                    onSuccess={handleRefreshProfile}
+                  />
+                  <FollowButton
+                    targetUserId={userId}
+                    targetUsername={profileData.username}
+                    size="lg"
+                    variant="full"
+                    className="w-full"
+                  />
+                  <UserBlockButton
+                    targetUserId={userId}
+                    targetUsername={profileData.username}
+                    size="sm"
+                  />
+                </div>
+              )}
+
+              {/* Business Profile Section (for creator profiles) */}
+              {(isCreatorProfile || isOwnProfile) && (
+                <div className="mt-4">
+                  <Separator className="mb-4" />
+                  {businessProfile && (businessProfile.businessName || businessProfile.category || businessProfile.businessEmail) && (
+                    <div className="space-y-3">
+                      {businessProfile.businessName && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Briefcase className="w-4 h-4 text-orange-500 shrink-0" />
+                          <span className="font-medium">{businessProfile.businessName}</span>
+                          {businessProfile.category && (
+                            <Badge className="text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+                              {businessProfile.category}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                      {(businessProfile.businessEmail || businessProfile.websiteUrl) && (
+                        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                          {businessProfile.businessEmail && (
+                            <span className="flex items-center gap-1">
+                              <Mail className="w-3.5 h-3.5" />
+                              {businessProfile.businessEmail}
+                            </span>
+                          )}
+                          {businessProfile.websiteUrl && (
+                            <a
+                              href={businessProfile.websiteUrl.startsWith('http') ? businessProfile.websiteUrl : `https://${businessProfile.websiteUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-orange-600 dark:text-orange-400 hover:underline"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              Website
+                            </a>
+                          )}
+                        </div>
+                      )}
+                      {businessProfile.bio && (
+                        <p className="text-xs text-muted-foreground leading-relaxed">{businessProfile.bio}</p>
+                      )}
+                    </div>
+                  )}
+                  {isOwnProfile && !businessProfile?.businessName && (
+                    <p className="text-xs text-muted-foreground text-center py-2">
+                      Set up your business profile to showcase your brand
+                    </p>
+                  )}
+
+                  {/* Subscription Tiers (for creator profiles) */}
+                  {subscriptionTiers.filter((t) => t.enabled).length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-orange-500" />
+                        Subscription Tiers
+                      </p>
+                      <div className="space-y-2">
+                        {subscriptionTiers
+                          .filter((t) => t.enabled)
+                          .map((tier) => (
+                            <div
+                              key={tier.id}
+                              className="flex items-center gap-3 p-2.5 rounded-lg bg-gradient-to-r from-orange-50/80 to-amber-50/50 dark:from-orange-950/30 dark:to-amber-950/10 border border-orange-200/60 dark:border-orange-800/30"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shrink-0">
+                                <Crown className="w-4 h-4 text-white" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium">{tier.name}</span>
+                                  <Badge className="text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+                                    ${tier.price.toFixed(2)}/mo
+                                  </Badge>
+                                </div>
+                                {tier.benefits.length > 0 && (
+                                  <p className="text-[10px] text-muted-foreground truncate">
+                                    {tier.benefits.slice(0, 3).join(' · ')}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Follow Button (for other non-creator profiles) */}
+              {!isOwnProfile && currentUser && !isCreatorProfile && (
                 <div className="w-full mt-4 space-y-2">
                   <FollowButton
                     targetUserId={userId}

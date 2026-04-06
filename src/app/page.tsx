@@ -43,6 +43,7 @@ import { HashtagFeedView } from '@/components/views/hashtag-feed-view';
 import { LiveSessionsView } from '@/components/views/live-sessions-view';
 import { LiveStreamView } from '@/components/views/live-stream-view';
 import { BroadcasterView } from '@/components/views/broadcaster-view';
+import { CreatorDashboardView } from '@/components/views/creator-dashboard-view';
 import { TrendingVideos } from '@/components/trending-videos';
 import { GlobalSearch } from '@/components/global-search';
 import { SkipToContent } from '@/components/skip-to-content';
@@ -91,10 +92,11 @@ import {
   Bell,
   Rss,
   ShieldCheck,
+  LayoutDashboard,
 } from 'lucide-react';
 import { FollowButton } from '@/components/follow-button';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'import-friends' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed' | 'live' | 'live-session' | 'broadcaster';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'import-friends' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed' | 'live' | 'live-session' | 'broadcaster' | 'creator-dashboard';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -1297,6 +1299,23 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: View) 
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Creator Studio Card — only for creators */}
+        {currentUser?.role === 'creator' && (
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Card className="cursor-pointer border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20" onClick={() => onNavigate('creator-dashboard')}>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+                  <LayoutDashboard className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Creator Studio</p>
+                  <p className="text-xs text-muted-foreground">Analytics & tools</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </motion.div>
 
       {/* Moderation Card — only show for moderators and admins */}
@@ -2056,6 +2075,9 @@ export default function Home() {
             onComplete={() => setView('explore')}
             onNavigate={navigate}
           />
+        )}
+        {view === 'creator-dashboard' && (
+          <CreatorDashboardView key="creator-dashboard" onNavigate={navigate} />
         )}
       </AnimatePresence>
     </main>

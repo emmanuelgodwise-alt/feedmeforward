@@ -39,9 +39,12 @@ interface VideoCardProps {
   onClick: (videoId: string) => void;
   onCreatorClick?: (creatorId: string) => void;
   showSave?: boolean;
+  reactionCounts?: Record<string, number>;
+  userReactions?: string[];
+  repostCount?: number;
 }
 
-function VideoCardComponent({ video, onClick, onCreatorClick, showSave = false }: VideoCardProps) {
+function VideoCardComponent({ video, onClick, onCreatorClick, showSave = false, reactionCounts, userReactions, repostCount }: VideoCardProps) {
   const { currentUser } = useAuthStore();
   const [isSaved, setIsSaved] = useState(false);
   const gradient = getGradient(video.id);
@@ -183,6 +186,36 @@ function VideoCardComponent({ video, onClick, onCreatorClick, showSave = false }
               </span>
             )}
           </div>
+
+          {/* Mini Reactions */}
+          {reactionCounts && Object.keys(reactionCounts).length > 0 && (
+            <div className="flex items-center gap-1 flex-wrap">
+              {Object.entries(reactionCounts).filter(([, count]) => count > 0).slice(0, 4).map(([type, count]) => {
+                const emojiMap: Record<string, string> = { fire: '🔥', heart: '❤️', laugh: '😂', wow: '😮', sad: '😢', angry: '😡', clap: '👏', thinking: '🤔' };
+                const isActive = userReactions?.includes(type);
+                return (
+                  <span
+                    key={type}
+                    className={`inline-flex items-center gap-0 px-1 py-0.5 rounded-full text-[10px] ${
+                      isActive ? 'bg-orange-100 dark:bg-orange-900/40 ring-1 ring-orange-400 dark:ring-orange-600' : 'bg-muted/60'
+                    }`}
+                  >
+                    {emojiMap[type] || type} {count}
+                  </span>
+                );
+              })}
+              {repostCount !== undefined && repostCount > 0 && (
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 ml-1">
+                  🔄 {repostCount}
+                </span>
+              )}
+            </div>
+          )}
+          {repostCount !== undefined && repostCount > 0 && (!reactionCounts || Object.keys(reactionCounts).length === 0) && (
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+              🔄 {repostCount} repost{(repostCount || 0) > 1 ? 's' : ''}
+            </span>
+          )}
 
           {/* Category & Time */}
           <div className="flex items-center justify-between">

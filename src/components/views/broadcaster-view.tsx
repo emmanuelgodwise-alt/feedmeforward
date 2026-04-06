@@ -87,7 +87,6 @@ export function BroadcasterView({ sessionId, onNavigate }: BroadcasterViewProps)
       // End session on unmount
       endStream();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Get media stream
@@ -159,7 +158,6 @@ export function BroadcasterView({ sessionId, onNavigate }: BroadcasterViewProps)
         uploadChunk(chunk);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLive]);
 
   // Poll for viewer count

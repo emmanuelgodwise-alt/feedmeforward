@@ -8,7 +8,8 @@ type NotificationType =
   | 'poll_vote'
   | 'mention'
   | 'invitation_accepted'
-  | 'tip';
+  | 'tip'
+  | 'subscription';
 
 interface CreateNotificationInput {
   userId: string;         // recipient
@@ -54,6 +55,8 @@ function getNotificationDefaults(type: NotificationType): { title: string; messa
       return { title: 'Poll Vote', message: 'Someone voted on your poll' };
     case 'tip':
       return { title: 'New Tip', message: 'You received a tip!' };
+    case 'subscription':
+      return { title: 'New Subscriber', message: 'Someone subscribed to your channel!' };
     case 'invitation_accepted':
       return { title: 'Invitation Accepted', message: 'Your invitation was accepted!' };
     case 'mention':

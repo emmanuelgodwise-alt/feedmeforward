@@ -3437,3 +3437,284 @@ Stage Summary:
 - Lint: ✅ 0 errors
 - Build: ✅ Successful compilation
 
+
+---
+## Task ID: 11-backend
+Agent: full-stack-developer
+Task: Prompt 11 Part 1 — Schema Updates & Backend API Routes (Reactions, Reposts, Stories, Activity Feed)
+
+Work Log:
+- Audited existing Prisma schema: Reaction, Repost, and Story models already present with all required fields, relations, indexes, and unique constraints
+- Verified User model already has reactions, reposts, stories relations
+- Verified Video model already has reactions, reposts relations
+- Schema requires no changes — fully matches spec
+- Reviewed all 8 API routes against spec requirements:
+  - POST /api/videos/[id]/react — Toggle reaction with notification ✅ (updated notification format)
+  - GET /api/videos/[id]/reactions — Counts + user reactions ✅
+  - POST /api/videos/[id]/repost — Toggle repost with notification ✅ (updated notification format)
+  - GET /api/feed/reposts — Paginated reposts from followed users ✅
+  - POST /api/stories — Create story with 24h expiry ✅
+  - GET /api/stories — Grouped stories from followed + self ✅
+  - GET /api/stories/[id] — Single story + view marking ✅
+  - DELETE /api/stories/[id] — Creator-only deletion ✅
+  - GET /api/feed/activity — Aggregated activity from followed users ✅
+  - GET /api/feed — Supports type=following|discover|all with reaction counts ✅
+- Updated react route notification: title changed to "New Reaction", message now includes @username and emoji (e.g. "@john reacted with 🔥 to your video")
+- Updated repost route notification: type changed from 'response' to 'repost', title changed to "New Repost", message now includes @username (e.g. "@jane reposted your video 'My Video'")
+- Ran npm run lint: 0 errors
+
+Stage Summary:
+- Schema: ✅ Already complete (Reaction, Repost, Story models with all fields/relations/indexes)
+- Reaction API: ✅ POST toggle + GET counts (notification updated with username + emoji)
+- Repost API: ✅ POST toggle + GET feed (notification updated with username + proper type)
+- Stories API: ✅ POST create + GET grouped + GET single + DELETE (all complete)
+- Activity Feed: ✅ Aggregated activities from followed users (videos, reposts, reactions, polls)
+- Feed API: ✅ Supports following/discover/all modes with reaction counts per video
+- Files modified: src/app/api/videos/[id]/react/route.ts, src/app/api/videos/[id]/repost/route.ts
+- Lint: ✅ 0 errors
+- Dev server: ✅ Compiling successfully (no runtime errors)
+
+---
+## Task ID: 11-Part2 - main-agent (Frontend Social Media Components)
+### Work Task
+Build/enhance frontend social media components: ReactionBar, RepostButton, StoriesBar, StoryViewer, CreateStoryDialog. Update VideoDetailView and SocialFeedView with reaction/repost/story integration.
+
+### Work Summary
+
+All 5 target components already existed from a previous build phase. This task enhanced each component to match the detailed Prompt 11 Part 2 specification.
+
+#### 1. `src/components/reaction-bar.tsx` — Enhanced
+- **Self-fetching mode**: When no external `reactionCounts`/`userReactions` props provided, component fetches from `GET /api/videos/[id]/reactions` on mount using `currentUser.id` header
+- **Controlled mode preserved**: When parent provides `reactionCounts`/`userReactions`/`onReact` props, works as before
+- **shadcn Tooltip**: Wrapped each emoji button with `<TooltipProvider>` and `<Tooltip>` showing the reaction type name (Fire, Heart, Laugh, etc.)
+- **Count badges**: Changed from inline text to absolute-positioned superscript badges (`-top-1 -right-1`) with orange background and white text
+- **Pop animation**: Enhanced emoji pop animation (scale 2.5, y-offset -30, longer duration)
+- **Active state**: Orange ring + `scale-105` for active reactions
+- **Expanded mode**: Larger emoji buttons (`text-2xl`) with larger padding (`px-2.5 py-1.5`)
+- **Compact mode**: Preserved smaller inline display with active ring styling
+- **Exported `getReactionSummary()`**: Helper function to generate top N reaction emoji+count strings for summary display
+
+#### 2. `src/components/repost-button.tsx` — Theme Fixed
+- **Orange theme**: Changed all emerald/green styling to orange/amber to match the project's warm palette:
+  - Active state: `bg-orange-500 hover:bg-orange-600` (was emerald-500/600)
+  - Inactive hover: `hover:bg-orange-50`, `hover:text-orange-500`, `hover:border-orange-300`
+  - Dialog icons: Orange and amber backgrounds (was emerald)
+  - Submit button: Orange-to-amber gradient (was emerald gradient)
+  - Quote option icon: Changed to amber theme
+- All functionality preserved: dialog with Repost/Quote Repost options, Undo Repost, toast notifications, loading states
+
+#### 3. `src/components/stories-bar.tsx` — Enhanced
+- **Snap scrolling**: Added `scroll-smooth` and `snap-start` on each item for proper snap behavior
+- **Verified badges**: Added `<CheckCircle2>` orange verified badge overlay on creators with `isVerified` flag
+- **View All button**: Added at the end when more than 8 story groups exist; clicking toggles full list
+- **Mobile responsive**: Smaller avatar sizes on mobile (`w-12 h-12` vs `w-[52px] h-[52px]` on sm+)
+- **Improved ring styling**: Unviewed stories get thicker gradient ring (3px padding) vs viewed (1.5px padding)
+- **Background styling**: Arrow buttons use `bg-background/90` for better visibility
+- **Gap spacing**: Increased gap between items (`sm:gap-4`)
+- **Container width**: Fixed `w-[68px] sm:w-[72px]` for consistent sizing
+
+#### 4. `src/components/story-viewer.tsx` — Enhanced
+- **Body scroll prevention**: Added `useEffect` that sets `document.body.style.overflow = 'hidden'` when open, restores on unmount
+- **Story view marking**: Added `useEffect` to call `GET /api/stories/[id]` (which marks as viewed) when a story is displayed
+- **Progress bar gradient**: Active progress bar uses orange-to-amber gradient instead of white
+- **Thicker progress bars**: Increased from `h-0.5` to `h-[3px]`
+- **Creator verified badge**: Added `<CheckCircle2>` badge next to creator name in the info bar
+- **Improved navigation zones**: Changed from 1/3-1/3-1/3 to 1/3-2/3 (left 1/3 = back, right 2/3 = forward)
+- **Gradient overlay**: Added gradient overlay on image stories for better text readability
+- **View count pill**: Changed to pill shape with `bg-black/30 backdrop-blur-sm rounded-full px-3 py-1`
+- **Full-screen image/video**: Changed `object-contain` to `object-cover` for full-screen experience
+- **Arrow button size**: Increased from `w-8` to `w-9` for better touch targets
+- **Orange gradient backgrounds**: All 6 gradients use orange/amber/rose tones
+
+#### 5. `src/components/create-story-dialog.tsx` — Enhanced
+- **Gradient presets reordered**: Moved "Golden" and "Berry" up, reordered to: Sunset, Golden, Berry, Forest, Ocean, Slate
+- **Larger gradient buttons**: Increased from `w-8 h-8` to `w-9 h-9` with `gap-2.5` spacing
+- **Preview improvements**: Added creator info overlay at bottom of preview (avatar + username), matching how it will look in the viewer
+- **9:16 aspect ratio**: Preview card uses `aspect-[9/16]` for mobile story dimensions
+- **Larger text area**: Changed to `text-base` for the story text input
+- **Share Story button**: Changed from "Post Story" to "Share Story" per spec
+- **Eye icon**: Added to Preview button for visual clarity
+- **Preview card styling**: Added max-height constraint and centered layout
+
+#### 6. `src/components/views/video-detail-view.tsx` — Updated
+- **Reaction summary text**: Added `getReactionSummary()` display above the ReactionBar, showing top 5 reaction emojis with counts (e.g., "🔥 12  ❤️ 8  😂 3")
+- Only displays when total reaction count > 0
+- Text uses `text-xs text-muted-foreground` styling
+- Wrapped ReactionBar in `space-y-1.5` container for proper spacing
+
+#### 7. `src/components/views/social-feed-view.tsx` — Updated
+- **Reaction data tracking**: Added `feedReactionData` state to store per-video reaction counts, user reactions, and repost counts
+- **Feed parsing**: Enhanced feed fetch to extract `reactionCounts`, `userReactions`, and `repostCount` from feed items and store in `feedReactionData` map
+- **Append support**: When loading more (append mode), merges new reaction data with existing
+- **VideoCard enhanced**: Both Following and Discover tab grids now pass `reactionCounts`, `userReactions`, and `repostCount` to each VideoCard for mini reaction display
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation (`✓ Compiled in 128ms`) with no runtime errors
+- TypeScript strict typing throughout all files
+- All components use 'use client' directive
+- framer-motion for animations throughout
+- Warm orange/amber palette (no blue/indigo) maintained
+
+#### Files Created/Modified
+```
+src/components/reaction-bar.tsx (enhanced - tooltips, self-fetching, badges, summary)
+src/components/repost-button.tsx (enhanced - orange theme)
+src/components/stories-bar.tsx (enhanced - snap scrolling, View All, verified badges)
+src/components/story-viewer.tsx (enhanced - body scroll lock, view marking, improved UX)
+src/components/create-story-dialog.tsx (enhanced - gradient presets, preview)
+src/components/views/video-detail-view.tsx (modified - reaction summary text)
+src/components/views/social-feed-view.tsx (modified - reaction data tracking, enhanced VideoCard props)
+```
+
+---
+## Task ID: 12-backend
+Agent: full-stack-developer
+Task: Prompt 12 Part 1 — Business & Commercial Backend APIs
+
+Work Log:
+- Read existing worklog, Prisma schema, package.json, and existing API patterns (wallet/revenue, tip, feed routes)
+- Updated `prisma/schema.prisma` with 3 new models (CreatorAnalytics, PromotedVideo, Subscription)
+- Added business/creator fields to User model (businessName, businessCategory, businessEmail, businessWebsite, businessBio, subscriptionTiers)
+- Added promotedVideo relation to Video model
+- Added `subscription` type to notifications.ts and notification defaults
+- Ran `npx prisma db push` successfully
+- Created 10 new API route files:
+
+  **Creator Analytics API** (`/api/creator/analytics`):
+  - GET handler with period filtering (all, 7d, 30d, 90d)
+  - Computes totalViews, totalLikes, totalComments, totalResponses from actual DB data
+  - Computes totalTips from earning transactions, totalRevenue from earning+reward transactions
+  - Computes avgEngagement rate, topCategory, subscriberCount
+  - Returns dailyViews chart data (last 30 days) and milestones array
+  - Upserts CreatorAnalytics cache record
+
+  **Creator Dashboard API** (`/api/creator/dashboard`):
+  - GET handler returning comprehensive dashboard data
+  - Overview: totalViews, totalFollowers, memberScore, isVerified
+  - Earnings: thisMonth, lastMonth, totalEarnings, pendingPayout
+  - Content: totalVideos, totalPolls, totalResponses, topVideo
+  - Audience: topLocations, topAgeRanges, subscriberGrowth (last 7 days)
+  - Recent activity and recent tips received
+
+  **Promoted Videos APIs**:
+  - POST `/api/creator/promote` — Promote video with budget, targeting, duration
+  - GET/PATCH `/api/creator/promotions` — List creator promotions with stats, pause/resume
+  - GET `/api/feed/promoted` — Return active promoted videos with targeting filter, $0.01/impression deduction, max 3 per feed
+
+  **Subscription APIs**:
+  - GET `/api/subscriptions` — List user's active subs or get creator's tier info
+  - POST `/api/subscriptions/subscribe` — Subscribe with wallet deduction, earning transaction for creator, notification
+  - POST `/api/subscriptions/cancel` — Cancel subscription (remains active until expiresAt)
+  - GET/PUT `/api/creator/tiers` — Get/update subscription tiers (JSON on User model)
+
+  **Business Profile API** (`/api/creator/business-profile`):
+  - GET handler returns business profile fields
+  - PUT handler validates creator role, email format, URL format, bio length
+
+- Ran `npm run lint` — zero errors
+- Ran `npx next build` — compiled successfully in 10.3s, 71 pages generated, all 10 new routes registered
+
+Stage Summary:
+- 3 new Prisma models: CreatorAnalytics, PromotedVideo, Subscription
+- 7 new fields on User model for business/creator features
+- 10 new API route files created
+- 1 updated notification helper (subscription type)
+- Build passes with zero errors
+- All routes follow existing X-User-Id auth pattern
+- Atomic transactions used where needed (promotions, subscriptions)
+- Files created:
+  - prisma/schema.prisma (modified)
+  - src/lib/notifications.ts (modified)
+  - src/app/api/creator/analytics/route.ts (created)
+  - src/app/api/creator/dashboard/route.ts (created)
+  - src/app/api/creator/promote/route.ts (created)
+  - src/app/api/creator/promotions/route.ts (created)
+  - src/app/api/creator/tiers/route.ts (created)
+  - src/app/api/creator/business-profile/route.ts (created)
+  - src/app/api/feed/promoted/route.ts (created)
+  - src/app/api/subscriptions/route.ts (created)
+  - src/app/api/subscriptions/subscribe/route.ts (created)
+  - src/app/api/subscriptions/cancel/route.ts (created)
+
+---
+## Task ID: creator-dashboard-view - main-agent (Creator Dashboard View Component)
+### Work Task
+Create `src/components/views/creator-dashboard-view.tsx` — a comprehensive analytics/management view for creators with warm orange/amber theme.
+
+### Work Summary
+Created a single file: `src/components/views/creator-dashboard-view.tsx` (780 lines).
+
+**Features implemented:**
+1. **Header**: "Creator Studio" title with Megaphone icon, back button to dashboard (ArrowLeft), subtitle
+2. **Period Selector Tabs**: All Time | 7 Days | 30 Days | 90 Days — gradient orange/amber active state, triggers re-fetch
+3. **Overview Cards** (4-col responsive grid): Total Views (Eye), Total Followers (Users), Member Score (Trophy + level badge), Earnings This Month (DollarSign + % change indicator)
+4. **Revenue Card**: This Month vs Last Month with comparison arrow/percentage, Pending Payout (amber themed), Total Earnings (emerald themed)
+5. **Top Content Card**: Top video highlight with trophy badge, content stats grid (Videos/Polls/Responses), engagement metrics from analytics (likes, comments, avg engagement, top category), empty state with Create Lead Clip CTA
+6. **Your Audience Card**: Subscriber count with weekly growth indicator, Top Locations with progress bars, Age Distribution badges
+7. **Recent Activity Card**: Last 8 activities with type-specific icons (Video/Heart/Users/BarChart3/Clock), description, relative timestamp
+8. **Milestones Card**: 9 milestone badges (100/1K/10K Views, 100/1K Likes, 50/100 Subscribers, $100/$1K Revenue) with achieved/locked states
+9. **Quick Actions Row**: Promote a Video (Megaphone, gradient), Manage Subscriptions (CreditCard), Edit Business Profile (Building2)
+10. **Loading State**: Full skeleton layout matching the content structure
+11. **Error State**: Centered error display with AlertCircle icon and Retry button
+
+**Data fetching:** Parallel `Promise.all` of `GET /api/creator/dashboard` and `GET /api/creator/analytics?period=${period}`, both using `X-User-Id` header from auth store. Refetches on period change via `useCallback`/`useEffect`.
+
+**Styling:** Warm orange/amber gradient buttons and badges, consistent with project theme. shadcn Card, Button, Badge, Skeleton components used. framer-motion stagger animations. Responsive grid layouts (2-col mobile → 4-col desktop).
+
+**Note:** Pre-existing lint error in `profile-view.tsx` (line 807) is unrelated to this change. The new file compiles cleanly.
+---
+## Task ID: 12-frontend
+Agent: full-stack-developer
+Task: Prompt 12 Part 2 — Business & Commercial Frontend UI
+
+Work Log:
+- Audited 4 existing business components created by previous agents (promote-video-dialog, subscription-tiers-manager, subscribe-button, business-profile-dialog)
+- Updated subscribe-button.tsx:
+  - Added `variant?: 'default' | 'compact'` prop for compact icon-only mode
+  - Added internal data fetching when tiers/subscription props not provided (GET /api/subscriptions, GET /api/creator/tiers)
+  - Added wallet balance check before subscribing with "Insufficient balance" toast warning
+  - Added wallet balance display in tier selection dropdown
+  - Added "Low balance" badge on unaffordable tiers in the dropdown
+  - Compact variant: 32x32 icon button with Crown/Check icon, popup cancel menu
+- Updated business-profile-dialog.tsx:
+  - Added email format validation (isValidEmail regex)
+  - Added URL format validation (isValidUrl using URL constructor)
+  - Added inline error messages with AlertTriangle icons
+  - Aligned categories to spec: Technology, Entertainment, Education, Health, Finance, Food, Fashion, Sports, Music, Other
+  - Added `errors` state with real-time clearing on input change
+- Updated profile-view.tsx:
+  - Added `Building2` to lucide-react imports
+  - Added 5 optional business fields to ProfileData interface: businessName, businessCategory, businessEmail, businessWebsite, businessBio
+  - Extracted inline arrow function on SubscribeButton onSuccess to named `handleRefreshProfile` function to fix TSX parsing error
+  - Verified all existing business profile section, SubscribeButton integration, Creator Studio button, and subscription tiers display remain intact
+
+Stage Summary:
+- All 4 business components verified/updated to meet spec requirements
+- subscribe-button.tsx: added compact variant, self-fetching, balance warnings
+- business-profile-dialog.tsx: added validation, aligned categories
+- profile-view.tsx: added business fields to ProfileData, fixed TSX parsing error
+- Lint: 0 errors, 0 warnings
+- Build: ✓ Compiled successfully in 10.1s
+- Dev server: ✓ Running with no runtime errors
+
+---
+## Task ID: 12-wiring
+### Agent: full-stack-developer
+### Work Task
+Wire Creator Dashboard + Business features into page.tsx
+
+### Work Summary
+- Added 'creator-dashboard' to the View type union in page.tsx
+- Imported CreatorDashboardView component from @/components/views/creator-dashboard-view
+- Imported LayoutDashboard icon from lucide-react
+- Added routing block for creator-dashboard view in AnimatePresence section
+- Added Creator Studio card to Dashboard action cards grid, conditionally rendered only when currentUser.role === 'creator'
+- Updated creator-dashboard-view.tsx: imported PromoteVideoDialog, added showPromoteDialog state, wired "Promote a Video" button to open the dialog, added PromoteVideoDialog component to render with onSuccess={fetchData}
+- Build passed successfully with zero errors
+- Dev log shows successful compilation with no runtime errors
+
+Stage Summary:
+- Creator Studio accessible from Dashboard for creator-role users
+- Full navigation flow working: Dashboard → Creator Studio → Promote Video Dialog
+- Promote Video Dialog integrated with 4-step campaign wizard (select video, budget, duration, targeting)

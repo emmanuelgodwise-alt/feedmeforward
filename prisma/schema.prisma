@@ -21,6 +21,17 @@ model User {
   walletBalance  Float    @default(0.0)
   isVerified     Boolean  @default(false)
   onboardingCompleted Boolean @default(false)
+  // Business & Creator
+  businessName        String?
+  businessCategory    String?
+  businessEmail       String?
+  businessWebsite     String?
+  businessBio         String?
+  subscriptionTiers   String?            @default("[]") // JSON: [{tier, name, price, benefits}]
+  analytics           CreatorAnalytics?  @relation("CreatorAnalytics")
+  subscriptions       Subscription[]     @relation("CreatorSubscriptions")
+  subscriberOf        Subscription[]     @relation("UserSubscriptions")
+  promotedVideos      PromotedVideo[]    @relation("UserPromotedVideos")
   // Audience Segmentation
   ageRange       String?
   location       String?
@@ -58,6 +69,9 @@ model User {
   videoCalls        VideoCall[]
   blockedUsers      BlockedUser[]   @relation("BlockedUsers")
   blockedByUsers    BlockedUser[]   @relation("BlockedByUsers")
+  reactions         Reaction[]      @relation("UserReactions")
+  reposts           Repost[]        @relation("UserReposts")
+  stories           Story[]         @relation("UserStories")
 }
 
 // ─── Video Model ────────────────────────────────────────────────────
@@ -89,6 +103,10 @@ model Video {
   circleShares    CircleVideo[]
   notifications   Notification[]  @relation("NotificationVideo")
   videoHashtags   VideoHashtag[]
+
+  reactions    Reaction[]   @relation("VideoReactions")
+  reposts      Repost[]     @relation("VideoReposts")
+  promotedVideo       PromotedVideo?    @relation("PromotedVideos")
 
   // Self-referential for response clips
   parentVideoId String?
@@ -543,6 +561,105 @@ model BlockedUser {
   blocked User @relation("BlockedByUsers", fields: [blockedId], references: [id], onDelete: Cascade)
 
   @@unique([blockerId, blockedId])
+}
+
+// ─── Reaction Model (Multi-emoji) ────────────────────────────────────
+model Reaction {
+  id        String   @id @default(cuid())
+  userId    String
+  videoId   String
+  type      String   // 'fire', 'heart', 'laugh', 'wow', 'sad', 'angry', 'clap', 'thinking'
+  createdAt DateTime @default(now())
+  user      User  @relation("UserReactions", fields: [userId], references: [id], onDelete: Cascade)
+  video     Video @relation("VideoReactions", fields: [videoId], references: [id], onDelete: Cascade)
+  @@unique([userId, videoId, type])
+  @@index([videoId, type])
+}
+
+// ─── Repost Model ───────────────────────────────────────────────────
+model Repost {
+  id          String   @id @default(cuid())
+  userId      String
+  videoId     String
+  quote       String?
+  createdAt   DateTime @default(now())
+  user        User  @relation("UserReposts", fields: [userId], references: [id], onDelete: Cascade)
+  video       Video @relation("VideoReposts", fields: [videoId], references: [id], onDelete: Cascade)
+  @@unique([userId, videoId])
+  @@index([userId, createdAt])
+}
+
+// ─── Story Model (Ephemeral Content) ─────────────────────────────────
+model Story {
+  id          String   @id @default(cuid())
+  creatorId   String
+  videoUrl    String?
+  imageUrl    String?
+  text        String?
+  type        String   @default("text") // 'text', 'image', 'video'
+  viewers     String   @default("[]")
+  viewCount   Int      @default(0)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  creator     User  @relation("UserStories", fields: [creatorId], references: [id], onDelete: Cascade)
+  @@index([creatorId, createdAt])
+  @@index([expiresAt])
+}
+
+// ─── Creator Analytics Model ──────────────────────────────────────
+model CreatorAnalytics {
+  id            String   @id @default(cuid())
+  creatorId     String   @unique
+  totalViews    Int      @default(0)
+  totalLikes    Int      @default(0)
+  totalComments Int      @default(0)
+  totalResponses Int     @default(0)
+  totalTips     Float    @default(0.0)
+  totalRevenue  Float    @default(0.0)
+  totalPolls    Int      @default(0)
+  avgEngagement Float    @default(0.0)
+  topCategory   String?
+  subscriberCount Int    @default(0)
+  period        String   @default("all") // 'all', '7d', '30d', '90d'
+  computedAt    DateTime @default(now())
+  creator       User     @relation("CreatorAnalytics", fields: [creatorId], references: [id], onDelete: Cascade)
+}
+
+// ─── Promoted Video Model ──────────────────────────────────────────
+model PromotedVideo {
+  id            String   @id @default(cuid())
+  videoId       String   @unique
+  creatorId     String
+  budget        Float
+  spent         Float    @default(0.0)
+  impressions   Int      @default(0)
+  clicks        Int      @default(0)
+  status        String   @default("active") // 'active', 'paused', 'exhausted', 'expired'
+  targetingCriteria String? // JSON string, same format as poll targeting
+  startsAt      DateTime @default(now())
+  endsAt        DateTime?
+  createdAt     DateTime @default(now())
+  video         Video    @relation("PromotedVideos", fields: [videoId], references: [id])
+  creator       User     @relation("UserPromotedVideos", fields: [creatorId], references: [id], onDelete: Cascade)
+  @@index([status, startsAt])
+}
+
+// ─── Subscription Model ────────────────────────────────────────────
+model Subscription {
+  id            String   @id @default(cuid())
+  subscriberId  String
+  creatorId     String
+  tier          String   @default("basic") // 'basic', 'premium', 'exclusive'
+  amount        Float
+  status        String   @default("active") // 'active', 'cancelled', 'expired'
+  startedAt     DateTime @default(now())
+  expiresAt     DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime @default(now())
+  subscriber    User     @relation("UserSubscriptions", fields: [subscriberId], references: [id], onDelete: Cascade)
+  creator       User     @relation("CreatorSubscriptions", fields: [creatorId], references: [id], onDelete: Cascade)
+  @@unique([subscriberId, creatorId])
+  @@index([creatorId, status])
 }
 
 // ─── Audience Segment Model ─────────────────────────────────────────
