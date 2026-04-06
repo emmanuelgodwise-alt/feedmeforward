@@ -48,6 +48,7 @@ import { TranscribeDialog } from '@/components/transcribe-dialog';
 import { ShareDialog } from '@/components/share-dialog';
 import { VideoActions } from '@/components/video-actions';
 import { QuickNav } from '@/components/quick-nav';
+import { HashtagTag } from '@/components/hashtag-tag';
 import { useVideoStore } from '@/stores/video-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
@@ -486,9 +487,14 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
               </Badge>
             )}
             {video.tags?.map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs">
-                #{tag}
-              </Badge>
+              <HashtagTag
+                key={tag}
+                tag={tag}
+                size="sm"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('navigate-hashtag', { detail: { tag } }));
+                }}
+              />
             ))}
           </div>
         ) : null}

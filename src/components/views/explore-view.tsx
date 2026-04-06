@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { VideoCard } from '@/components/video-card';
 import { FilterBar } from '@/components/filter-bar';
 import { QuickNav } from '@/components/quick-nav';
+import { TrendingHashtags } from '@/components/trending-hashtags';
 
 interface ExploreViewProps {
   onNavigate: (view: string) => void;
@@ -35,6 +36,10 @@ export function ExploreView({ onNavigate, setVideoId }: ExploreViewProps) {
   const handleVideoClick = (videoId: string) => {
     setVideoId(videoId);
     onNavigate('video-detail');
+  };
+
+  const handleHashtagClick = (tag: string) => {
+    window.dispatchEvent(new CustomEvent('navigate-hashtag', { detail: { tag } }));
   };
 
   return (
@@ -89,57 +94,68 @@ export function ExploreView({ onNavigate, setVideoId }: ExploreViewProps) {
         <FilterBar filters={filters} onFilterChange={setFilters} />
       </motion.div>
 
-      {/* Video Grid */}
-      {isLoading && videos.length === 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="space-y-3">
-              <Skeleton className="aspect-video rounded-xl" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-3 w-1/2" />
-              <Skeleton className="h-3 w-1/3" />
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Main Video Grid */}
+        <div className="flex-1 min-w-0">
+          {isLoading && videos.length === 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <Skeleton className="aspect-video rounded-xl" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ) : videos.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center py-20"
-        >
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-950/50 dark:to-amber-950/30 flex items-center justify-center mx-auto mb-4">
-            <Search className="w-10 h-10 text-orange-400" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">No videos found</h3>
-          <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
-            {filters.search || filters.status || filters.category
-              ? 'Try adjusting your filters to find more content'
-              : 'Be the first to create a Lead Clip and start the conversation!'}
-          </p>
-          {currentUser && !filters.search && !filters.status && !filters.category && (
-            <Button
-              className="gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
-              onClick={() => onNavigate('create-lead')}
-            >
-              <Plus className="w-4 h-4" />
-              Create the First Lead Clip
-            </Button>
-          )}
-        </motion.div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {videos.map((video, index) => (
+          ) : videos.length === 0 ? (
             <motion.div
-              key={video.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.03, duration: 0.3 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-20"
             >
-              <VideoCard video={video} onClick={handleVideoClick} />
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-950/50 dark:to-amber-950/30 flex items-center justify-center mx-auto mb-4">
+                <Search className="w-10 h-10 text-orange-400" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No videos found</h3>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
+                {filters.search || filters.status || filters.category
+                  ? 'Try adjusting your filters to find more content'
+                  : 'Be the first to create a Lead Clip and start the conversation!'}
+              </p>
+              {currentUser && !filters.search && !filters.status && !filters.category && (
+                <Button
+                  className="gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
+                  onClick={() => onNavigate('create-lead')}
+                >
+                  <Plus className="w-4 h-4" />
+                  Create the First Lead Clip
+                </Button>
+              )}
             </motion.div>
-          ))}
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
+              {videos.map((video, index) => (
+                <motion.div
+                  key={video.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03, duration: 0.3 }}
+                >
+                  <VideoCard video={video} onClick={handleVideoClick} />
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Trending Hashtags Sidebar */}
+        <div className="w-full lg:w-72 shrink-0">
+          <div className="lg:sticky lg:top-6">
+            <TrendingHashtags onHashtagClick={handleHashtagClick} limit={10} />
+          </div>
+        </div>
+      </div>
 
       {/* FAB for create lead */}
       {currentUser && (

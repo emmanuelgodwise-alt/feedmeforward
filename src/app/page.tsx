@@ -37,6 +37,7 @@ import { CirclesView } from '@/components/views/circles-view';
 import { CircleDetailView } from '@/components/views/circle-detail-view';
 import { ModerationView } from '@/components/views/moderation-view';
 import { OnboardingView } from '@/components/views/onboarding-view';
+import { HashtagFeedView } from '@/components/views/hashtag-feed-view';
 import { GlobalSearch } from '@/components/global-search';
 import { SkipToContent } from '@/components/skip-to-content';
 import { NotificationBell } from '@/components/notification-bell';
@@ -85,7 +86,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -1681,6 +1682,7 @@ export default function Home() {
   const [parentVideoThumbnail, setParentVideoThumbnail] = useState<string>('');
   const [profileUserId, setProfileUserId] = useState<string>('');
   const [circleId, setCircleId] = useState<string>('');
+  const [currentHashtag, setCurrentHashtag] = useState<string>('');
 
   const navigate = useCallback((newView: View) => {
     setView(newView);
@@ -1705,8 +1707,19 @@ export default function Home() {
       setView('users-list');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
+    // Listen for hashtag navigation
+    const hashtagHandler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.tag) {
+        setCurrentHashtag(detail.tag);
+        setView('hashtag-feed');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+    window.addEventListener('navigate-hashtag', hashtagHandler);
     return () => {
       window.removeEventListener('navigate-video', handler);
+      window.removeEventListener('navigate-hashtag', hashtagHandler);
     };
   }, []);
 
@@ -1861,6 +1874,19 @@ export default function Home() {
           <ModerationView
             key="moderation"
             onNavigate={navigate}
+          />
+        )}
+        {view === 'hashtag-feed' && currentHashtag && (
+          <HashtagFeedView
+            key={currentHashtag}
+            onNavigate={navigate}
+            hashtag={currentHashtag}
+            setVideoId={handleVideoClick}
+            onHashtagClick={(tag) => {
+              setCurrentHashtag(tag);
+              setView('hashtag-feed');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           />
         )}
         {view === 'onboarding' && (

@@ -128,6 +128,16 @@ export async function POST(request: NextRequest) {
     // Trigger score recalculation for the creator (fire and forget)
     recalculateScore(userId).catch((err) => console.error('Score recalc failed:', err));
 
+    // Fire-and-forget hashtag sync
+    if (tags && Array.isArray(tags) && tags.length > 0) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      fetch(`${baseUrl}/api/hashtags/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId: video.id, tags }),
+      }).catch(() => {});
+    }
+
     return NextResponse.json({ success: true, data: { ...video, tags: video.tags ? JSON.parse(video.tags) : null } }, { status: 201 });
   } catch (error) {
     console.error('POST /api/videos error:', error);

@@ -81,15 +81,23 @@ export function PollAnalytics({ pollId }: PollAnalyticsProps) {
   const [showHourly, setShowHourly] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
     fetch(`/api/polls/${pollId}/analytics`)
       .then((res) => res.json())
       .then((json) => {
+        if (cancelled) return;
         if (json.success) setData(json.data);
         else setError(json.error || 'Failed to load analytics');
       })
-      .catch(() => setError('Network error'))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (cancelled) return;
+        setError('Network error');
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [pollId]);
 
   const handleExportCSV = () => {

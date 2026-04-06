@@ -2860,3 +2860,111 @@ Work Log:
 Stage Summary:
 - File modified: src/app/page.tsx (line 1671)
 - Error resolved: "ReferenceError: currentUser is not defined"
+---
+## Task ID: prompt-1 - main-agent (Hashtag Tagging System)
+### Work Task
+Build the Hashtag Tagging System for FeedMeForward: Prisma schema models, 5 API routes, hashtag UI components (HashtagTag, HashtagInput, TrendingHashtags, HashtagFeedView), video detail view update, explore view trending sidebar, and main router integration.
+
+### Work Summary
+
+#### 1. Prisma Schema — Modified
+Added two new models to `prisma/schema.prisma`:
+- **Hashtag**: id, tag (unique, lowercase), useCount (default 0), createdAt
+- **VideoHashtag** (join model): id, videoId, hashtagId, createdAt; @@unique([videoId, hashtagId])
+- Added `videoHashtags VideoHashtag[]` relation to Video model
+- Cascade deletes on both VideoHashtag relations
+- Successfully pushed to SQLite via `npx prisma db push`
+
+#### 2. API Routes (5 route files created)
+- **POST `/api/hashtags/sync`**: Syncs hashtags for a video. Normalizes tags (strip #, lowercase, trim, dedup). Creates hashtags with skipDuplicates, creates VideoHashtag relations, increments useCount. Returns updated hashtag objects.
+- **GET `/api/hashtags/trending`**: Returns top hashtags by useCount descending. Supports `limit` param (default 20, max 50).
+- **GET `/api/hashtags/search`**: Case-insensitive search on hashtags. Requires `q` param (min 2 chars). Supports `limit` param (default 10).
+- **GET `/api/hashtags/[tag]`**: Returns videos for a specific hashtag with pagination and sort (latest/popular). Includes video creator info and counts.
+- **GET `/api/hashtags/suggestions`**: Autocomplete suggestions where tag starts with query prefix. Requires `q` (min 1 char). Used for HashtagInput dropdown.
+
+#### 3. Video Creation Auto-Sync — Modified
+- Updated `POST /api/videos` in `src/app/api/videos/route.ts`
+- After creating video, fire-and-forget POST to `/api/hashtags/sync` with the videoId and tags from request body
+
+#### 4. HashtagTag Component (`src/components/hashtag-tag.tsx`) — Created
+- Clickable hashtag chip with orange/amber gradient styling
+- Displays `#tag` with Hash icon
+- Props: tag, onClick callback, size ('sm' | 'md')
+- Hover/tap animations via framer-motion
+- Uses `e.stopPropagation()` to prevent event bubbling
+
+#### 5. HashtagInput Component (`src/components/hashtag-input.tsx`) — Created
+- Text input that detects hashtags typed with # prefix
+- Shows autocomplete suggestions dropdown from `/api/hashtags/suggestions`
+- Selected tags displayed as removable chips with X button
+- Enter or comma finalizes current hashtag
+- Backspace removes last tag when input is empty
+- Arrow key navigation in suggestions dropdown
+- Click-outside closes suggestions
+- Configurable max tags (default 10)
+
+#### 6. TrendingHashtags Component (`src/components/trending-hashtags.tsx`) — Created
+- Card component showing top trending hashtags with mini usage bar
+- Numbered list (1-10) with hashtag icon and use count
+- Refresh button to re-fetch trending data
+- Loading skeletons and empty state handling
+- Animations for list items
+
+#### 7. HashtagFeedView (`src/components/views/hashtag-feed-view.tsx`) — Created
+- Full view showing videos for a specific hashtag
+- Header with `#tag` display, video count, use count
+- Sort options: Latest, Most Popular
+- Video grid using existing VideoCard component
+- Pagination with "Load More" button
+- TrendingHashtags sidebar (sticky on desktop)
+- Back button to explore view
+- Clickable hashtags in sidebar navigate to other hashtag feeds
+
+#### 8. Video Detail View — Updated
+- Replaced plain text tag badges with interactive HashtagTag components
+- Clicking a hashtag dispatches `navigate-hashtag` custom event
+- Added HashtagTag import
+
+#### 9. Explore View — Updated
+- Added TrendingHashtags sidebar to the right of the video grid
+- Responsive layout: video grid takes full width on mobile, sidebar appears on desktop (lg breakpoint)
+- Hashtag clicks dispatch `navigate-hashtag` custom event
+- Video grid reduced to 3 columns on xl breakpoint to accommodate sidebar
+
+#### 10. Main Router (`src/app/page.tsx`) — Updated
+- Added `'hashtag-feed'` to View type union
+- Added `currentHashtag` state variable
+- Added `navigate-hashtag` custom event listener
+- Renders HashtagFeedView with proper props and key
+- Supports navigating between different hashtags
+
+#### 11. Pre-existing Fix
+- Fixed pre-existing lint error in `src/components/poll-analytics.tsx`: moved `setLoading(true)` out of useEffect body into a callback pattern with cancellation flag
+
+#### Quality Checks
+- `npm run lint` passes with **zero errors and zero warnings**
+- Dev log shows successful compilation (`✓ Compiled in ~200ms`) with no runtime errors
+- TypeScript strict typing throughout all files
+
+#### Files Created
+```
+src/app/api/hashtags/sync/route.ts (created)
+src/app/api/hashtags/trending/route.ts (created)
+src/app/api/hashtags/search/route.ts (created)
+src/app/api/hashtags/suggestions/route.ts (created)
+src/app/api/hashtags/[tag]/route.ts (created)
+src/components/hashtag-tag.tsx (created)
+src/components/hashtag-input.tsx (created)
+src/components/trending-hashtags.tsx (created)
+src/components/views/hashtag-feed-view.tsx (created)
+```
+
+#### Files Modified
+```
+prisma/schema.prisma (modified - added Hashtag + VideoHashtag models)
+src/app/api/videos/route.ts (modified - added hashtag sync after video creation)
+src/components/views/video-detail-view.tsx (modified - replaced tag badges with HashtagTag)
+src/components/views/explore-view.tsx (modified - added trending sidebar)
+src/app/page.tsx (modified - added hashtag-feed view, event listener, state)
+src/components/poll-analytics.tsx (modified - fixed pre-existing lint error)
+```

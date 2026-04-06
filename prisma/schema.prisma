@@ -81,11 +81,35 @@ model Video {
   invitations     Invitation[]
   circleShares    CircleVideo[]
   notifications   Notification[]  @relation("NotificationVideo")
+  videoHashtags   VideoHashtag[]
 
   // Self-referential for response clips
   parentVideoId String?
   parentVideo   Video?    @relation("VideoResponses", fields: [parentVideoId], references: [id])
   responses     Video[]   @relation("VideoResponses")
+}
+
+// ─── Hashtag Model ──────────────────────────────────────────────────
+model Hashtag {
+  id        String   @id @default(cuid())
+  tag       String   @unique // lowercase tag without #
+  useCount  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  videoHashtags VideoHashtag[]
+}
+
+// ─── VideoHashtag Join Model ─────────────────────────────────────────
+model VideoHashtag {
+  id        String   @id @default(cuid())
+  videoId   String
+  hashtagId String
+  createdAt DateTime @default(now())
+
+  video   Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  hashtag Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, hashtagId])
 }
 
 // ─── Poll Model ─────────────────────────────────────────────────────
