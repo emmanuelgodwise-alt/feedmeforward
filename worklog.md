@@ -2968,3 +2968,36 @@ src/components/views/explore-view.tsx (modified - added trending sidebar)
 src/app/page.tsx (modified - added hashtag-feed view, event listener, state)
 src/components/poll-analytics.tsx (modified - fixed pre-existing lint error)
 ```
+---
+## Task ID: prompt-2 - main-agent (Text Chat, Voice Chat, and Video Calls)
+### Work Task
+Implement conversation-based messaging system, WebRTC voice/video calls with DB signaling, and full UI integration for the FeedMeForward platform.
+
+### Work Summary
+
+#### 1. Prisma Schema
+- Replaced old Message model (senderId/receiverId) with conversation-based Message model (conversationId/senderId/type/content/mediaUrl/replyToId/readBy)
+- Added 6 new models: Conversation, ConversationMember, Message (new), VoiceCall, VideoCall, CallSignal
+- Updated User relations: removed receivedMessages, added conversations, voiceCalls, videoCalls
+
+#### 2. API Routes (18 new, 3 updated)
+**Conversation routes:** POST/GET /api/conversations, GET /api/conversations/[id], POST/GET /api/conversations/[id]/messages, POST/DELETE /api/conversations/[id]/members, POST /api/conversations/[id]/read
+**Call routes:** POST voice/video start/answer/end, POST/GET signal, GET history
+**Updated legacy routes:** POST/GET /api/messages, GET/DELETE /api/messages/[userId], GET /api/messages/unread-count
+
+#### 3. Chat Store
+- Zustand store with conversations, messages, activeCall, incomingCall
+- Actions for CRUD, calls, WebRTC signaling, optimistic updates
+
+#### 4. UI Components (6 new)
+- ConversationList, ChatView, MessageBubble, NewConversationDialog, VoiceCallUI, VideoCallUI
+- MessagesView completely rewritten with conversation system + call integration
+
+#### Files Created: 20 new files
+#### Files Modified: 5 files
+#### Total new API routes: 18
+
+#### Quality Checks
+- `npm run lint` passes with zero errors and zero warnings
+- Dev server compiles successfully
+- TypeScript strict typing throughout

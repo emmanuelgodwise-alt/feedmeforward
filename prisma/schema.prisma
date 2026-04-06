@@ -48,8 +48,10 @@ model User {
   segments          AudienceSegment[] @relation("UserAudienceSegments")
   notifications     Notification[]  @relation("UserNotifications")
   sentNotifications Notification[]  @relation("NotificationSender")
+  conversations     ConversationMember[]
   sentMessages      Message[]       @relation("SentMessages")
-  receivedMessages  Message[]       @relation("ReceivedMessages")
+  voiceCalls        VoiceCall[]
+  videoCalls        VideoCall[]
   blockedUsers      BlockedUser[]   @relation("BlockedUsers")
   blockedByUsers    BlockedUser[]   @relation("BlockedByUsers")
 }
@@ -347,20 +349,108 @@ model Notification {
   @@index([userId, isRead])
 }
 
-// ─── Message Model (Direct Messages) ──────────────────────────────
+// ─── Conversation Model ──────────────────────────────────────
+model Conversation {
+  id             String    @id @default(cuid())
+  type           String    @default("direct") // "direct" | "group"
+  name           String?
+  avatarUrl      String?
+  lastMessage    String?
+  lastActivityAt DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  members    ConversationMember[]
+  messages   Message[]
+  voiceCalls VoiceCall[]
+  videoCalls VideoCall[]
+
+  @@index([lastActivityAt])
+}
+
+// ─── Conversation Member Model ──────────────────────────────────
+model ConversationMember {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  role           String   @default("member") // "admin" | "member"
+  joinedAt       DateTime @default(now())
+  lastReadAt     DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+// ─── Message Model ──────────────────────────────────────────────
 model Message {
-  id          String   @id @default(cuid())
-  senderId    String
-  receiverId  String
-  content     String
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  type           String   @default("text") // "text" | "image" | "video" | "voice" | "file" | "system"
+  content        String?
+  mediaUrl       String?
+  replyToId      String?
+  isRead         Boolean  @default(false)
+  readBy         String?  // JSON array of user IDs who read this
+  createdAt      DateTime @default(now())
 
-  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("SentMessages", fields: [senderId], references: [id])
+  replyTo      Message?     @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies      Message[]    @relation("MessageReplies")
 
-  @@index([senderId, receiverId])
-  @@index([receiverId, isRead])
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+// ─── Voice Call Model ───────────────────────────────────────────
+model VoiceCall {
+  id             String    @id @default(cuid())
+  conversationId String
+  callerId       String
+  status         String    @default("ringing") // "ringing" | "ongoing" | "ended" | "rejected"
+  startedAt      DateTime?
+  endedAt        DateTime?
+  duration       Int?      // Duration in seconds
+  createdAt      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  caller       User         @relation(fields: [callerId], references: [id])
+
+  @@index([conversationId])
+}
+
+// ─── Video Call Model ───────────────────────────────────────────
+model VideoCall {
+  id             String    @id @default(cuid())
+  conversationId String
+  callerId       String
+  status         String    @default("ringing") // "ringing" | "ongoing" | "ended" | "rejected"
+  startedAt      DateTime?
+  endedAt        DateTime?
+  duration       Int?      // Duration in seconds
+  createdAt      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  caller       User         @relation(fields: [callerId], references: [id])
+
+  @@index([conversationId])
+}
+
+// ─── Call Signal Model (WebRTC Signaling) ───────────────────────
+model CallSignal {
+  id         String   @id @default(cuid())
+  callId     String
+  callType   String   // "voice" | "video"
+  signalType String   // "offer" | "answer" | "ice-candidate" | "hangup"
+  senderId   String
+  content    String   // JSON string for SDP or ICE candidate
+  createdAt  DateTime @default(now())
+
+  @@index([callId, createdAt])
 }
 
 // ─── Blocked User Model ────────────────────────────────────────

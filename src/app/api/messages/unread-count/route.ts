@@ -9,12 +9,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
 
-    const unreadCount = await db.message.count({
-      where: {
-        receiverId: userId,
-        isRead: false,
-      },
+    // Get all memberships
+    const memberships = await db.conversationMember.findMany({
+      where: { userId },
+      select: { conversationId: true, lastReadAt: true },
     });
+
+    // Count unread messages across all conversations
+    let unreadCount = 0;
+    for (const membership of memberships) {
+      const count = await db.message.count({
+        where: {
+          conversationId: membership.conversationId,
+          senderId: { not: userId },
+          createdAt: { gt: membership.lastReadAt },
+        },
+      });
+      unreadCount += count;
+    }
 
     return NextResponse.json({ unreadCount });
   } catch (error) {

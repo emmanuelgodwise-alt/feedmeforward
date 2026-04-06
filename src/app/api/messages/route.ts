@@ -1,8 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
-import { createNotification } from '@/lib/notifications';
 
-// POST /api/messages — Send a message
+// POST /api/messages — Send a message (legacy: creates a direct conversation + message)
 export async function POST(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');
@@ -25,12 +24,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'content must be between 1 and 2000 characters' }, { status: 400 });
     }
 
-    // Cannot send to self
     if (receiverId === userId) {
       return NextResponse.json({ success: false, error: 'Cannot send a message to yourself' }, { status: 400 });
     }
 
-    // Verify receiver exists
     const receiver = await db.user.findUnique({
       where: { id: receiverId },
       select: { id: true },
@@ -40,29 +37,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Receiver not found' }, { status: 404 });
     }
 
+    // Find or create direct conversation between the two users
+    const existingMembers = await db.conversationMember.findMany({
+      where: {
+        userId: { in: [userId, receiverId] },
+      },
+      include: {
+        conversation: true,
+      },
+    });
+
+    // Find a direct conversation that both users are members of
+    let conversationId: string | null = null;
+    for (const member of existingMembers) {
+      if (member.conversation.type !== 'direct') continue;
+      const otherMember = existingMembers.find(
+        (m) => m.conversationId === member.conversationId && m.userId !== member.userId
+      );
+      if (otherMember) {
+        conversationId = member.conversationId;
+        break;
+      }
+    }
+
+    if (!conversationId) {
+      // Create a new direct conversation
+      const conversation = await db.conversation.create({
+        data: {
+          type: 'direct',
+        },
+      });
+      await db.conversationMember.createMany({
+        data: [
+          { conversationId: conversation.id, userId, role: 'member' },
+          { conversationId: conversation.id, userId: receiverId, role: 'member' },
+        ],
+      });
+      conversationId = conversation.id;
+    }
+
+    // Create the message
     const message = await db.message.create({
       data: {
+        conversationId,
         senderId: userId,
-        receiverId,
+        type: 'text',
         content: content.trim(),
       },
       include: {
         sender: {
           select: { id: true, username: true, displayName: true, avatarUrl: true },
         },
-        receiver: {
-          select: { id: true, username: true, displayName: true, avatarUrl: true },
-        },
       },
     });
 
-    // Create notification for receiver
-    createNotification({
-      userId: receiverId,
-      fromUserId: userId,
-      type: 'comment',
-      title: 'New Message',
-      message: content.trim().length > 100 ? content.trim().substring(0, 100) + '...' : content.trim(),
+    // Update conversation last activity
+    await db.conversation.update({
+      where: { id: conversationId },
+      data: {
+        lastMessage: content.trim(),
+        lastActivityAt: new Date(),
+      },
     });
 
     return NextResponse.json({ success: true, message }, { status: 201 });
@@ -72,7 +107,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/messages — Get conversations list
+// GET /api/messages — Get conversations list (now uses Conversation model)
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');
@@ -80,78 +115,58 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
 
-    // Get all messages where user is sender or receiver
-    const messages = await db.message.findMany({
-      where: {
-        OR: [
-          { senderId: userId },
-          { receiverId: userId },
-        ],
-      },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        senderId: true,
-        receiverId: true,
-        content: true,
-        isRead: true,
-        createdAt: true,
-        sender: {
-          select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true },
-        },
-        receiver: {
-          select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true },
+    // Get all conversations the user is a member of
+    const memberships = await db.conversationMember.findMany({
+      where: { userId },
+      include: {
+        conversation: {
+          include: {
+            members: {
+              include: {
+                user: {
+                  select: { id: true, username: true, displayName: true, avatarUrl: true, isVerified: true },
+                },
+              },
+            },
+          },
         },
       },
+      orderBy: { conversation: { lastActivityAt: 'desc' } },
     });
 
-    // Group by conversation partner and get latest message per conversation
-    const conversationMap = new Map<string, {
-      otherUser: {
-        id: string;
-        username: string;
-        displayName: string | null;
-        avatarUrl: string | null;
-        isVerified: boolean;
-      };
-      lastMessage: {
-        id: string;
-        content: string;
-        createdAt: Date;
-        senderId: string;
-        receiverId: string;
-        isRead: boolean;
-      };
-      unreadCount: number;
-    }>();
+    const conversations = await Promise.all(
+      memberships.map(async (membership) => {
+        const conv = membership.conversation;
+        const otherMembers = conv.members.filter((m) => m.userId !== userId);
+        const otherUser = otherMembers.length === 1 ? otherMembers[0].user : null;
 
-    for (const msg of messages) {
-      const partnerId = msg.senderId === userId ? msg.receiverId : msg.senderId;
-      const otherUser = msg.senderId === userId ? msg.receiver : msg.sender;
-
-      if (!conversationMap.has(partnerId)) {
-        const unreadCount = messages.filter(
-          (m) => m.senderId === partnerId && m.receiverId === userId && !m.isRead
-        ).length;
-
-        conversationMap.set(partnerId, {
-          otherUser,
-          lastMessage: {
-            id: msg.id,
-            content: msg.content,
-            createdAt: msg.createdAt,
-            senderId: msg.senderId,
-            receiverId: msg.receiverId,
-            isRead: msg.isRead,
+        // Count unread messages
+        const unreadCount = await db.message.count({
+          where: {
+            conversationId: conv.id,
+            senderId: { not: userId },
+            createdAt: { gt: membership.lastReadAt },
           },
-          unreadCount,
         });
-      }
-    }
 
-    // Sort by latest message createdAt desc
-    const conversations = Array.from(conversationMap.values()).sort(
-      (a, b) => new Date(b.lastMessage.createdAt).getTime() - new Date(a.lastMessage.createdAt).getTime()
+        return {
+          id: conv.id,
+          type: conv.type,
+          name: conv.name,
+          avatarUrl: conv.avatarUrl,
+          lastMessage: conv.lastMessage,
+          lastActivityAt: conv.lastActivityAt,
+          memberCount: conv.members.length,
+          otherUser: otherUser ? {
+            id: otherUser.id,
+            username: otherUser.username,
+            displayName: otherUser.displayName,
+            avatarUrl: otherUser.avatarUrl,
+            isVerified: otherUser.isVerified,
+          } : null,
+          unreadCount,
+        };
+      })
     );
 
     return NextResponse.json({ conversations });
