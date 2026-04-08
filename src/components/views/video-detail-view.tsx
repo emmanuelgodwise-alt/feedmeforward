@@ -65,6 +65,8 @@ import { RepostButton } from '@/components/repost-button';
 import { timeAgo, getGradient } from '@/components/video-card';
 import { AdBanner } from '@/components/ad-banner';
 import { WorthyBadge } from '@/components/worthy-badge';
+import { PreRollAd } from '@/components/pre-roll-ad';
+import { PostVoteAd } from '@/components/post-vote-ad';
 import type { Video as VideoType, VideoDetail } from '@/types';
 type Video = VideoType;
 import type { View } from '@/app/page';
@@ -105,6 +107,9 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
   const [userReactions, setUserReactions] = useState<string[]>([]);
   const [repostCount, setRepostCount] = useState(0);
   const [isReposted, setIsReposted] = useState(false);
+  const [preRollDone, setPreRollDone] = useState(true); // true = no ad / ad completed
+  const [showPostVoteAd, setShowPostVoteAd] = useState(false);
+  const [votedPollIds, setVotedPollIds] = useState<Set<string>>(new Set());
   const { updateWalletBalance } = useAuthStore();
   const { isWorthy } = useAdStore();
   const pollRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -501,12 +506,23 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
 
       <QuickNav onNavigate={(v) => onNavigate(v as View)} activeView="video-detail" />
 
+      {/* ─── PRE-ROLL AD (for worthy videos) ──────────────────────── */}
+      {!preRollDone && (
+        <PreRollAd
+          videoId={videoId}
+          onComplete={() => setPreRollDone(true)}
+          duration={5}
+          skipDelay={3}
+        />
+      )}
+
       {/* ─── LEAD CLIP — FULL WIDTH VIDEO PLAYER ─────────────────── */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: preRollDone ? 0 : 1, y: preRollDone ? 10 : 0 }}
+        animate={{ opacity: preRollDone ? 1 : 0.3, y: preRollDone ? 0 : 0 }}
         transition={{ delay: 0.05 }}
         className="mt-4"
+        style={{ pointerEvents: preRollDone ? 'auto' : 'none' }}
       >
         <div className="aspect-video rounded-xl overflow-hidden bg-black/5 dark:bg-black/20 relative">
           {embedUrl && !embedError ? (
@@ -1029,6 +1045,17 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
             </div>
           ))}
         </motion.div>
+      )}
+
+      {/* ─── POST-VOTE AD (after voting in a poll) ──────────────────── */}
+      {video.polls && video.polls.some((p) => p.userVoted) && (
+        <div className="mt-6">
+          <PostVoteAd
+            videoId={videoId}
+            show={true}
+            onDismiss={() => setShowPostVoteAd(false)}
+          />
+        </div>
       )}
 
       {/* ─── COMMENTS (SECONDARY, COLLAPSIBLE) ────────────────────── */}

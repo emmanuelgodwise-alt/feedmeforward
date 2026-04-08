@@ -34,6 +34,9 @@ export async function POST(
     }
 
     // For uploaded local videos, read the file and transcribe
+    const body = await request.json().catch(() => ({}));
+    const language = typeof body?.language === 'string' && body.language.length <= 10 ? body.language : undefined;
+
     if (video.videoUrl.startsWith('/uploads/')) {
       const filepath = join(process.cwd(), 'public', video.videoUrl);
 
@@ -91,9 +94,9 @@ export async function POST(
       }
 
       const zai = await ZAI.create();
-      const response = await zai.audio.asr.create({
-        file_base64: base64Audio,
-      });
+      const asrParams: Record<string, unknown> = { file_base64: base64Audio };
+      if (language) asrParams.language = language;
+      const response = await zai.audio.asr.create(asrParams);
 
       const transcription = response.text || '';
 

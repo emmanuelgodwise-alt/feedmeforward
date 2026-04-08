@@ -12,7 +12,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, Copy, Check, Loader2, Mic, AlertCircle, XCircle } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { FileText, Copy, Check, Loader2, Mic, AlertCircle, XCircle, Globe, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface TranscribeDialogProps {
@@ -23,6 +29,20 @@ interface TranscribeDialogProps {
 }
 
 type LoadingStage = 'extracting' | 'transcribing' | 'processing';
+
+const LANGUAGES = [
+  { code: 'en', label: 'English', flag: '🇬🇧' },
+  { code: 'fr', label: 'French', flag: '🇫🇷' },
+  { code: 'es', label: 'Spanish', flag: '🇪🇸' },
+  { code: 'hi', label: 'Hindi', flag: '🇮🇳' },
+  { code: 'ar', label: 'Arabic', flag: '🇸🇦' },
+  { code: 'zh', label: 'Chinese', flag: '🇨🇳' },
+  { code: 'de', label: 'German', flag: '🇩🇪' },
+  { code: 'pt', label: 'Portuguese', flag: '🇧🇷' },
+  { code: 'ja', label: 'Japanese', flag: '🇯🇵' },
+  { code: 'ko', label: 'Korean', flag: '🇰🇷' },
+  { code: 'auto', label: 'Auto-detect', flag: '🔍' },
+] as const;
 
 const LOADING_MESSAGES: Record<LoadingStage, { title: string; description: string }> = {
   extracting: {
@@ -51,6 +71,8 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
   const [error, setError] = useState<string | null>(null);
   const [loadingStage, setLoadingStage] = useState<LoadingStage>('extracting');
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -110,6 +132,8 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
     setElapsedTime(0);
   };
 
+  const currentLanguage = LANGUAGES.find((l) => l.code === selectedLanguage) || LANGUAGES[0];
+
   const handleCancel = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -163,6 +187,7 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: abortController.signal,
+        body: JSON.stringify({ language: selectedLanguage === 'auto' ? undefined : selectedLanguage }),
       });
 
       clearTimeout(stageTimeout1);
@@ -216,6 +241,12 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
     }
   };
 
+  const handleRefreshTranscription = () => {
+    resetState();
+    // Re-trigger immediately
+    setTimeout(() => handleTranscribe(), 100);
+  };
+
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       // Cancel any in-progress request when closing
@@ -259,9 +290,44 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
               <p className="text-sm text-muted-foreground max-w-sm mb-1">
                 &ldquo;{videoTitle}&rdquo;
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mb-6">
                 This will analyze the audio in the video and convert speech to text using AI.
               </p>
+
+              {/* Language selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Language:</span>
+                <DropdownMenu open={languageMenuOpen} onOpenChange={setLanguageMenuOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 text-sm"
+                    >
+                      <Globe className="w-3.5 h-3.5" />
+                      {currentLanguage.flag} {currentLanguage.label}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" className="w-48">
+                    {LANGUAGES.map((lang) => (
+                      <DropdownMenuItem
+                        key={lang.code}
+                        onSelect={() => {
+                          setSelectedLanguage(lang.code);
+                          setLanguageMenuOpen(false);
+                        }}
+                        className={`gap-2 cursor-pointer ${selectedLanguage === lang.code ? 'bg-orange-50 dark:bg-orange-950/30' : ''}`}
+                      >
+                        <span>{lang.flag}</span>
+                        <span className="flex-1">{lang.label}</span>
+                        {selectedLanguage === lang.code && (
+                          <Check className="w-3 h-3 text-orange-500" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           )}
 
@@ -395,6 +461,18 @@ export function TranscribeDialog({ open, onOpenChange, videoId, videoTitle }: Tr
             >
               <Mic className="w-4 h-4" />
               Start Transcription
+            </Button>
+          )}
+
+          {transcription && !loading && (
+            <Button
+              onClick={handleRefreshTranscription}
+              variant="outline"
+              className="w-full sm:w-auto gap-2"
+              title="Re-transcribe with different language"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Retry
             </Button>
           )}
 
