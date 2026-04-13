@@ -251,7 +251,7 @@ function LandingPage({ onNavigate }: { onNavigate: (view: View) => void }) {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-orange-500/25 flex items-center justify-center">
+          <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 shadow-lg shadow-slate-900/30 flex items-center justify-center">
             <img src="/logo.svg" alt="FeedMeForward Logo" className="w-16 h-16 md:w-24 md:h-24 object-contain" />
           </div>
           <motion.div
@@ -502,7 +502,7 @@ function SignUpForm({ onNavigate }: { onNavigate: (view: View) => void }) {
             </Button>
           </div>
           <motion.div
-            className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center mx-auto mb-4 shadow-md shadow-orange-500/20"
+            className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center mx-auto mb-4 shadow-md shadow-slate-900/20"
             whileHover={{ rotate: 5, scale: 1.05 }}
           >
             <img src="/logo.svg" alt="Logo" className="w-8 h-8 object-contain" />
@@ -737,7 +737,7 @@ function LoginForm({ onNavigate }: { onNavigate: (view: View) => void }) {
             </Button>
           </div>
           <motion.div
-            className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center mx-auto mb-4 shadow-md shadow-orange-500/20"
+            className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center mx-auto mb-4 shadow-md shadow-slate-900/20"
             whileHover={{ rotate: 5, scale: 1.05 }}
           >
             <img src="/logo.svg" alt="Logo" className="w-8 h-8 object-contain" />
@@ -899,7 +899,7 @@ function Dashboard({ onNavigate, setProfileUserId }: { onNavigate: (view: string
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
       >
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-md shadow-orange-500/20">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center shadow-md shadow-slate-900/20">
             <img src="/logo.svg" alt="Logo" className="w-7 h-7 object-contain" />
           </div>
           <div>
