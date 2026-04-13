@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   keywords: ["FeedMeForward", "video polling", "social media", "polls", "community", "engagement"],
   authors: [{ name: "FeedMeForward Team" }],
   icons: {
-    icon: "/logo.svg",
+    icon: "/fmf-logo.svg",
   },
   openGraph: {
     title: "FeedMeForward",
