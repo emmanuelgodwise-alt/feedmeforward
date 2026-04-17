@@ -26,7 +26,6 @@ import {
 interface HamburgerMenuProps {
   onNavigate: (view: string) => void;
   activeView?: string;
-  /** Only show the hamburger when authenticated */
   isAuthenticated?: boolean;
 }
 
@@ -34,67 +33,47 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   view: string;
-  theme: string; // for subtle color grouping
+  /** Individual bright icon color — Tailwind text class */
+  iconColor: string;
+  /** Individual bright icon bg — Tailwind bg class */
+  iconBg: string;
+  /** Active dot color */
+  dotColor: string;
+  /** Hover bg for the button */
+  hoverBg: string;
 }
 
-// Features organized by purpose into 4 rows
+// Each feature has its own bright, vivid color
 const ROWS: NavItem[][] = [
-  // Row 1: Engage (the 3 tiers)
+  // Row 1: Engage
   [
-    { icon: Video, label: 'Video Polls', view: 'explore', theme: 'orange' },
-    { icon: Rss, label: 'Feed', view: 'feed', theme: 'orange' },
-    { icon: Vote, label: 'Plebiscite', view: 'plebiscite', theme: 'orange' },
-    { icon: FileSignature, label: 'Petition', view: 'petition', theme: 'orange' },
+    { icon: Video, label: 'Video Polls', view: 'explore', iconColor: 'text-red-500', iconBg: 'bg-red-100 dark:bg-red-950/60', dotColor: 'bg-red-500', hoverBg: 'hover:bg-red-50 dark:hover:bg-red-950/20' },
+    { icon: Rss, label: 'Feed', view: 'feed', iconColor: 'text-orange-500', iconBg: 'bg-orange-100 dark:bg-orange-950/60', dotColor: 'bg-orange-500', hoverBg: 'hover:bg-orange-50 dark:hover:bg-orange-950/20' },
+    { icon: Vote, label: 'Plebiscite', view: 'plebiscite', iconColor: 'text-blue-600', iconBg: 'bg-blue-100 dark:bg-blue-950/60', dotColor: 'bg-blue-500', hoverBg: 'hover:bg-blue-50 dark:hover:bg-blue-950/20' },
+    { icon: FileSignature, label: 'Petition', view: 'petition', iconColor: 'text-pink-500', iconBg: 'bg-pink-100 dark:bg-pink-950/60', dotColor: 'bg-pink-500', hoverBg: 'hover:bg-pink-50 dark:hover:bg-pink-950/20' },
   ],
   // Row 2: Create & Connect
   [
-    { icon: Plus, label: 'Create', view: 'create-lead', theme: 'blue' },
-    { icon: MessageSquare, label: 'Messages', view: 'messages', theme: 'blue' },
-    { icon: Bell, label: 'Alerts', view: 'notifications', theme: 'blue' },
-    { icon: Circle, label: 'Communities', view: 'circles', theme: 'blue' },
+    { icon: Plus, label: 'Create', view: 'create-lead', iconColor: 'text-green-500', iconBg: 'bg-green-100 dark:bg-green-950/60', dotColor: 'bg-green-500', hoverBg: 'hover:bg-green-50 dark:hover:bg-green-950/20' },
+    { icon: MessageSquare, label: 'Messages', view: 'messages', iconColor: 'text-sky-500', iconBg: 'bg-sky-100 dark:bg-sky-950/60', dotColor: 'bg-sky-500', hoverBg: 'hover:bg-sky-50 dark:hover:bg-sky-950/20' },
+    { icon: Bell, label: 'Alerts', view: 'notifications', iconColor: 'text-amber-500', iconBg: 'bg-amber-100 dark:bg-amber-950/60', dotColor: 'bg-amber-500', hoverBg: 'hover:bg-amber-50 dark:hover:bg-amber-950/20' },
+    { icon: Circle, label: 'Communities', view: 'circles', iconColor: 'text-teal-500', iconBg: 'bg-teal-100 dark:bg-teal-950/60', dotColor: 'bg-teal-500', hoverBg: 'hover:bg-teal-50 dark:hover:bg-teal-950/20' },
   ],
   // Row 3: Earn & Manage
   [
-    { icon: Users, label: 'Ranks', view: 'leaderboard', theme: 'emerald' },
-    { icon: TrendingUp, label: 'Rewards', view: 'rewards', theme: 'emerald' },
-    { icon: Wallet, label: 'Wallet', view: 'wallet', theme: 'emerald' },
-    { icon: LayoutDashboard, label: 'Dashboard', view: 'dashboard', theme: 'emerald' },
+    { icon: Users, label: 'Ranks', view: 'leaderboard', iconColor: 'text-yellow-500', iconBg: 'bg-yellow-100 dark:bg-yellow-950/60', dotColor: 'bg-yellow-500', hoverBg: 'hover:bg-yellow-50 dark:hover:bg-yellow-950/20' },
+    { icon: TrendingUp, label: 'Rewards', view: 'rewards', iconColor: 'text-fuchsia-500', iconBg: 'bg-fuchsia-100 dark:bg-fuchsia-950/60', dotColor: 'bg-fuchsia-500', hoverBg: 'hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/20' },
+    { icon: Wallet, label: 'Wallet', view: 'wallet', iconColor: 'text-lime-600', iconBg: 'bg-lime-100 dark:bg-lime-950/60', dotColor: 'bg-lime-500', hoverBg: 'hover:bg-lime-50 dark:hover:bg-lime-950/20' },
+    { icon: LayoutDashboard, label: 'Dashboard', view: 'dashboard', iconColor: 'text-indigo-500', iconBg: 'bg-indigo-100 dark:bg-indigo-950/60', dotColor: 'bg-indigo-500', hoverBg: 'hover:bg-indigo-50 dark:hover:bg-indigo-950/20' },
   ],
   // Row 4: Advanced
   [
-    { icon: BarChart3, label: 'Insights', view: 'audience', theme: 'violet' },
-    { icon: Target, label: 'Segments', view: 'segments', theme: 'violet' },
-    { icon: ShieldCheck, label: 'Analytics Pro', view: 'analytics-pro', theme: 'violet' },
-    { icon: Contact, label: 'Import Friends', view: 'import-friends', theme: 'violet' },
+    { icon: BarChart3, label: 'Insights', view: 'audience', iconColor: 'text-cyan-500', iconBg: 'bg-cyan-100 dark:bg-cyan-950/60', dotColor: 'bg-cyan-500', hoverBg: 'hover:bg-cyan-50 dark:hover:bg-cyan-950/20' },
+    { icon: Target, label: 'Segments', view: 'segments', iconColor: 'text-rose-500', iconBg: 'bg-rose-100 dark:bg-rose-950/60', dotColor: 'bg-rose-500', hoverBg: 'hover:bg-rose-50 dark:hover:bg-rose-950/20' },
+    { icon: ShieldCheck, label: 'Analytics Pro', view: 'analytics-pro', iconColor: 'text-purple-500', iconBg: 'bg-purple-100 dark:bg-purple-950/60', dotColor: 'bg-purple-500', hoverBg: 'hover:bg-purple-50 dark:hover:bg-purple-950/20' },
+    { icon: Contact, label: 'Import Friends', view: 'import-friends', iconColor: 'text-blue-400', iconBg: 'bg-blue-100 dark:bg-blue-950/60', dotColor: 'bg-blue-400', hoverBg: 'hover:bg-blue-50 dark:hover:bg-blue-950/20' },
   ],
 ];
-
-const THEME_STYLES: Record<string, { hover: string; activeBg: string; activeText: string; dot: string }> = {
-  orange: {
-    hover: 'hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-600 dark:hover:text-orange-400',
-    activeBg: 'bg-orange-100 dark:bg-orange-950/50',
-    activeText: 'text-orange-700 dark:text-orange-300',
-    dot: 'bg-orange-400',
-  },
-  blue: {
-    hover: 'hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-600 dark:hover:text-blue-400',
-    activeBg: 'bg-blue-100 dark:bg-blue-950/50',
-    activeText: 'text-blue-700 dark:text-blue-300',
-    dot: 'bg-blue-400',
-  },
-  emerald: {
-    hover: 'hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400',
-    activeBg: 'bg-emerald-100 dark:bg-emerald-950/50',
-    activeText: 'text-emerald-700 dark:text-emerald-300',
-    dot: 'bg-emerald-400',
-  },
-  violet: {
-    hover: 'hover:bg-violet-50 dark:hover:bg-violet-950/30 hover:text-violet-600 dark:hover:text-violet-400',
-    activeBg: 'bg-violet-100 dark:bg-violet-950/50',
-    activeText: 'text-violet-700 dark:text-violet-300',
-    dot: 'bg-violet-400',
-  },
-};
 
 const ROW_LABELS = ['Engage', 'Create & Connect', 'Earn & Manage', 'Advanced'];
 
@@ -111,7 +90,6 @@ export function HamburgerMenu({ onNavigate, activeView, isAuthenticated = true }
     }
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      // Prevent body scroll when menu open on mobile
       document.body.style.overflow = 'hidden';
     }
     return () => {
@@ -199,15 +177,15 @@ export function HamburgerMenu({ onNavigate, activeView, isAuthenticated = true }
               className="absolute right-0 top-14 mt-1 w-[min(92vw,520px)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-200 dark:border-slate-700/50 flex flex-col overflow-hidden"
               style={{ maxHeight: 'calc(100vh - 6rem)' }}
             >
-              {/* Panel Header */}
+              {/* Panel Header — sticky */}
               <div className="shrink-0 px-4 pt-4 pb-2 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Navigate
                 </h3>
               </div>
 
-              {/* Feature Rows — scrollable */}
-              <div className="overflow-y-auto overscroll-contain p-4 space-y-4">
+              {/* Feature Rows — scrollable with extra bottom padding */}
+              <div className="overflow-y-auto overscroll-contain px-4 pt-4 pb-8 space-y-5">
                 {ROWS.map((row, rowIdx) => (
                   <div key={rowIdx}>
                     {/* Row label */}
@@ -218,7 +196,6 @@ export function HamburgerMenu({ onNavigate, activeView, isAuthenticated = true }
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {row.map((item) => {
                         const isActive = activeView === item.view;
-                        const theme = THEME_STYLES[item.theme];
                         const Icon = item.icon;
 
                         return (
@@ -230,22 +207,27 @@ export function HamburgerMenu({ onNavigate, activeView, isAuthenticated = true }
                             className={`
                               relative flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl transition-all duration-150 text-center
                               ${isActive
-                                ? `${theme.activeBg} ${theme.activeText} ring-1 ring-current/20`
-                                : `text-slate-600 dark:text-slate-400 ${theme.hover}`
+                                ? `${item.iconBg} ring-1 ring-current/20`
+                                : `${item.hoverBg} text-slate-600 dark:text-slate-400`
                               }
                             `}
                           >
+                            {/* Icon in its own bright colored circle */}
                             <div className="relative">
-                              <Icon className="w-5 h-5" />
+                              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isActive ? item.iconBg : 'bg-slate-100 dark:bg-slate-800'}`}>
+                                <Icon className={`w-5 h-5 ${item.iconColor}`} />
+                              </div>
                               {isActive && (
                                 <motion.span
-                                  layoutId="active-dot"
-                                  className={`absolute -top-1.5 -right-1.5 w-2 h-2 rounded-full ${theme.dot}`}
+                                  layoutId={`active-dot-${item.view}`}
+                                  className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ${item.dotColor} ring-2 ring-white dark:ring-slate-900`}
                                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                                 />
                               )}
                             </div>
-                            <span className="text-[11px] font-medium leading-tight">{item.label}</span>
+                            <span className={`text-[11px] font-medium leading-tight ${isActive ? item.iconColor : ''}`}>
+                              {item.label}
+                            </span>
                           </motion.button>
                         );
                       })}
