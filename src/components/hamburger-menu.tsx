@@ -196,17 +196,18 @@ export function HamburgerMenu({ onNavigate, activeView, isAuthenticated = true }
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="absolute right-0 top-14 mt-1 w-[min(92vw,520px)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-200 dark:border-slate-700/50 overflow-hidden"
+              className="absolute right-0 top-14 mt-1 w-[min(92vw,520px)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-200 dark:border-slate-700/50 flex flex-col overflow-hidden"
+              style={{ maxHeight: 'calc(100vh - 6rem)' }}
             >
               {/* Panel Header */}
-              <div className="px-4 pt-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="shrink-0 px-4 pt-4 pb-2 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Navigate
                 </h3>
               </div>
 
-              {/* Feature Rows */}
-              <div className="p-4 space-y-4">
+              {/* Feature Rows — scrollable */}
+              <div className="overflow-y-auto overscroll-contain p-4 space-y-4">
                 {ROWS.map((row, rowIdx) => (
                   <div key={rowIdx}>
                     {/* Row label */}
