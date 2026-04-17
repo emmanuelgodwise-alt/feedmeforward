@@ -17,6 +17,8 @@ import {
   Contact,
   Target,
   ShieldCheck,
+  Vote,
+  FileSignature,
 } from 'lucide-react';
 
 interface QuickNavProps {
@@ -40,6 +42,8 @@ const NAV_ITEMS = [
   { icon: BarChart3, label: 'Insights', view: 'audience' },
   { icon: Target, label: 'Segments', view: 'segments' },
   { icon: ShieldCheck, label: 'Analytics Pro', view: 'analytics-pro' },
+  { icon: Vote, label: 'Plebiscite', view: 'plebiscite' },
+  { icon: FileSignature, label: 'Petition', view: 'petition' },
 ];
 
 export function QuickNav({ onNavigate, activeView }: QuickNavProps) {

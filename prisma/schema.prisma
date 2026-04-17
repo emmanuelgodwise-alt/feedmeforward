@@ -73,6 +73,10 @@ model User {
   reactions         Reaction[]      @relation("UserReactions")
   reposts           Repost[]        @relation("UserReposts")
   stories           Story[]         @relation("UserStories")
+  plebiscites       Plebiscite[]    @relation("UserPlebiscites")
+  plebisciteVotes   PlebisciteVote[] @relation("UserPlebisciteVotes")
+  petitions         Petition[]      @relation("UserPetitions")
+  petitionSignatures PetitionSignature[] @relation("UserPetitionSignatures")
 }
 
 // ─── Video Model ────────────────────────────────────────────────────
@@ -792,4 +796,101 @@ model AdRevenueShare {
   @@index([videoId])
   @@index([recipientId, createdAt])
   @@index([campaignId])
+}
+
+// ─── Plebiscite Model (Binary Decision Poll — A vs B) ──────────────────
+model Plebiscite {
+  id                String    @id @default(cuid())
+  creatorId         String
+  title             String
+  description       String?   // the question / context
+  // Option A
+  optionALabel      String               // e.g. "Professor A"
+  optionAVideoId    String?              // lead clip for option A
+  optionAVideoUrl   String?
+  optionAThumbnail  String?
+  // Option B
+  optionBLabel      String               // e.g. "Mr. B"
+  optionBVideoId    String?              // lead clip for option B
+  optionBVideoUrl   String?
+  optionBThumbnail  String?
+  // Voting
+  optionAVotes      Int       @default(0)
+  optionBVotes      Int       @default(0)
+  totalVotes        Int       @default(0)
+  verifiedOnly      Boolean   @default(false)    // only verified users can vote
+  targetingCriteria String?   // JSON: {age, location, gender, language, minScore}
+  // Lifecycle
+  status            String    @default("active")  // "draft", "active", "closed", "cancelled"
+  opensAt           DateTime  @default(now())
+  closesAt          DateTime?
+  winnerLabel       String?                      // set when closed: "A" or "B"
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  creator User             @relation("UserPlebiscites", fields: [creatorId], references: [id], onDelete: Cascade)
+  votes   PlebisciteVote[]
+
+  @@index([status, opensAt])
+  @@index([creatorId])
+}
+
+// ─── PlebisciteVote Model ──────────────────────────────────────────────
+model PlebisciteVote {
+  id           String   @id @default(cuid())
+  plebisciteId String
+  userId       String
+  choice       String   // "A" or "B"
+  createdAt    DateTime @default(now())
+
+  plebiscite Plebiscite @relation(fields: [plebisciteId], references: [id])
+  user       User       @relation("UserPlebisciteVotes", fields: [userId], references: [id])
+
+  @@unique([plebisciteId, userId])  // one vote per user per plebiscite
+}
+
+// ─── Petition Model ────────────────────────────────────────────────────
+model Petition {
+  id                String    @id @default(cuid())
+  creatorId         String
+  title             String
+  description       String    // what the petition is demanding
+  videoUrl          String?   // lead clip explaining the cause
+  videoId           String?
+  thumbnailUrl      String?
+  targetName        String?   // who the petition is directed to (e.g. "The Dean")
+  targetTitle       String?   // role/title of target (e.g. "Dean of Engineering")
+  goalSignatures    Int?      // optional signature goal
+  currentSignatures Int       @default(0)
+  status            String    @default("active")  // "draft", "active", "delivered", "responded", "resolved", "cancelled"
+  opensAt           DateTime  @default(now())
+  closesAt          DateTime?
+  deliveredAt       DateTime?
+  responseText      String?   // target's response
+  targetingCriteria String?   // JSON: {age, location, gender, language, minScore}
+  tags              String?   // JSON: ["education", "infrastructure"]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  creator    User                @relation("UserPetitions", fields: [creatorId], references: [id], onDelete: Cascade)
+  signatures PetitionSignature[]
+
+  @@index([status, opensAt])
+  @@index([creatorId])
+}
+
+// ─── PetitionSignature Model ───────────────────────────────────────────
+model PetitionSignature {
+  id          String   @id @default(cuid())
+  petitionId  String
+  userId      String
+  videoUrl    String?  // optional video clip explaining WHY they signed
+  videoId     String?
+  comment     String?  // optional text reason
+  createdAt   DateTime @default(now())
+
+  petition Petition @relation(fields: [petitionId], references: [id])
+  user     User     @relation("UserPetitionSignatures", fields: [userId], references: [id])
+
+  @@unique([petitionId, userId])  // one signature per user per petition
 }

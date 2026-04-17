@@ -4436,3 +4436,30 @@ Stage Summary:
 - All 4 logo display locations updated with complementary dark backgrounds
 - File size reduced from 42KB to 435 bytes
 - Preview URL: https://preview-chat-48456d7d-3f89-493d-944c-2f51255dd204.space.z.ai/
+
+---
+Task ID: 2
+Agent: Main Agent + Subagents
+Task: Implement Plebiscite and Petition features for FeedMeForward
+
+Work Log:
+- Added 4 Prisma models: Plebiscite, PlebisciteVote, Petition, PetitionSignature
+- Added User relations for all 4 new models
+- Ran prisma db push — schema synced, client regenerated
+- Created 4 Plebiscite API routes: CRUD (GET/POST /api/plebiscites), detail (GET/DELETE /api/plebiscites/[id]), vote (POST /api/plebiscites/[id]/vote), close (POST /api/plebiscites/[id]/close)
+- Created 6 Petition API routes: CRUD (GET/POST /api/petitions), detail (GET/DELETE /api/petitions/[id]), sign (POST /api/petitions/[id]/sign), deliver (POST /api/petitions/[id]/deliver), respond (POST /api/petitions/[id]/respond), resolve (POST /api/petitions/[id]/resolve)
+- Created plebiscite-store.ts with optimistic vote updates
+- Created petition-store.ts with optimistic signature updates
+- Built plebiscite-view.tsx (~1631 lines): 4 tabs (Browse, Vote, Create, My Plebiscites) with dramatic binary voting UI
+- Built petition-view.tsx (~750+ lines): 4 tabs (Browse, View, Create, My Petitions) with progress bars, status timeline, video signatures
+- Updated page.tsx: View type, imports, AnimatePresence render blocks for both new views
+- Updated quick-nav.tsx: Added Vote icon (Plebiscite) and FileSignature icon (Petition)
+- Fixed FileSignatures → FileSignature icon import error
+- Lint: 0 errors, server: 200 OK
+
+Stage Summary:
+- Full Plebiscite feature: binary A vs B voting, video lead clips, verified-only option, timed voting, close & declare winner
+- Full Petition feature: video lead clips, signature tracking with progress, video signatures, status lifecycle (active→delivered→responded→resolved)
+- Both integrated into quick-nav and page.tsx navigation
+- All API routes follow existing codebase patterns (auth, transactions, error handling)
+- Both stores have optimistic updates for vote/sign actions

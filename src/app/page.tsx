@@ -46,6 +46,8 @@ import { BroadcasterView } from '@/components/views/broadcaster-view';
 import { CreatorDashboardView } from '@/components/views/creator-dashboard-view';
 import { AnalyticsProView } from '@/components/views/analytics-pro-view';
 import { AdvertiserDashboardView } from '@/components/views/advertiser-dashboard-view';
+import { PlebisciteView } from '@/components/views/plebiscite-view';
+import { PetitionView } from '@/components/views/petition-view';
 import { TrendingVideos } from '@/components/trending-videos';
 import { GlobalSearch } from '@/components/global-search';
 import { SkipToContent } from '@/components/skip-to-content';
@@ -98,7 +100,7 @@ import {
 } from 'lucide-react';
 import { FollowButton } from '@/components/follow-button';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'import-friends' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed' | 'live' | 'live-session' | 'broadcaster' | 'creator-dashboard' | 'analytics-pro' | 'advertiser-dashboard';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'import-friends' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed' | 'live' | 'live-session' | 'broadcaster' | 'creator-dashboard' | 'analytics-pro' | 'advertiser-dashboard' | 'plebiscite' | 'petition';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -2086,6 +2088,12 @@ export default function Home() {
         )}
         {view === 'advertiser-dashboard' && (
           <AdvertiserDashboardView key="advertiser-dashboard" onNavigate={navigate} />
+        )}
+        {view === 'plebiscite' && (
+          <PlebisciteView key="plebiscite" onNavigate={navigate} />
+        )}
+        {view === 'petition' && (
+          <PetitionView key="petition" onNavigate={navigate} />
         )}
       </AnimatePresence>
     </main>
