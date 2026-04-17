@@ -29,7 +29,6 @@ import {
 import type { LeaderboardEntry } from '@/types';
 
 import { useAuthStore } from '@/stores/auth-store';
-import { QuickNav } from '@/components/quick-nav';
 
 interface LeaderboardViewProps {
   onNavigate: (view: string) => void;
@@ -276,7 +275,6 @@ export function LeaderboardView({ onNavigate, setProfileUserId }: LeaderboardVie
         </div>
       </motion.div>
 
-      <QuickNav onNavigate={onNavigate} activeView="leaderboard" />
 
       {/* Category Tabs */}
       <motion.div

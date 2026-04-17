@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth-store';
-import { QuickNav } from '@/components/quick-nav';
 import {
   Trophy,
   TrendingUp,
@@ -226,7 +225,6 @@ export function RewardsView({ onNavigate }: ViewProps) {
         </Button>
       </motion.div>
 
-      <QuickNav onNavigate={onNavigate} activeView="rewards" />
 
       {/* Score Overview Card */}
       <motion.div variants={staggerItem} className="mb-8">

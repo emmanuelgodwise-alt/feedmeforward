@@ -15,7 +15,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useChatStore, type ConversationItem, type ConversationDetail } from '@/stores/chat-store';
 import { useRealtimeStore } from '@/stores/realtime-store';
 import { useRealtime } from '@/hooks/use-realtime';
-import { QuickNav } from '@/components/quick-nav';
 import { ConversationList } from '@/components/chat/conversation-list';
 import { ChatView } from '@/components/chat/chat-view';
 import { NewConversationDialog } from '@/components/chat/new-conversation-dialog';
@@ -207,7 +206,6 @@ export function MessagesView({ onNavigate, setProfileUserId }: MessagesViewProps
         </Button>
       </motion.div>
 
-      <QuickNav onNavigate={(v) => onNavigate(v as View)} activeView="messages" />
 
       {/* Main Layout */}
       <div

@@ -68,7 +68,6 @@ import { SubscribeButton } from '@/components/subscribe-button';
 import { VideoCard } from '@/components/video-card';
 import { FollowButton } from '@/components/follow-button';
 import { UserBlockButton } from '@/components/user-block-button';
-import { QuickNav } from '@/components/quick-nav';
 import { useAuthStore } from '@/stores/auth-store';
 import { useFollowStore } from '@/stores/follow-store';
 import { useOnlinePresence } from '@/hooks/use-online-presence';
@@ -649,7 +648,6 @@ export function ProfileView({ onNavigate, userId }: ProfileViewProps) {
         <h1 className="text-2xl font-bold">Profile</h1>
       </motion.div>
 
-      <QuickNav onNavigate={onNavigate} activeView="profile" />
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Profile Header */}

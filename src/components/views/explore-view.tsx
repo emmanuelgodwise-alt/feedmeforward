@@ -10,7 +10,6 @@ import { useVideoStore } from '@/stores/video-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { VideoCard } from '@/components/video-card';
 import { FilterBar } from '@/components/filter-bar';
-import { QuickNav } from '@/components/quick-nav';
 import { TrendingHashtags } from '@/components/trending-hashtags';
 import { TrendingVideos } from '@/components/trending-videos';
 import { getGradient, timeAgo } from '@/components/video-card';
@@ -148,7 +147,6 @@ export function ExploreView({ onNavigate, setVideoId }: ExploreViewProps) {
       <div className="border-b mb-6" />
 
       {/* Quick Nav */}
-      <QuickNav onNavigate={onNavigate} activeView="explore" />
 
       {/* Tabs: All Videos / Targeted Polls */}
       <div className="flex gap-2 mb-4">

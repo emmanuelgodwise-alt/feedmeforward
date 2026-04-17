@@ -50,7 +50,6 @@ import { TipDialog } from '@/components/tip-dialog';
 import { TranscribeDialog } from '@/components/transcribe-dialog';
 import { ShareDialog } from '@/components/share-dialog';
 import { VideoActions } from '@/components/video-actions';
-import { QuickNav } from '@/components/quick-nav';
 import { HashtagTag } from '@/components/hashtag-tag';
 import { useVideoStore } from '@/stores/video-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -504,7 +503,6 @@ export function VideoDetailView({ onNavigate, videoId, setParentVideoId, setProf
         </div>
       </motion.div>
 
-      <QuickNav onNavigate={(v) => onNavigate(v as View)} activeView="video-detail" />
 
       {/* ─── PRE-ROLL AD (for worthy videos) ──────────────────────── */}
       {!preRollDone && (

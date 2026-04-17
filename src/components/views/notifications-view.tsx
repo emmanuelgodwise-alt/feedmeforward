@@ -22,7 +22,6 @@ import {
   Star,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
-import { QuickNav } from '@/components/quick-nav';
 import type { View } from '@/app/page';
 
 // ─── Types ─────────────────────────────────────────────────────────
@@ -476,7 +475,6 @@ export function NotificationsView({
         )}
       </motion.div>
 
-      <QuickNav onNavigate={(v) => onNavigate(v as View)} activeView="notifications" />
 
       {/* Tabs */}
       <Tabs

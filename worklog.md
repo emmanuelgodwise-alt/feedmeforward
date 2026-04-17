@@ -4463,3 +4463,24 @@ Stage Summary:
 - Both integrated into quick-nav and page.tsx navigation
 - All API routes follow existing codebase patterns (auth, transactions, error handling)
 - Both stores have optimistic updates for vote/sign actions
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Replace QuickNav bar with Hamburger Menu (☰) at top-right
+
+Work Log:
+- Created hamburger-menu.tsx component with dropdown panel showing all features in 4 organized rows
+- Added HamburgerMenu to page.tsx global layout (top-right, fixed position, only visible when authenticated)
+- Removed QuickNav import and usage from all 20 view components
+- Hamburger has: open/close animation, click-outside-close, Escape key close, backdrop on mobile
+- Features organized into 4 rows by theme: Engage, Create & Connect, Earn & Manage, Advanced
+- Each row has a color theme (orange, blue, emerald, violet) for visual grouping
+- Active view is highlighted with colored background + dot indicator
+- Lint: 0 errors, server: 200 OK
+
+Stage Summary:
+- QuickNav (17-button bar) completely replaced by single ☰ hamburger icon at top-right
+- All 16 features accessible via dropdown with 4 rows, all visible at one glance
+- Language selector untouched on the left side
+- quick-nav.tsx file retained but no longer imported anywhere

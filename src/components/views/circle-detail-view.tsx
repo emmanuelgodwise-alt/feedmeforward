@@ -31,7 +31,6 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuthStore } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
-import { QuickNav } from '@/components/quick-nav';
 import { VideoCard } from '@/components/video-card';
 import { FollowButton } from '@/components/follow-button';
 import {
@@ -893,9 +892,7 @@ export function CircleDetailView({ onNavigate, circleId, setProfileUserId, setVi
         </TabsContent>
       </Tabs>
 
-      {/* QuickNav */}
       <div className="mt-8">
-        <QuickNav onNavigate={onNavigate} activeView="circle-detail" />
       </div>
 
       {/* ─── DIALOGS ──────────────────────────────── */}

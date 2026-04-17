@@ -9,7 +9,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Users, UserPlus, Loader2, UserCheck, MapPin, UserRoundPlus } from 'lucide-react';
-import { QuickNav } from '@/components/quick-nav';
 import { FollowButton } from '@/components/follow-button';
 import { useAuthStore } from '@/stores/auth-store';
 import { useFollowStore } from '@/stores/follow-store';
@@ -260,7 +259,6 @@ export function UsersListView({
         </Button>
       </motion.div>
 
-      <QuickNav onNavigate={onNavigate} />
 
       {/* Title */}
       <motion.div

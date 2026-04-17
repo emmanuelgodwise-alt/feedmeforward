@@ -13,7 +13,6 @@ import { Loader2, Play, X, Upload, FileVideo, CheckCircle, Video, Type, ImageIco
 import { useAuthStore } from '@/stores/auth-store';
 import { useVideoStore } from '@/stores/video-store';
 import { useToast } from '@/hooks/use-toast';
-import { QuickNav } from '@/components/quick-nav';
 interface CreateResponseViewProps {
   onNavigate: (view: string) => void;
   parentVideoId: string;
@@ -234,7 +233,6 @@ export function CreateResponseView({
         </div>
       </motion.div>
 
-      <QuickNav onNavigate={onNavigate} activeView="create-response" />
 
       {/* Parent Video Info */}
       <motion.div

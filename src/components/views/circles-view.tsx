@@ -20,7 +20,6 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useAuthStore } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
-import { QuickNav } from '@/components/quick-nav';
 import {
   Users,
   Search,
@@ -591,9 +590,7 @@ export function CirclesView({ onNavigate, setCircleId }: CirclesViewProps) {
         </TabsContent>
       </Tabs>
 
-      {/* QuickNav */}
       <div className="mt-8">
-        <QuickNav onNavigate={onNavigate} activeView="circles" />
       </div>
     </motion.div>
   );

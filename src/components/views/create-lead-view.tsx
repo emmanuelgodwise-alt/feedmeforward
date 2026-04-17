@@ -21,7 +21,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useAudienceStore } from '@/stores/audience-store';
 import { useVideoStore } from '@/stores/video-store';
 import { useToast } from '@/hooks/use-toast';
-import { QuickNav } from '@/components/quick-nav';
 import { CATEGORIES } from '@/types';
 import { type SegmentCriteria, hasActiveCriteria, criteriaToBreakdown } from '@/lib/build-where-clause';
 interface CreateLeadViewProps {
@@ -430,7 +429,6 @@ export function CreateLeadView({ onNavigate }: CreateLeadViewProps) {
         </div>
       </motion.div>
 
-      <QuickNav onNavigate={onNavigate} activeView="create-lead" />
 
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">

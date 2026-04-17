@@ -25,7 +25,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useRealtimeStore } from '@/stores/realtime-store';
 import { useToast } from '@/hooks/use-toast';
 import { VideoCard } from '@/components/video-card';
-import { QuickNav } from '@/components/quick-nav';
 import { StoriesBar } from '@/components/stories-bar';
 import { StoryViewer } from '@/components/story-viewer';
 import { CreateStoryDialog } from '@/components/create-story-dialog';
@@ -507,7 +506,6 @@ export function SocialFeedView({
       </motion.div>
 
       {/* Quick Nav */}
-      <QuickNav onNavigate={onNavigate} activeView="social-feed" />
 
       {/* New content available banner */}
       {lastEventAt && lastFetchTime && lastEventAt > lastFetchTime && !isLoadingFeed && (

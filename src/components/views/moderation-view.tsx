@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/auth-store';
-import { QuickNav } from '@/components/quick-nav';
 import {
   Shield,
   AlertTriangle,
@@ -312,7 +311,6 @@ export function ModerationView({ onNavigate }: ModerationViewProps) {
         </h1>
       </motion.div>
 
-      <QuickNav onNavigate={onNavigate} activeView="moderation" />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

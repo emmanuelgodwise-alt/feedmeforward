@@ -13,7 +13,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
-import { QuickNav } from '@/components/quick-nav';
 import {
   BarChart3,
   Users,
@@ -161,7 +160,6 @@ export function AudienceInsightsView({ onNavigate }: ViewProps) {
         </Button>
       </motion.div>
 
-      <QuickNav onNavigate={onNavigate} activeView="audience" />
 
       {/* Overview Stats */}
       <motion.div variants={staggerItem} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

@@ -17,7 +17,6 @@ import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth-store';
 import { useAudienceStore } from '@/stores/audience-store';
 import { useToast } from '@/hooks/use-toast';
-import { QuickNav } from '@/components/quick-nav';
 import {
   Target,
   Plus,
@@ -341,7 +340,6 @@ export function SegmentsView({ onNavigate }: ViewProps) {
         </Button>
       </motion.div>
 
-      <QuickNav onNavigate={onNavigate} activeView="segments" />
 
       {/* Create/Edit Form */}
       {showCreateForm && (

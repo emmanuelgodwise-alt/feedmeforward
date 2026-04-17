@@ -47,7 +47,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useWalletStore } from '@/stores/wallet-store';
 import { useToast } from '@/hooks/use-toast';
 import { TipDialog } from '@/components/tip-dialog';
-import { QuickNav } from '@/components/quick-nav';
 import type { View } from '@/app/page';
 import type { TransactionItem } from '@/types';
 
@@ -269,7 +268,6 @@ export function WalletView({ onNavigate }: WalletViewProps) {
         </div>
       </motion.div>
 
-      <QuickNav onNavigate={(v) => onNavigate(v as View)} activeView="wallet" />
 
       {/* Wallet Header Card */}
       <motion.div variants={staggerItem} initial="initial" animate="animate">

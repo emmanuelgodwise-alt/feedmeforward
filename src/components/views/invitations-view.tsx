@@ -16,7 +16,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth-store';
 import { useToast } from '@/hooks/use-toast';
-import { QuickNav } from '@/components/quick-nav';
 import {
   UserPlus,
   Mail,
@@ -418,7 +417,6 @@ export function InvitationsView({ onNavigate }: ViewProps) {
         </div>
       </motion.div>
 
-      <QuickNav onNavigate={onNavigate} activeView="invitations" />
 
       {/* ─── 2. Invitation Stats Cards ───────────────────────────── */}
       <motion.div variants={staggerItem} className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

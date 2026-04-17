@@ -19,7 +19,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { QuickNav } from '@/components/quick-nav';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, LineChart, Line,
@@ -297,7 +296,6 @@ export function AnalyticsProView({ onNavigate }: ViewProps) {
         </div>
       </motion.div>
 
-      <QuickNav onNavigate={onNavigate} activeView="analytics-pro" />
 
       {/* ─── Tabs ────────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

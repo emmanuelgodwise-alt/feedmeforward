@@ -99,6 +99,7 @@ import {
   LayoutDashboard,
 } from 'lucide-react';
 import { FollowButton } from '@/components/follow-button';
+import { HamburgerMenu } from '@/components/hamburger-menu';
 
 export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'import-friends' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed' | 'live' | 'live-session' | 'broadcaster' | 'creator-dashboard' | 'analytics-pro' | 'advertiser-dashboard' | 'plebiscite' | 'petition';
 
@@ -1927,6 +1928,10 @@ export default function Home() {
     <>
     <SkipToContent />
     <main id="main-content" className="relative overflow-hidden">
+      {/* Global Hamburger Menu — top-right, visible when authenticated */}
+      {isAuthenticated && (
+        <HamburgerMenu onNavigate={navigate} activeView={view} />
+      )}
       <FloatingOrbs />
       <AnimatePresence mode="wait">
         {view === 'landing' && <LandingPage key="landing" onNavigate={navigate} />}
