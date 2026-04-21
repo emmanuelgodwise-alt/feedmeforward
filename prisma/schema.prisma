@@ -77,6 +77,8 @@ model User {
   plebisciteVotes   PlebisciteVote[] @relation("UserPlebisciteVotes")
   petitions         Petition[]      @relation("UserPetitions")
   petitionSignatures PetitionSignature[] @relation("UserPetitionSignatures")
+  paidPollListings     PaidPollListing[]    @relation("UserPaidPollListings")
+  paidPollApplications PaidPollApplication[] @relation("UserPaidPollApplications")
 }
 
 // ─── Video Model ────────────────────────────────────────────────────
@@ -893,4 +895,69 @@ model PetitionSignature {
   user     User     @relation("UserPetitionSignatures", fields: [userId], references: [id])
 
   @@unique([petitionId, userId])  // one signature per user per petition
+}
+
+// ─── Paid Poll Listing Model (Marketplace) ─────────────────────────────
+model PaidPollListing {
+  id                  String    @id @default(cuid())
+  creatorId           String
+  title               String
+  description         String     // what the poll is about
+  // Qualification criteria
+  minScore            Int?       // minimum member score to qualify
+  verifiedOnly        Boolean   @default(false)
+  minPollResponses    Int?       // minimum polls the user must have responded to
+  location            String?    // required location
+  ageRange            String?    // e.g. "18-25" or "25-40"
+  gender              String?    // "male", "female", "all"
+  interests           String?    // JSON: ["technology", "fashion"]
+  // Compensation
+  rewardPerResponse   Float      // how much each participant earns
+  totalBudget         Float      // total budget = rewardPerResponse * slots
+  slots               Int        // number of participants needed
+  filledSlots         Int        @default(0)
+  // Status & timing
+  status              String    @default("active")  // "draft", "active", "paused", "closed", "completed"
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  opensAt             DateTime  @default(now())
+  closesAt            DateTime?
+
+  creator     User                @relation("UserPaidPollListings", fields: [creatorId], references: [id], onDelete: Cascade)
+  applications PaidPollApplication[]
+
+  @@index([status, opensAt])
+  @@index([creatorId])
+  @@index([rewardPerResponse])
+}
+
+// ─── Paid Poll Application Model ───────────────────────────────────────
+model PaidPollApplication {
+  id                  String    @id @default(cuid())
+  listingId           String
+  userId              String
+  coverMessage        String?   // optional message from applicant
+  // Auto-attached credentials at time of application
+  memberScore         Int?
+  isVerified          Boolean?
+  totalPollResponses  Int?
+  totalFollowers      Int?
+  // Status
+  status              String    @default("pending")  // "pending", "accepted", "declined", "withdrawn", "completed"
+  reviewedAt          DateTime?
+  respondedAt         DateTime?  // when user actually responded to the poll
+  paidAt              DateTime?  // when user received payment
+  rewardAmount        Float?    // amount paid to user
+  // Feedback
+  ownerRating         Int?      // 1-5, rating given by poll owner
+  userRating          Int?      // 1-5, rating given by user
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  listing PaidPollListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user    User             @relation("UserPaidPollApplications", fields: [userId], references: [id])
+
+  @@unique([listingId, userId])  // one application per user per listing
+  @@index([userId, status])
+  @@index([listingId, status])
 }

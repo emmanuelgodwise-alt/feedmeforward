@@ -48,6 +48,7 @@ import { AnalyticsProView } from '@/components/views/analytics-pro-view';
 import { AdvertiserDashboardView } from '@/components/views/advertiser-dashboard-view';
 import { PlebisciteView } from '@/components/views/plebiscite-view';
 import { PetitionView } from '@/components/views/petition-view';
+import { PollsMarketplaceView } from '@/components/views/polls-marketplace-view';
 import { TrendingVideos } from '@/components/trending-videos';
 import { GlobalSearch } from '@/components/global-search';
 import { SkipToContent } from '@/components/skip-to-content';
@@ -101,7 +102,7 @@ import {
 import { FollowButton } from '@/components/follow-button';
 import { HamburgerMenu } from '@/components/hamburger-menu';
 
-export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'import-friends' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed' | 'live' | 'live-session' | 'broadcaster' | 'creator-dashboard' | 'analytics-pro' | 'advertiser-dashboard' | 'plebiscite' | 'petition';
+export type View = 'landing' | 'signup' | 'login' | 'dashboard' | 'schema' | 'explore' | 'create-lead' | 'create-response' | 'video-detail' | 'profile' | 'leaderboard' | 'wallet' | 'rewards' | 'invitations' | 'import-friends' | 'audience' | 'segments' | 'feed' | 'notifications' | 'users-list' | 'messages' | 'circles' | 'circle-detail' | 'moderation' | 'onboarding' | 'hashtag-feed' | 'live' | 'live-session' | 'broadcaster' | 'creator-dashboard' | 'analytics-pro' | 'advertiser-dashboard' | 'plebiscite' | 'petition' | 'polls-marketplace';
 
 // ─── Types for Schema API ──────────────────────────────────────────
 interface SchemaField {
@@ -2099,6 +2100,9 @@ export default function Home() {
         )}
         {view === 'petition' && (
           <PetitionView key="petition" onNavigate={navigate} />
+        )}
+        {view === 'polls-marketplace' && (
+          <PollsMarketplaceView key="polls-marketplace" onNavigate={navigate} />
         )}
       </AnimatePresence>
     </main>

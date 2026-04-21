@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Vote,
   FileSignature,
+  Banknote,
 } from 'lucide-react';
 
 interface HamburgerMenuProps {
@@ -63,6 +64,7 @@ const ROWS: NavItem[][] = [
   [
     { icon: Users, label: 'Ranks', view: 'leaderboard', iconColor: 'text-yellow-500', iconBg: 'bg-yellow-100 dark:bg-yellow-950/60', dotColor: 'bg-yellow-500', hoverBg: 'hover:bg-yellow-50 dark:hover:bg-yellow-950/20' },
     { icon: TrendingUp, label: 'Rewards', view: 'rewards', iconColor: 'text-fuchsia-500', iconBg: 'bg-fuchsia-100 dark:bg-fuchsia-950/60', dotColor: 'bg-fuchsia-500', hoverBg: 'hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/20' },
+    { icon: Banknote, label: 'Polls Market', view: 'polls-marketplace', iconColor: 'text-emerald-600', iconBg: 'bg-emerald-100 dark:bg-emerald-950/60', dotColor: 'bg-emerald-500', hoverBg: 'hover:bg-emerald-50 dark:hover:bg-emerald-950/20' },
     { icon: Wallet, label: 'Wallet', view: 'wallet', iconColor: 'text-lime-600', iconBg: 'bg-lime-100 dark:bg-lime-950/60', dotColor: 'bg-lime-500', hoverBg: 'hover:bg-lime-50 dark:hover:bg-lime-950/20' },
     { icon: LayoutDashboard, label: 'Dashboard', view: 'dashboard', iconColor: 'text-indigo-500', iconBg: 'bg-indigo-100 dark:bg-indigo-950/60', dotColor: 'bg-indigo-500', hoverBg: 'hover:bg-indigo-50 dark:hover:bg-indigo-950/20' },
   ],

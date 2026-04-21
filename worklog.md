@@ -4484,3 +4484,26 @@ Stage Summary:
 - All 16 features accessible via dropdown with 4 rows, all visible at one glance
 - Language selector untouched on the left side
 - quick-nav.tsx file retained but no longer imported anywhere
+
+---
+Task ID: 4
+Agent: Main Agent + Subagents
+Task: Implement Polls Marketplace feature
+
+Work Log:
+- Added 2 Prisma models: PaidPollListing (marketplace listings with qualification criteria, compensation, slots) + PaidPollApplication (applications with auto-attached credentials, status lifecycle)
+- Added User relations for both models
+- Ran prisma db push — schema synced
+- Created 6 API routes: CRUD listings, apply, list applications, review (accept/decline), my-applications
+- Created marketplace-store.ts with checkQualification and optimistic apply
+- Built polls-marketplace-view.tsx (~1749 lines): 4 tabs (Available with reward cards, My Applications with status tracking, Create Listing with qualification criteria form, My Listings with applicant review dialog)
+- Integrated into page.tsx (View type, imports, render block)
+- Added to hamburger menu Row 3 "Earn & Manage" with Banknote icon in emerald green
+- Lint: 0 errors, server: 200 OK
+
+Stage Summary:
+- Full marketplace: companies post paid polls → users browse → apply with auto-attached FMF credentials → companies review → accept/decline → selected users participate → earn money
+- Qualification system: min score, verified-only, min poll responses, location, age range, gender, interests
+- Auto-credential attachment: member score, verification, poll response count, follower count
+- 4-tab UI: Available listings, My Applications, Create Listing, My Listings
+- Reward amounts are the most prominent visual element (large emerald text)
