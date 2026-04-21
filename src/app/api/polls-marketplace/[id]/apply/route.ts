@@ -93,7 +93,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      data: application,
+      application: application,
     }, { status: 201 });
   } catch (error) {
     console.error('POST /api/polls-marketplace/[id]/apply error:', error);

@@ -54,9 +54,30 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
+    // Transform to match store's MarketplaceApplication interface
+    const transformed = applications.map((app) => ({
+      id: app.id,
+      listingId: app.listingId,
+      listingTitle: app.listing?.title ?? null,
+      listingRewardPerResponse: app.listing?.rewardPerResponse ?? null,
+      listingStatus: app.listing?.status ?? null,
+      applicantId: app.userId,
+      applicantUsername: null, // Not included in this query — can add if needed
+      applicantAvatarUrl: null,
+      applicantDisplayName: null,
+      applicantScore: app.memberScore ?? null,
+      applicantVerified: app.isVerified ?? null,
+      applicantPollResponses: app.totalPollResponses ?? null,
+      applicantFollowers: app.totalFollowers ?? null,
+      coverMessage: app.coverMessage ?? null,
+      status: app.status,
+      reviewedAt: app.reviewedAt?.toISOString() ?? null,
+      createdAt: app.createdAt.toISOString(),
+    }));
+
     return NextResponse.json({
       success: true,
-      data: applications,
+      applications: transformed,
     });
   } catch (error) {
     console.error('GET /api/polls-marketplace/my-applications error:', error);

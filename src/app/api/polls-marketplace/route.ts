@@ -1,6 +1,42 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
+// Helper: transform DB listing to API response shape matching store's MarketplaceListing
+function transformListing(listing: any) {
+  let parsedInterests: string[] | null = null;
+  if (listing.interests) {
+    try { parsedInterests = JSON.parse(listing.interests); } catch { parsedInterests = null; }
+  }
+
+  return {
+    id: listing.id,
+    creatorId: listing.creatorId,
+    creatorUsername: listing.creator?.username ?? null,
+    creatorAvatarUrl: listing.creator?.avatarUrl ?? null,
+    creatorDisplayName: listing.creator?.displayName ?? null,
+    title: listing.title,
+    description: listing.description,
+    rewardPerResponse: listing.rewardPerResponse,
+    totalSlots: listing.slots,
+    filledSlots: listing.filledSlots,
+    totalBudget: listing.totalBudget,
+    qualificationCriteria: {
+      minScore: listing.minScore ?? null,
+      verifiedOnly: listing.verifiedOnly ?? false,
+      minPollResponses: listing.minPollResponses ?? null,
+      location: listing.location ?? null,
+      ageRange: listing.ageRange ?? null,
+      gender: listing.gender ?? null,
+      interests: parsedInterests,
+    },
+    status: listing.status,
+    closesAt: listing.closesAt?.toISOString() ?? null,
+    applicationsCount: listing._count?.applications ?? 0,
+    createdAt: listing.createdAt.toISOString(),
+    updatedAt: listing.updatedAt.toISOString(),
+  };
+}
+
 // GET /api/polls-marketplace — List marketplace listings
 export async function GET(request: NextRequest) {
   try {
@@ -57,13 +93,19 @@ export async function GET(request: NextRequest) {
             isVerified: true,
           },
         },
+        _count: {
+          select: { applications: true },
+        },
       },
       orderBy: { rewardPerResponse: 'desc' },
     });
 
+    const transformed = listings.map(transformListing);
+
     return NextResponse.json({
       success: true,
-      data: listings,
+      listings: transformed,
+      total: transformed.length,
     });
   } catch (error) {
     console.error('GET /api/polls-marketplace error:', error);
@@ -141,11 +183,24 @@ export async function POST(request: NextRequest) {
         closesAt: closesAt ? new Date(closesAt) : null,
         status: 'active',
       },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+            isVerified: true,
+          },
+        },
+      },
     });
+
+    const transformed = transformListing({ ...listing, _count: { applications: 0 } });
 
     return NextResponse.json({
       success: true,
-      data: listing,
+      listing: transformed,
     }, { status: 201 });
   } catch (error) {
     console.error('POST /api/polls-marketplace error:', error);

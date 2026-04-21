@@ -84,6 +84,10 @@ import {
   BarChart3,
   CircleDollarSign,
   Sparkles,
+  Flame,
+  Zap,
+  Timer,
+  Crown,
 } from 'lucide-react';
 
 // ─── Types ─────────────────────────────────────────────────────────
@@ -415,13 +419,153 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
   const stats = useMemo(() => {
     const listings = store.listings;
     if (listings.length === 0) {
-      return { total: 0, avgReward: 0, highestReward: 0 };
+      return { total: 0, avgReward: 0, highestReward: 0, totalBudget: 0 };
     }
     const total = listings.length;
     const avgReward = listings.reduce((sum, l) => sum + l.rewardPerResponse, 0) / total;
     const highestReward = Math.max(...listings.map((l) => l.rewardPerResponse));
-    return { total, avgReward, highestReward };
+    const totalBudget = listings.reduce((sum, l) => sum + l.totalBudget, 0);
+    return { total, avgReward, highestReward, totalBudget };
   }, [store.listings]);
+
+  // ─── Showcase boards computation ─────────────────────────────────
+
+  const boards = useMemo(() => {
+    const listings = store.listings;
+    if (listings.length === 0) {
+      return { highestPaid: [], trending: [], newest: [], endingSoon: [] };
+    }
+
+    // Highest Paid — top 4 by reward per response
+    const highestPaid = [...listings]
+      .sort((a, b) => b.rewardPerResponse - a.rewardPerResponse)
+      .slice(0, 4);
+
+    // Trending — top 4 by fill rate (filledSlots / totalSlots)
+    const trending = [...listings]
+      .sort((a, b) => {
+        const rateA = a.totalSlots > 0 ? a.filledSlots / a.totalSlots : 0;
+        const rateB = b.totalSlots > 0 ? b.filledSlots / b.totalSlots : 0;
+        return rateB - rateA;
+      })
+      .slice(0, 4);
+
+    // Newest — top 4 most recently created
+    const newest = [...listings]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 4);
+
+    // Ending Soon — top 4 closest to closing (with closesAt set, in the future)
+    const endingSoon = [...listings]
+      .filter((l) => l.closesAt && new Date(l.closesAt).getTime() > Date.now())
+      .sort((a, b) => new Date(a.closesAt).getTime() - new Date(b.closesAt).getTime())
+      .slice(0, 4);
+
+    return { highestPaid, trending, newest, endingSoon };
+  }, [store.listings]);
+
+  // ─── Compact listing card for showcase boards ──────────────
+
+  const renderCompactCard = (listing: MarketplaceListing, rank?: number) => {
+    const fillPercent = listing.totalSlots > 0
+      ? Math.round((listing.filledSlots / listing.totalSlots) * 100)
+      : 0;
+    const timeRemaining = formatTimeRemaining(listing.closesAt);
+
+    return (
+      <motion.div
+        key={listing.id}
+        variants={staggerItem}
+        whileHover={{ scale: 1.02 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      >
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-all border-0 bg-card overflow-hidden"
+          onClick={() => handleOpenDetail(listing)}
+        >
+          <CardContent className="p-3">
+            <div className="flex items-start gap-2.5">
+              {/* Rank badge or index */}
+              {rank !== undefined && (
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5 ${
+                  rank === 0
+                    ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white'
+                    : rank === 1
+                    ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white'
+                    : rank === 2
+                    ? 'bg-gradient-to-br from-orange-300 to-amber-400 text-white'
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  {rank + 1}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <h4 className="text-xs font-bold line-clamp-1 leading-tight">{listing.title}</h4>
+                <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">
+                  by @{listing.creatorUsername ?? 'company'}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                  ${listing.rewardPerResponse.toFixed(2)}
+                </p>
+                <p className="text-[9px] text-muted-foreground">per response</p>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-2">
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-0.5">
+                <span>{listing.filledSlots}/{listing.totalSlots} slots</span>
+                <span>{fillPercent}%</span>
+              </div>
+              <Progress value={fillPercent} className="h-1" />
+            </div>
+
+            {/* Time badge */}
+            {timeRemaining !== 'No deadline' && (
+              <div className={`mt-1.5 flex items-center gap-1 text-[10px] ${
+                timeRemaining === 'Closed'
+                  ? 'text-red-500'
+                  : parseInt(timeRemaining) <= 3
+                  ? 'text-amber-500'
+                  : 'text-muted-foreground'
+              }`}>
+                <Clock className="w-2.5 h-2.5" />
+                {timeRemaining}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  };
+
+  // ─── Showcase board section renderer ─────────────────────────────
+
+  const renderBoardSection = (
+    title: string,
+    icon: React.ReactNode,
+    listings: MarketplaceListing[],
+    gradientClass: string,
+    showRank: boolean = false
+  ) => {
+    if (listings.length === 0) return null;
+    return (
+      <motion.div variants={staggerItem} className="mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <div className={`w-7 h-7 rounded-lg ${gradientClass} flex items-center justify-center shadow-sm`}>
+            {icon}
+          </div>
+          <h2 className="text-sm font-bold">{title}</h2>
+          <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {listings.map((listing, i) => renderCompactCard(listing, showRank ? i : undefined))}
+        </div>
+      </motion.div>
+    );
+  };
 
   // ─── Skeleton renderers ────────────────────────────────────────
 
@@ -678,41 +822,54 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
           {/* Stats banner */}
           <motion.div
             variants={staggerItem}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6"
+            className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"
           >
             <Card className="bg-gradient-to-br from-emerald-50/80 to-green-50/50 dark:from-emerald-950/20 dark:to-green-950/10 border-emerald-200 dark:border-emerald-800/40">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-sm">
-                  <BarChart3 className="w-5 h-5 text-white" />
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-sm">
+                  <BarChart3 className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium">Total Listings</p>
-                  <p className="text-xl font-bold">{stats.total}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">Total Listings</p>
+                  <p className="text-lg font-bold">{stats.total}</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="bg-gradient-to-br from-amber-50/80 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/10 border-amber-200 dark:border-amber-800/40">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
-                  <TrendingUp className="w-5 h-5 text-white" />
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
+                  <TrendingUp className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium">Avg. Reward</p>
-                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                  <p className="text-[10px] text-muted-foreground font-medium">Avg. Reward</p>
+                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
                     ${stats.avgReward.toFixed(2)}
                   </p>
                 </div>
               </CardContent>
             </Card>
             <Card className="bg-gradient-to-br from-violet-50/80 to-fuchsia-50/50 dark:from-violet-950/20 dark:to-fuchsia-950/10 border-violet-200 dark:border-violet-800/40">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-sm">
-                  <Trophy className="w-5 h-5 text-white" />
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-sm">
+                  <Trophy className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium">Highest Reward</p>
-                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                  <p className="text-[10px] text-muted-foreground font-medium">Highest Reward</p>
+                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
                     ${stats.highestReward.toFixed(2)}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-sky-50/80 to-blue-50/50 dark:from-sky-950/20 dark:to-blue-950/10 border-sky-200 dark:border-sky-800/40">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-500 to-blue-500 flex items-center justify-center shadow-sm">
+                  <DollarSign className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground font-medium">Total Budget</p>
+                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                    ${(stats.totalBudget / 1000).toFixed(1)}K
                   </p>
                 </div>
               </CardContent>
@@ -746,16 +903,65 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
             </Card>
           )}
 
-          {/* Grid */}
+          {/* ═══ Showcase Boards ═══ */}
           {!store.listingsLoading && store.listings.length > 0 && (
-            <motion.div
-              variants={staggerContainer}
-              initial="initial"
-              animate="animate"
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-            >
-              {store.listings.map((listing) => renderListingCard(listing))}
-            </motion.div>
+            <>
+              {/* Board 1: Highest Paid */}
+              {renderBoardSection(
+                'Highest Paid',
+                <Crown className="w-3.5 h-3.5 text-amber-600" />,
+                boards.highestPaid,
+                'bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/40 dark:to-yellow-900/40',
+                true
+              )}
+
+              {/* Board 2: Trending (filling fast) */}
+              {renderBoardSection(
+                'Trending — Filling Fast',
+                <Flame className="w-3.5 h-3.5 text-orange-600" />,
+                boards.trending,
+                'bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900/40 dark:to-red-900/40',
+                true
+              )}
+
+              {/* Board 3: New Listings */}
+              {renderBoardSection(
+                'New Listings',
+                <Zap className="w-3.5 h-3.5 text-sky-600" />,
+                boards.newest,
+                'bg-gradient-to-br from-sky-100 to-cyan-100 dark:from-sky-900/40 dark:to-cyan-900/40',
+                false
+              )}
+
+              {/* Board 4: Ending Soon */}
+              {renderBoardSection(
+                'Ending Soon',
+                <Timer className="w-3.5 h-3.5 text-rose-600" />,
+                boards.endingSoon,
+                'bg-gradient-to-br from-rose-100 to-pink-100 dark:from-rose-900/40 dark:to-pink-900/40',
+                false
+              )}
+
+              {/* ── Divider ── */}
+              <div className="flex items-center gap-3 mb-6 mt-2">
+                <Separator className="flex-1" />
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  All Available Listings
+                </span>
+                <Separator className="flex-1" />
+              </div>
+
+              {/* Grid */}
+              <motion.div
+                variants={staggerContainer}
+                initial="initial"
+                animate="animate"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+              >
+                {store.listings.map((listing) => renderListingCard(listing))}
+              </motion.div>
+            </>
           )}
         </TabsContent>
 

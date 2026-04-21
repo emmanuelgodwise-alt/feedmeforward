@@ -157,7 +157,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   fetchListings: async () => {
     set({ listingsLoading: true });
     try {
-      const res = await fetch('/api/marketplace/listings');
+      const res = await fetch('/api/polls-marketplace');
       const json = await res.json();
       if (json.success) {
         set({
@@ -175,7 +175,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   fetchListing: async (id: string) => {
     set({ currentListingLoading: true });
     try {
-      const res = await fetch(`/api/marketplace/listings/${id}`);
+      const res = await fetch(`/api/polls-marketplace/${id}`);
       const json = await res.json();
       if (json.success) {
         set({ currentListing: json.listing ?? null });
@@ -190,7 +190,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   fetchMyListings: async (creatorId: string) => {
     set({ myListingsLoading: true });
     try {
-      const res = await fetch(`/api/marketplace/listings?creatorId=${creatorId}`);
+      const res = await fetch(`/api/polls-marketplace?creator=${creatorId}`);
       const json = await res.json();
       if (json.success) {
         set({ myListings: json.listings ?? [] });
@@ -205,10 +205,17 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   createListing: async (data: CreateListingInput) => {
     set({ creatingListing: true });
     try {
-      const res = await fetch('/api/marketplace/listings', {
+      // Destructure qualificationCriteria into flat fields matching API expectations
+      const { qualificationCriteria, totalSlots, ...rest } = data;
+      const payload = {
+        ...rest,
+        slots: totalSlots,
+        ...qualificationCriteria,
+      };
+      const res = await fetch('/api/polls-marketplace', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
       if (json.success && json.listing) {
@@ -227,10 +234,10 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   applyToListing: async (listingId: string, coverMessage: string) => {
     set({ applyingToListing: true });
     try {
-      const res = await fetch('/api/marketplace/applications', {
+      const res = await fetch(`/api/polls-marketplace/${listingId}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listingId, coverMessage }),
+        body: JSON.stringify({ coverMessage }),
       });
       const json = await res.json();
       return !!json.success;
@@ -244,7 +251,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   fetchApplications: async (listingId: string) => {
     set({ listingApplicationsLoading: true });
     try {
-      const res = await fetch(`/api/marketplace/applications?listingId=${listingId}`);
+      const res = await fetch(`/api/polls-marketplace/${listingId}/applications`);
       const json = await res.json();
       if (json.success) {
         set({ listingApplications: json.applications ?? [] });
@@ -259,7 +266,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   fetchMyApplications: async (applicantId: string) => {
     set({ myApplicationsLoading: true });
     try {
-      const res = await fetch(`/api/marketplace/applications?applicantId=${applicantId}`);
+      const res = await fetch('/api/polls-marketplace/my-applications');
       const json = await res.json();
       if (json.success) {
         set({ myApplications: json.applications ?? [] });
@@ -274,7 +281,13 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   reviewApplication: async (applicationId: string, action: 'accept' | 'decline') => {
     set({ reviewingApplication: true });
     try {
-      const res = await fetch(`/api/marketplace/applications/${applicationId}/review`, {
+      const { listingApplications } = get();
+      const listingId = listingApplications.find(a => a.id === applicationId)?.listingId;
+      if (!listingId) {
+        set({ reviewingApplication: false });
+        return false;
+      }
+      const res = await fetch(`/api/polls-marketplace/${listingId}/applications/${applicationId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
@@ -282,11 +295,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
       const json = await res.json();
       if (json.success) {
         // Refresh applications for the listing
-        const { listingApplications } = get();
-        const listingId = listingApplications.find(a => a.id === applicationId)?.listingId;
-        if (listingId) {
-          await get().fetchApplications(listingId);
-        }
+        await get().fetchApplications(listingId);
         return true;
       }
       return false;

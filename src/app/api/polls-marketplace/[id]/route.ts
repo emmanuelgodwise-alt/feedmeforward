@@ -66,14 +66,45 @@ export async function GET(
       applicationCounts[app.status] = (applicationCounts[app.status] || 0) + 1;
     }
 
+    // Transform to match store's MarketplaceListing interface
+    let parsedInterests: string[] | null = null;
+    if (listing.interests) {
+      try { parsedInterests = JSON.parse(listing.interests); } catch { parsedInterests = null; }
+    }
+
+    const transformedListing = {
+      id: listing.id,
+      creatorId: listing.creatorId,
+      creatorUsername: listing.creator?.username ?? null,
+      creatorAvatarUrl: listing.creator?.avatarUrl ?? null,
+      creatorDisplayName: listing.creator?.displayName ?? null,
+      title: listing.title,
+      description: listing.description,
+      rewardPerResponse: listing.rewardPerResponse,
+      totalSlots: listing.slots,
+      filledSlots: listing.filledSlots,
+      totalBudget: listing.totalBudget,
+      qualificationCriteria: {
+        minScore: listing.minScore ?? null,
+        verifiedOnly: listing.verifiedOnly ?? false,
+        minPollResponses: listing.minPollResponses ?? null,
+        location: listing.location ?? null,
+        ageRange: listing.ageRange ?? null,
+        gender: listing.gender ?? null,
+        interests: parsedInterests,
+      },
+      status: listing.status,
+      closesAt: listing.closesAt?.toISOString() ?? null,
+      applicationsCount: listing.applications.length,
+      applicationCounts,
+      userApplication,
+      createdAt: listing.createdAt.toISOString(),
+      updatedAt: listing.updatedAt.toISOString(),
+    };
+
     return NextResponse.json({
       success: true,
-      data: {
-        ...listing,
-        applications: undefined,
-        applicationCounts,
-        userApplication,
-      },
+      listing: transformedListing,
     });
   } catch (error) {
     console.error('GET /api/polls-marketplace/[id] error:', error);
@@ -169,9 +200,31 @@ export async function PATCH(
       },
     });
 
+    // Transform the updated listing
+    let parsedInterests: string[] | null = null;
+    if (updatedListing.interests) {
+      try { parsedInterests = JSON.parse(updatedListing.interests); } catch { parsedInterests = null; }
+    }
+    const transformedListing = {
+      ...updatedListing,
+      totalSlots: updatedListing.slots,
+      qualificationCriteria: {
+        minScore: updatedListing.minScore ?? null,
+        verifiedOnly: updatedListing.verifiedOnly ?? false,
+        minPollResponses: updatedListing.minPollResponses ?? null,
+        location: updatedListing.location ?? null,
+        ageRange: updatedListing.ageRange ?? null,
+        gender: updatedListing.gender ?? null,
+        interests: parsedInterests,
+      },
+      closesAt: updatedListing.closesAt?.toISOString() ?? null,
+      createdAt: updatedListing.createdAt.toISOString(),
+      updatedAt: updatedListing.updatedAt.toISOString(),
+    };
+
     return NextResponse.json({
       success: true,
-      data: updatedListing,
+      listing: transformedListing,
     });
   } catch (error) {
     console.error('PATCH /api/polls-marketplace/[id] error:', error);

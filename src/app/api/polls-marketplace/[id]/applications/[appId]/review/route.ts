@@ -104,7 +104,7 @@ export async function POST(
 
       return NextResponse.json({
         success: true,
-        data: updatedApplication,
+        application: updatedApplication,
       });
     } else {
       // Decline application
@@ -130,7 +130,7 @@ export async function POST(
 
       return NextResponse.json({
         success: true,
-        data: updatedApplication,
+        application: updatedApplication,
       });
     }
   } catch (error) {
