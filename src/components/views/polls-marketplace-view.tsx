@@ -313,13 +313,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
 
   useEffect(() => {
     if (listings.length > 0 && currentUser) {
-      const { checkQualification } = useMarketplaceStore.getState();
-      const currentChecks = useMarketplaceStore.getState().qualificationChecks;
-      listings.forEach((listing) => {
-        if (!currentChecks[listing.id]) {
-          checkQualification(listing.id, listing.qualificationCriteria);
-        }
-      });
+      useMarketplaceStore.getState().batchCheckQualifications(listings);
     }
   }, [listings, currentUser]);
 

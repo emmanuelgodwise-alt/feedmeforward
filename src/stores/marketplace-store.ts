@@ -118,6 +118,7 @@ interface MarketplaceState {
   fetchMyApplications: (applicantId: string) => Promise<void>;
   reviewApplication: (applicationId: string, action: 'accept' | 'decline') => Promise<boolean>;
   checkQualification: (listingId: string, criteria: QualificationCriteria) => void;
+  batchCheckQualifications: (listings: MarketplaceListing[]) => void;
 }
 
 // ─── Create Listing Input ──────────────────────────────────────────
@@ -155,6 +156,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   reviewingApplication: false,
 
   fetchListings: async () => {
+    if (get().listingsLoading) return;
     set({ listingsLoading: true });
     try {
       const res = await fetch('/api/polls-marketplace');
@@ -173,6 +175,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   },
 
   fetchListing: async (id: string) => {
+    if (get().currentListingLoading) return;
     set({ currentListingLoading: true });
     try {
       const res = await fetch(`/api/polls-marketplace/${id}`);
@@ -188,6 +191,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   },
 
   fetchMyListings: async (creatorId: string) => {
+    if (get().myListingsLoading) return;
     set({ myListingsLoading: true });
     try {
       const res = await fetch(`/api/polls-marketplace?creator=${creatorId}`);
@@ -249,6 +253,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   },
 
   fetchApplications: async (listingId: string) => {
+    if (get().listingApplicationsLoading) return;
     set({ listingApplicationsLoading: true });
     try {
       const res = await fetch(`/api/polls-marketplace/${listingId}/applications`);
@@ -264,6 +269,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   },
 
   fetchMyApplications: async (applicantId: string) => {
+    if (get().myApplicationsLoading) return;
     set({ myApplicationsLoading: true });
     try {
       const res = await fetch('/api/polls-marketplace/my-applications');
@@ -339,5 +345,30 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
         [listingId]: { qualified, reasons },
       },
     });
+  },
+
+  batchCheckQualifications: (listings: MarketplaceListing[]) => {
+    const { currentUser } = useAuthStore.getState();
+    if (!currentUser) return;
+    const existingChecks = get().qualificationChecks;
+    const newChecks: Record<string, QualificationCheck> = {};
+    for (const listing of listings) {
+      if (existingChecks[listing.id]) continue;
+      const reasons: string[] = [];
+      let qualified = true;
+      const criteria = listing.qualificationCriteria;
+      if (criteria.minScore && currentUser.memberScore < criteria.minScore) {
+        qualified = false;
+        reasons.push(`Score must be ${criteria.minScore}+ (you have ${currentUser.memberScore})`);
+      }
+      if (criteria.verifiedOnly && !currentUser.isVerified) {
+        qualified = false;
+        reasons.push('Verified account required');
+      }
+      newChecks[listing.id] = { qualified, reasons };
+    }
+    if (Object.keys(newChecks).length > 0) {
+      set({ qualificationChecks: { ...existingChecks, ...newChecks } });
+    }
   },
 }));
