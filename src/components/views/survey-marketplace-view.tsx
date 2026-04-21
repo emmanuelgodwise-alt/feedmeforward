@@ -259,7 +259,19 @@ function buildQualificationBadges(criteria: SurveyQualificationCriteria): { labe
 
 export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps) {
   const { currentUser } = useAuthStore();
-  const store = useSurveyMarketplaceStore();
+  const listings = useSurveyMarketplaceStore((s) => s.listings);
+  const listingsLoading = useSurveyMarketplaceStore((s) => s.listingsLoading);
+  const myApplications = useSurveyMarketplaceStore((s) => s.myApplications);
+  const myApplicationsLoading = useSurveyMarketplaceStore((s) => s.myApplicationsLoading);
+  const myListings = useSurveyMarketplaceStore((s) => s.myListings);
+  const myListingsLoading = useSurveyMarketplaceStore((s) => s.myListingsLoading);
+  const qualificationChecks = useSurveyMarketplaceStore((s) => s.qualificationChecks);
+  const currentListing = useSurveyMarketplaceStore((s) => s.currentListing);
+  const creatingListing = useSurveyMarketplaceStore((s) => s.creatingListing);
+  const applyingToListing = useSurveyMarketplaceStore((s) => s.applyingToListing);
+  const listingApplications = useSurveyMarketplaceStore((s) => s.listingApplications);
+  const listingApplicationsLoading = useSurveyMarketplaceStore((s) => s.listingApplicationsLoading);
+  const reviewingApplication = useSurveyMarketplaceStore((s) => s.reviewingApplication);
 
   const [activeTab, setActiveTab] = useState('available');
 
@@ -314,20 +326,20 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
   // ─── Data fetching ─────────────────────────────────────────────
 
   const fetchListings = useCallback(async () => {
-    await store.fetchListings();
-  }, [store]);
+    await useSurveyMarketplaceStore.getState().fetchListings();
+  }, []);
 
   const fetchMyApplications = useCallback(async () => {
     if (currentUser?.id) {
-      await store.fetchMyApplications(currentUser.id);
+      await useSurveyMarketplaceStore.getState().fetchMyApplications(currentUser.id);
     }
-  }, [store, currentUser]);
+  }, [currentUser]);
 
   const fetchMyListings = useCallback(async () => {
     if (currentUser?.id) {
-      await store.fetchMyListings(currentUser.id);
+      await useSurveyMarketplaceStore.getState().fetchMyListings(currentUser.id);
     }
-  }, [store, currentUser]);
+  }, [currentUser]);
 
   useEffect(() => {
     fetchListings();
@@ -348,23 +360,24 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
   // ─── Qualification checks ──────────────────────────────────────
 
   useEffect(() => {
-    if (store.listings.length > 0 && currentUser) {
-      store.listings.forEach((listing) => {
-        if (!store.qualificationChecks[listing.id]) {
-          store.checkQualification(listing.id, listing.qualificationCriteria);
+    if (listings.length > 0 && currentUser) {
+      listings.forEach((listing) => {
+        if (!qualificationChecks[listing.id]) {
+          useSurveyMarketplaceStore.getState().checkQualification(listing.id, listing.qualificationCriteria);
         }
       });
     }
-  }, [store.listings, currentUser]);
+  }, [listings, qualificationChecks, currentUser]);
 
   // ─── Handlers ──────────────────────────────────────────────────
 
   const handleOpenDetail = async (listing: SurveyListing) => {
     setSelectedListing(listing);
     setDetailOpen(true);
-    await store.fetchListing(listing.id);
-    if (store.currentListing) {
-      store.checkQualification(listing.id, store.currentListing.qualificationCriteria);
+    await useSurveyMarketplaceStore.getState().fetchListing(listing.id);
+    const cl = useSurveyMarketplaceStore.getState().currentListing;
+    if (cl) {
+      useSurveyMarketplaceStore.getState().checkQualification(listing.id, cl.qualificationCriteria);
     }
   };
 
@@ -379,7 +392,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
       toast.error('Please write a cover message');
       return;
     }
-    const success = await store.applyToListing(applyListingId, coverMessage.trim());
+    const success = await useSurveyMarketplaceStore.getState().applyToListing(applyListingId, coverMessage.trim());
     if (success) {
       toast.success('Application submitted! You will be notified when reviewed.');
       setApplyOpen(false);
@@ -393,11 +406,11 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
   const handleOpenReview = async (listingId: string) => {
     setReviewListingId(listingId);
     setReviewOpen(true);
-    await store.fetchApplications(listingId);
+    await useSurveyMarketplaceStore.getState().fetchApplications(listingId);
   };
 
   const handleReview = async (applicationId: string, action: 'accept' | 'decline') => {
-    const success = await store.reviewApplication(applicationId, action);
+    const success = await useSurveyMarketplaceStore.getState().reviewApplication(applicationId, action);
     if (success) {
       toast.success(action === 'accept' ? 'Application accepted!' : 'Application declined.');
       fetchMyListings();
@@ -454,7 +467,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
       },
     };
 
-    const listing = await store.createListing(data);
+    const listing = await useSurveyMarketplaceStore.getState().createListing(data);
     if (listing) {
       toast.success('Survey listing published successfully!');
       setCreateForm({ ...defaultCreateForm });
@@ -468,7 +481,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
   // ─── Stats computation ─────────────────────────────────────────
 
   const stats = useMemo(() => {
-    const listings = store.listings;
+    const listings = listings;
     if (listings.length === 0) {
       return { total: 0, avgReward: 0, highestReward: 0, totalBudget: 0 };
     }
@@ -477,12 +490,12 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
     const highestReward = Math.max(...listings.map((l) => l.rewardPerResponse));
     const totalBudget = listings.reduce((sum, l) => sum + l.totalBudget, 0);
     return { total, avgReward, highestReward, totalBudget };
-  }, [store.listings]);
+  }, [listings]);
 
   // ─── Showcase boards computation ─────────────────────────────────
 
   const boards = useMemo(() => {
-    const listings = store.listings;
+    const listings = listings;
     if (listings.length === 0) {
       return { highestPaid: [], quickSurveys: [], newest: [], endingSoon: [] };
     }
@@ -509,7 +522,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
       .slice(0, 4);
 
     return { highestPaid, quickSurveys, newest, endingSoon };
-  }, [store.listings]);
+  }, [listings]);
 
   // ─── Compact listing card for showcase boards ──────────────
 
@@ -667,7 +680,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
 
   const renderListingCard = (listing: SurveyListing) => {
     const qualBadges = buildQualificationBadges(listing.qualificationCriteria);
-    const qualCheck = store.qualificationChecks[listing.id];
+    const qualCheck = qualificationChecks[listing.id];
     const isQualified = qualCheck?.qualified !== false;
     const fillPercent = listing.totalSlots > 0
       ? Math.round((listing.filledSlots / listing.totalSlots) * 100)
@@ -965,14 +978,14 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
           </motion.div>
 
           {/* Loading */}
-          {store.listingsLoading && (
+          {listingsLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {renderListingSkeletons(6)}
             </div>
           )}
 
           {/* Empty */}
-          {!store.listingsLoading && store.listings.length === 0 && (
+          {!listingsLoading && listings.length === 0 && (
             <Card>
               <CardContent className="p-12 text-center">
                 <ClipboardList className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -992,7 +1005,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
           )}
 
           {/* ═══ Showcase Boards ═══ */}
-          {!store.listingsLoading && store.listings.length > 0 && (
+          {!listingsLoading && listings.length > 0 && (
             <>
               {/* Board 1: Highest Paid */}
               {renderBoardSection(
@@ -1047,7 +1060,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
                 animate="animate"
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
               >
-                {store.listings.map((listing) => renderListingCard(listing))}
+                {listings.map((listing) => renderListingCard(listing))}
               </motion.div>
             </>
           )}
@@ -1075,13 +1088,13 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
             </Card>
           ) : (
             <>
-              {store.myApplicationsLoading && (
+              {myApplicationsLoading && (
                 <div className="space-y-3 max-w-2xl">
                   {renderApplicationSkeletons(4)}
                 </div>
               )}
 
-              {!store.myApplicationsLoading && store.myApplications.length === 0 && (
+              {!myApplicationsLoading && myApplications.length === 0 && (
                 <Card>
                   <CardContent className="p-12 text-center">
                     <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -1100,7 +1113,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
                 </Card>
               )}
 
-              {!store.myApplicationsLoading && store.myApplications.length > 0 && (
+              {!myApplicationsLoading && myApplications.length > 0 && (
                 <AnimatePresence mode="wait">
                   <motion.div
                     variants={staggerContainer}
@@ -1108,7 +1121,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
                     animate="animate"
                     className="space-y-3 max-w-2xl"
                   >
-                    {store.myApplications.map((app) => {
+                    {myApplications.map((app) => {
                       const statusLabel = app.status.charAt(0).toUpperCase() + app.status.slice(1);
                       return (
                         <motion.div key={app.id} variants={staggerItem} layout>
@@ -1622,7 +1635,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
                       type="submit"
                       className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-md shadow-teal-500/20 font-semibold"
                       disabled={
-                        store.creatingListing ||
+                        creatingListing ||
                         !createForm.title.trim() ||
                         !createForm.description.trim() ||
                         !createForm.organizationName.trim() ||
@@ -1633,7 +1646,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
                         (createForm.questionsCount ?? 0) <= 0
                       }
                     >
-                      {store.creatingListing ? (
+                      {creatingListing ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin mr-2" />
                           Publishing...
@@ -1674,13 +1687,13 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
             </Card>
           ) : (
             <>
-              {store.myListingsLoading && (
+              {myListingsLoading && (
                 <div className="space-y-3 max-w-3xl">
                   {renderApplicationSkeletons(4)}
                 </div>
               )}
 
-              {!store.myListingsLoading && store.myListings.length === 0 && (
+              {!myListingsLoading && myListings.length === 0 && (
                 <Card>
                   <CardContent className="p-12 text-center">
                     <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -1699,7 +1712,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
                 </Card>
               )}
 
-              {!store.myListingsLoading && store.myListings.length > 0 && (
+              {!myListingsLoading && myListings.length > 0 && (
                 <AnimatePresence mode="wait">
                   <motion.div
                     variants={staggerContainer}
@@ -1707,7 +1720,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
                     animate="animate"
                     className="space-y-3 max-w-3xl"
                   >
-                    {store.myListings.map((listing) => {
+                    {myListings.map((listing) => {
                       const isExpanded = expandedListingId === listing.id;
                       const fillPercent = listing.totalSlots > 0
                         ? Math.round((listing.filledSlots / listing.totalSlots) * 100)
@@ -1943,15 +1956,15 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
                 )}
 
                 {/* Qualification check result */}
-                {currentUser && store.qualificationChecks[selectedListing.id] && (
+                {currentUser && qualificationChecks[selectedListing.id] && (
                   <div
                     className={`p-3 rounded-lg text-sm ${
-                      store.qualificationChecks[selectedListing.id].qualified
+                      qualificationChecks[selectedListing.id].qualified
                         ? 'bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-300'
                         : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
                     }`}
                   >
-                    {store.qualificationChecks[selectedListing.id].qualified ? (
+                    {qualificationChecks[selectedListing.id].qualified ? (
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4" />
                         <span className="font-medium">You qualify for this survey!</span>
@@ -1962,7 +1975,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
                           <XCircle className="w-4 h-4" />
                           <span className="font-medium">You don&apos;t qualify</span>
                         </div>
-                        {store.qualificationChecks[selectedListing.id].reasons.map((r, i) => (
+                        {qualificationChecks[selectedListing.id].reasons.map((r, i) => (
                           <p key={i} className="text-xs ml-6">{r}</p>
                         ))}
                       </div>
@@ -1993,7 +2006,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
                 {selectedListing.status !== 'closed' &&
                   selectedListing.status !== 'completed' &&
                   formatTimeRemaining(selectedListing.closesAt) !== 'Closed' &&
-                  store.qualificationChecks[selectedListing.id]?.qualified && (
+                  qualificationChecks[selectedListing.id]?.qualified && (
                     <Button
                       className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white"
                       onClick={() => {
@@ -2025,7 +2038,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
           <div className="space-y-4">
             <div className="bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-950/30 dark:to-cyan-950/30 rounded-lg p-3 text-center">
               <span className="text-xl font-bold text-teal-600 dark:text-teal-400">
-                ${store.listings.find((l) => l.id === applyListingId)?.rewardPerResponse.toFixed(2) ?? '0.00'}
+                ${listings.find((l) => l.id === applyListingId)?.rewardPerResponse.toFixed(2) ?? '0.00'}
               </span>
               <p className="text-xs text-teal-600/70 dark:text-teal-400/60">per response</p>
             </div>
@@ -2048,10 +2061,10 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
             </Button>
             <Button
               className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white"
-              disabled={store.applyingToListing || !coverMessage.trim()}
+              disabled={applyingToListing || !coverMessage.trim()}
               onClick={handleApply}
             >
-              {store.applyingToListing ? (
+              {applyingToListing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   Submitting...
@@ -2079,20 +2092,20 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
             </DialogTitle>
           </DialogHeader>
 
-          {store.listingApplicationsLoading ? (
+          {listingApplicationsLoading ? (
             <div className="space-y-3 py-4">
               {Array.from({ length: 3 }).map((_, i) => (
                 <Skeleton key={i} className="h-32 w-full rounded-lg" />
               ))}
             </div>
-          ) : store.listingApplications.length === 0 ? (
+          ) : listingApplications.length === 0 ? (
             <div className="text-center py-8">
               <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">No applications to review yet.</p>
             </div>
           ) : (
             <div className="space-y-3 py-2">
-              {store.listingApplications.map((app) => {
+              {listingApplications.map((app) => {
                 const statusLabel = app.status.charAt(0).toUpperCase() + app.status.slice(1);
                 return (
                   <motion.div
@@ -2177,7 +2190,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
                               <Button
                                 size="sm"
                                 className="text-xs bg-teal-500 hover:bg-teal-600 text-white"
-                                disabled={store.reviewingApplication}
+                                disabled={reviewingApplication}
                                 onClick={() => handleReview(app.id, 'accept')}
                               >
                                 <UserCheck className="w-3.5 h-3.5 mr-1" />
@@ -2187,7 +2200,7 @@ export function SurveyMarketplaceView({ onNavigate }: SurveyMarketplaceViewProps
                                 size="sm"
                                 variant="outline"
                                 className="text-xs border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30"
-                                disabled={store.reviewingApplication}
+                                disabled={reviewingApplication}
                                 onClick={() => handleReview(app.id, 'decline')}
                               >
                                 <UserX className="w-3.5 h-3.5 mr-1" />

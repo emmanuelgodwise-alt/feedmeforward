@@ -281,7 +281,19 @@ function formatDuration(minutes: number): string {
 
 export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
   const { currentUser } = useAuthStore();
-  const store = useFocusGroupsStore();
+  const listings = useFocusGroupsStore((s) => s.listings);
+  const listingsLoading = useFocusGroupsStore((s) => s.listingsLoading);
+  const myApplications = useFocusGroupsStore((s) => s.myApplications);
+  const myApplicationsLoading = useFocusGroupsStore((s) => s.myApplicationsLoading);
+  const myListings = useFocusGroupsStore((s) => s.myListings);
+  const myListingsLoading = useFocusGroupsStore((s) => s.myListingsLoading);
+  const qualificationChecks = useFocusGroupsStore((s) => s.qualificationChecks);
+  const currentListing = useFocusGroupsStore((s) => s.currentListing);
+  const creatingListing = useFocusGroupsStore((s) => s.creatingListing);
+  const applyingToListing = useFocusGroupsStore((s) => s.applyingToListing);
+  const listingApplications = useFocusGroupsStore((s) => s.listingApplications);
+  const listingApplicationsLoading = useFocusGroupsStore((s) => s.listingApplicationsLoading);
+  const reviewingApplication = useFocusGroupsStore((s) => s.reviewingApplication);
 
   const [activeTab, setActiveTab] = useState('available');
 
@@ -335,20 +347,20 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
   // ─── Data fetching ─────────────────────────────────────────────
 
   const fetchListings = useCallback(async () => {
-    await store.fetchListings();
-  }, [store]);
+    await useFocusGroupsStore.getState().fetchListings();
+  }, []);
 
   const fetchMyApplications = useCallback(async () => {
     if (currentUser?.id) {
-      await store.fetchMyApplications(currentUser.id);
+      await useFocusGroupsStore.getState().fetchMyApplications(currentUser.id);
     }
-  }, [store, currentUser]);
+  }, [currentUser]);
 
   const fetchMyListings = useCallback(async () => {
     if (currentUser?.id) {
-      await store.fetchMyListings(currentUser.id);
+      await useFocusGroupsStore.getState().fetchMyListings(currentUser.id);
     }
-  }, [store, currentUser]);
+  }, [currentUser]);
 
   useEffect(() => {
     fetchListings();
@@ -369,23 +381,24 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
   // ─── Qualification checks ──────────────────────────────────────
 
   useEffect(() => {
-    if (store.listings.length > 0 && currentUser) {
-      store.listings.forEach((listing) => {
-        if (!store.qualificationChecks[listing.id]) {
-          store.checkQualification(listing.id, listing.qualificationCriteria);
+    if (listings.length > 0 && currentUser) {
+      listings.forEach((listing) => {
+        if (!qualificationChecks[listing.id]) {
+          useFocusGroupsStore.getState().checkQualification(listing.id, listing.qualificationCriteria);
         }
       });
     }
-  }, [store.listings, currentUser]);
+  }, [listings, qualificationChecks, currentUser]);
 
   // ─── Handlers ──────────────────────────────────────────────────
 
   const handleOpenDetail = async (listing: FocusGroupListing) => {
     setSelectedListing(listing);
     setDetailOpen(true);
-    await store.fetchListing(listing.id);
-    if (store.currentListing) {
-      store.checkQualification(listing.id, store.currentListing.qualificationCriteria);
+    await useFocusGroupsStore.getState().fetchListing(listing.id);
+    const cl = useFocusGroupsStore.getState().currentListing;
+    if (cl) {
+      useFocusGroupsStore.getState().checkQualification(listing.id, cl.qualificationCriteria);
     }
   };
 
@@ -400,7 +413,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
       toast.error('Please write a cover message');
       return;
     }
-    const success = await store.applyToListing(applyListingId, coverMessage.trim());
+    const success = await useFocusGroupsStore.getState().applyToListing(applyListingId, coverMessage.trim());
     if (success) {
       toast.success('Application submitted! You will be notified when reviewed.');
       setApplyOpen(false);
@@ -414,11 +427,11 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
   const handleOpenReview = async (listingId: string) => {
     setReviewListingId(listingId);
     setReviewOpen(true);
-    await store.fetchApplications(listingId);
+    await useFocusGroupsStore.getState().fetchApplications(listingId);
   };
 
   const handleReview = async (applicationId: string, action: 'accept' | 'decline') => {
-    const success = await store.reviewApplication(applicationId, action);
+    const success = await useFocusGroupsStore.getState().reviewApplication(applicationId, action);
     if (success) {
       toast.success(action === 'accept' ? 'Application accepted!' : 'Application declined.');
       fetchMyListings();
@@ -463,7 +476,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
       },
     };
 
-    const listing = await store.createListing(data);
+    const listing = await useFocusGroupsStore.getState().createListing(data);
     if (listing) {
       toast.success('Focus group published successfully!');
       setCreateForm({
@@ -497,7 +510,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
   // ─── Stats computation ─────────────────────────────────────────
 
   const stats = useMemo(() => {
-    const listings = store.listings;
+    const listings = listings;
     if (listings.length === 0) {
       return { total: 0, avgReward: 0, highestReward: 0, totalBudget: 0 };
     }
@@ -506,12 +519,12 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
     const highestReward = Math.max(...listings.map((l) => l.rewardPerResponse));
     const totalBudget = listings.reduce((sum, l) => sum + l.totalBudget, 0);
     return { total, avgReward, highestReward, totalBudget };
-  }, [store.listings]);
+  }, [listings]);
 
   // ─── Showcase boards computation ─────────────────────────────────
 
   const boards = useMemo(() => {
-    const listings = store.listings;
+    const listings = listings;
     if (listings.length === 0) {
       return { highestPaid: [], liveSessions: [], newest: [], closingSoon: [] };
     }
@@ -538,7 +551,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
       .slice(0, 4);
 
     return { highestPaid, liveSessions, newest, closingSoon };
-  }, [store.listings]);
+  }, [listings]);
 
   // ─── Compact listing card for showcase boards ──────────────
 
@@ -695,7 +708,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
 
   const renderListingCard = (listing: FocusGroupListing) => {
     const qualBadges = buildQualificationBadges(listing.qualificationCriteria);
-    const qualCheck = store.qualificationChecks[listing.id];
+    const qualCheck = qualificationChecks[listing.id];
     const isQualified = qualCheck?.qualified !== false;
     const fillPercent = listing.totalSlots > 0
       ? Math.round((listing.filledSlots / listing.totalSlots) * 100)
@@ -976,14 +989,14 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
           </motion.div>
 
           {/* Loading */}
-          {store.listingsLoading && (
+          {listingsLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {renderListingSkeletons(6)}
             </div>
           )}
 
           {/* Empty */}
-          {!store.listingsLoading && store.listings.length === 0 && (
+          {!listingsLoading && listings.length === 0 && (
             <Card>
               <CardContent className="p-12 text-center">
                 <UsersRound className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -1003,7 +1016,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
           )}
 
           {/* ═══ Showcase Boards ═══ */}
-          {!store.listingsLoading && store.listings.length > 0 && (
+          {!listingsLoading && listings.length > 0 && (
             <>
               {/* Board 1: Highest Paid */}
               {renderBoardSection(
@@ -1058,7 +1071,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
                 animate="animate"
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
               >
-                {store.listings.map((listing) => renderListingCard(listing))}
+                {listings.map((listing) => renderListingCard(listing))}
               </motion.div>
             </>
           )}
@@ -1086,13 +1099,13 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
             </Card>
           ) : (
             <>
-              {store.myApplicationsLoading && (
+              {myApplicationsLoading && (
                 <div className="space-y-3 max-w-2xl">
                   {renderApplicationSkeletons(4)}
                 </div>
               )}
 
-              {!store.myApplicationsLoading && store.myApplications.length === 0 && (
+              {!myApplicationsLoading && myApplications.length === 0 && (
                 <Card>
                   <CardContent className="p-12 text-center">
                     <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -1111,7 +1124,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
                 </Card>
               )}
 
-              {!store.myApplicationsLoading && store.myApplications.length > 0 && (
+              {!myApplicationsLoading && myApplications.length > 0 && (
                 <AnimatePresence mode="wait">
                   <motion.div
                     variants={staggerContainer}
@@ -1119,7 +1132,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
                     animate="animate"
                     className="space-y-3 max-w-2xl"
                   >
-                    {store.myApplications.map((app) => {
+                    {myApplications.map((app) => {
                       const statusLabel = app.status.charAt(0).toUpperCase() + app.status.slice(1);
                       return (
                         <motion.div key={app.id} variants={staggerItem} layout>
@@ -1601,7 +1614,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
                       type="submit"
                       className="w-full bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white shadow-md shadow-violet-500/20 font-semibold"
                       disabled={
-                        store.creatingListing ||
+                        creatingListing ||
                         !createForm.title.trim() ||
                         !createForm.description.trim() ||
                         !createForm.companyName.trim() ||
@@ -1609,7 +1622,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
                         (createForm.totalSlots ?? 0) <= 0
                       }
                     >
-                      {store.creatingListing ? (
+                      {creatingListing ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin mr-2" />
                           Publishing...
@@ -1650,13 +1663,13 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
             </Card>
           ) : (
             <>
-              {store.myListingsLoading && (
+              {myListingsLoading && (
                 <div className="space-y-3 max-w-3xl">
                   {renderApplicationSkeletons(4)}
                 </div>
               )}
 
-              {!store.myListingsLoading && store.myListings.length === 0 && (
+              {!myListingsLoading && myListings.length === 0 && (
                 <Card>
                   <CardContent className="p-12 text-center">
                     <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -1675,7 +1688,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
                 </Card>
               )}
 
-              {!store.myListingsLoading && store.myListings.length > 0 && (
+              {!myListingsLoading && myListings.length > 0 && (
                 <AnimatePresence mode="wait">
                   <motion.div
                     variants={staggerContainer}
@@ -1683,7 +1696,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
                     animate="animate"
                     className="space-y-3 max-w-3xl"
                   >
-                    {store.myListings.map((listing) => {
+                    {myListings.map((listing) => {
                       const isExpanded = expandedListingId === listing.id;
                       const fillPercent = listing.totalSlots > 0
                         ? Math.round((listing.filledSlots / listing.totalSlots) * 100)
@@ -1921,15 +1934,15 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
                 )}
 
                 {/* Qualification check result */}
-                {currentUser && store.qualificationChecks[selectedListing.id] && (
+                {currentUser && qualificationChecks[selectedListing.id] && (
                   <div
                     className={`p-3 rounded-lg text-sm ${
-                      store.qualificationChecks[selectedListing.id].qualified
+                      qualificationChecks[selectedListing.id].qualified
                         ? 'bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300'
                         : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
                     }`}
                   >
-                    {store.qualificationChecks[selectedListing.id].qualified ? (
+                    {qualificationChecks[selectedListing.id].qualified ? (
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4" />
                         <span className="font-medium">You qualify for this focus group!</span>
@@ -1940,7 +1953,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
                           <XCircle className="w-4 h-4" />
                           <span className="font-medium">You don&apos;t qualify</span>
                         </div>
-                        {store.qualificationChecks[selectedListing.id].reasons.map((r, i) => (
+                        {qualificationChecks[selectedListing.id].reasons.map((r, i) => (
                           <p key={i} className="text-xs ml-6">{r}</p>
                         ))}
                       </div>
@@ -1971,7 +1984,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
                 {selectedListing.status !== 'closed' &&
                   selectedListing.status !== 'completed' &&
                   formatTimeRemaining(selectedListing.closesAt) !== 'Closed' &&
-                  store.qualificationChecks[selectedListing.id]?.qualified && (
+                  qualificationChecks[selectedListing.id]?.qualified && (
                     <Button
                       className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white"
                       onClick={() => {
@@ -2003,7 +2016,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
           <div className="space-y-4">
             <div className="bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30 rounded-lg p-3 text-center">
               <span className="text-xl font-bold text-violet-600 dark:text-violet-400">
-                ${store.listings.find((l) => l.id === applyListingId)?.rewardPerResponse.toFixed(2) ?? '0.00'}
+                ${listings.find((l) => l.id === applyListingId)?.rewardPerResponse.toFixed(2) ?? '0.00'}
               </span>
               <p className="text-xs text-violet-600/70 dark:text-violet-400/60">per session</p>
             </div>
@@ -2026,10 +2039,10 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
             </Button>
             <Button
               className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white"
-              disabled={store.applyingToListing || !coverMessage.trim()}
+              disabled={applyingToListing || !coverMessage.trim()}
               onClick={handleApply}
             >
-              {store.applyingToListing ? (
+              {applyingToListing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   Submitting...
@@ -2057,7 +2070,7 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
             </DialogTitle>
           </DialogHeader>
 
-          {store.listingApplicationsLoading ? (
+          {listingApplicationsLoading ? (
             <div className="space-y-3 py-4">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="space-y-2">
@@ -2067,11 +2080,11 @@ export function FocusGroupsView({ onNavigate }: FocusGroupsViewProps) {
                 </div>
               ))}
             </div>
-          ) : store.listingApplications.length === 0 ? (
+          ) : listingApplications.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No applications received yet.</p>
           ) : (
             <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-              {store.listingApplications.map((app) => (
+              {listingApplications.map((app) => (
                 <Card key={app.id} className="overflow-hidden">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">

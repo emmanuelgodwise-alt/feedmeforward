@@ -215,7 +215,21 @@ function buildQualificationBadges(criteria: QualificationCriteria): { label: str
 
 export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) {
   const { currentUser } = useAuthStore();
-  const store = useMarketplaceStore();
+  const listings = useMarketplaceStore((s) => s.listings);
+  const listingsLoading = useMarketplaceStore((s) => s.listingsLoading);
+  const listingsTotal = useMarketplaceStore((s) => s.listingsTotal);
+  const currentListing = useMarketplaceStore((s) => s.currentListing);
+  const currentListingLoading = useMarketplaceStore((s) => s.currentListingLoading);
+  const myListings = useMarketplaceStore((s) => s.myListings);
+  const myListingsLoading = useMarketplaceStore((s) => s.myListingsLoading);
+  const myApplications = useMarketplaceStore((s) => s.myApplications);
+  const myApplicationsLoading = useMarketplaceStore((s) => s.myApplicationsLoading);
+  const listingApplications = useMarketplaceStore((s) => s.listingApplications);
+  const listingApplicationsLoading = useMarketplaceStore((s) => s.listingApplicationsLoading);
+  const qualificationChecks = useMarketplaceStore((s) => s.qualificationChecks);
+  const creatingListing = useMarketplaceStore((s) => s.creatingListing);
+  const applyingToListing = useMarketplaceStore((s) => s.applyingToListing);
+  const reviewingApplication = useMarketplaceStore((s) => s.reviewingApplication);
 
   const [activeTab, setActiveTab] = useState('available');
 
@@ -264,20 +278,20 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
   // ─── Data fetching ─────────────────────────────────────────────
 
   const fetchListings = useCallback(async () => {
-    await store.fetchListings();
-  }, [store]);
+    await useMarketplaceStore.getState().fetchListings();
+  }, []);
 
   const fetchMyApplications = useCallback(async () => {
     if (currentUser?.id) {
-      await store.fetchMyApplications(currentUser.id);
+      await useMarketplaceStore.getState().fetchMyApplications(currentUser.id);
     }
-  }, [store, currentUser]);
+  }, [currentUser]);
 
   const fetchMyListings = useCallback(async () => {
     if (currentUser?.id) {
-      await store.fetchMyListings(currentUser.id);
+      await useMarketplaceStore.getState().fetchMyListings(currentUser.id);
     }
-  }, [store, currentUser]);
+  }, [currentUser]);
 
   useEffect(() => {
     fetchListings();
@@ -298,23 +312,27 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
   // ─── Qualification checks ──────────────────────────────────────
 
   useEffect(() => {
-    if (store.listings.length > 0 && currentUser) {
-      store.listings.forEach((listing) => {
-        if (!store.qualificationChecks[listing.id]) {
-          store.checkQualification(listing.id, listing.qualificationCriteria);
+    if (listings.length > 0 && currentUser) {
+      const { checkQualification } = useMarketplaceStore.getState();
+      const currentChecks = useMarketplaceStore.getState().qualificationChecks;
+      listings.forEach((listing) => {
+        if (!currentChecks[listing.id]) {
+          checkQualification(listing.id, listing.qualificationCriteria);
         }
       });
     }
-  }, [store.listings, currentUser]);
+  }, [listings, currentUser]);
 
   // ─── Handlers ──────────────────────────────────────────────────
 
   const handleOpenDetail = async (listing: MarketplaceListing) => {
     setSelectedListing(listing);
     setDetailOpen(true);
-    await store.fetchListing(listing.id);
-    if (store.currentListing) {
-      store.checkQualification(listing.id, store.currentListing.qualificationCriteria);
+    const { fetchListing, checkQualification, currentListing: fetched } = useMarketplaceStore.getState();
+    await fetchListing(listing.id);
+    const afterFetch = useMarketplaceStore.getState().currentListing;
+    if (afterFetch) {
+      checkQualification(listing.id, afterFetch.qualificationCriteria);
     }
   };
 
@@ -329,7 +347,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
       toast.error('Please write a cover message');
       return;
     }
-    const success = await store.applyToListing(applyListingId, coverMessage.trim());
+    const success = await useMarketplaceStore.getState().applyToListing(applyListingId, coverMessage.trim());
     if (success) {
       toast.success('Application submitted! You will be notified when reviewed.');
       setApplyOpen(false);
@@ -343,11 +361,11 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
   const handleOpenReview = async (listingId: string) => {
     setReviewListingId(listingId);
     setReviewOpen(true);
-    await store.fetchApplications(listingId);
+    await useMarketplaceStore.getState().fetchApplications(listingId);
   };
 
   const handleReview = async (applicationId: string, action: 'accept' | 'decline') => {
-    const success = await store.reviewApplication(applicationId, action);
+    const success = await useMarketplaceStore.getState().reviewApplication(applicationId, action);
     if (success) {
       toast.success(action === 'accept' ? 'Application accepted!' : 'Application declined.');
       fetchMyListings();
@@ -388,7 +406,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
       },
     };
 
-    const listing = await store.createListing(data);
+    const listing = await useMarketplaceStore.getState().createListing(data);
     if (listing) {
       toast.success('Listing published successfully! 🎉');
       setCreateForm({
@@ -417,7 +435,6 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
   // ─── Stats computation ─────────────────────────────────────────
 
   const stats = useMemo(() => {
-    const listings = store.listings;
     if (listings.length === 0) {
       return { total: 0, avgReward: 0, highestReward: 0, totalBudget: 0 };
     }
@@ -426,12 +443,11 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
     const highestReward = Math.max(...listings.map((l) => l.rewardPerResponse));
     const totalBudget = listings.reduce((sum, l) => sum + l.totalBudget, 0);
     return { total, avgReward, highestReward, totalBudget };
-  }, [store.listings]);
+  }, [listings]);
 
   // ─── Showcase boards computation ─────────────────────────────────
 
   const boards = useMemo(() => {
-    const listings = store.listings;
     if (listings.length === 0) {
       return { highestPaid: [], trending: [], newest: [], endingSoon: [] };
     }
@@ -462,7 +478,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
       .slice(0, 4);
 
     return { highestPaid, trending, newest, endingSoon };
-  }, [store.listings]);
+  }, [listings]);
 
   // ─── Compact listing card for showcase boards ──────────────
 
@@ -607,7 +623,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
 
   const renderListingCard = (listing: MarketplaceListing) => {
     const qualBadges = buildQualificationBadges(listing.qualificationCriteria);
-    const qualCheck = store.qualificationChecks[listing.id];
+    const qualCheck = qualificationChecks[listing.id];
     const isQualified = qualCheck?.qualified !== false;
     const fillPercent = listing.totalSlots > 0
       ? Math.round((listing.filledSlots / listing.totalSlots) * 100)
@@ -877,14 +893,14 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
           </motion.div>
 
           {/* Loading */}
-          {store.listingsLoading && (
+          {listingsLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {renderListingSkeletons(6)}
             </div>
           )}
 
           {/* Empty */}
-          {!store.listingsLoading && store.listings.length === 0 && (
+          {!listingsLoading && listings.length === 0 && (
             <Card>
               <CardContent className="p-12 text-center">
                 <CircleDollarSign className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -904,7 +920,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
           )}
 
           {/* ═══ Showcase Boards ═══ */}
-          {!store.listingsLoading && store.listings.length > 0 && (
+          {!listingsLoading && listings.length > 0 && (
             <>
               {/* Board 1: Highest Paid */}
               {renderBoardSection(
@@ -959,7 +975,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
                 animate="animate"
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
               >
-                {store.listings.map((listing) => renderListingCard(listing))}
+                {listings.map((listing) => renderListingCard(listing))}
               </motion.div>
             </>
           )}
@@ -987,13 +1003,13 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
             </Card>
           ) : (
             <>
-              {store.myApplicationsLoading && (
+              {myApplicationsLoading && (
                 <div className="space-y-3 max-w-2xl">
                   {renderApplicationSkeletons(4)}
                 </div>
               )}
 
-              {!store.myApplicationsLoading && store.myApplications.length === 0 && (
+              {!myApplicationsLoading && myApplications.length === 0 && (
                 <Card>
                   <CardContent className="p-12 text-center">
                     <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -1012,7 +1028,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
                 </Card>
               )}
 
-              {!store.myApplicationsLoading && store.myApplications.length > 0 && (
+              {!myApplicationsLoading && myApplications.length > 0 && (
                 <AnimatePresence mode="wait">
                   <motion.div
                     variants={staggerContainer}
@@ -1020,7 +1036,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
                     animate="animate"
                     className="space-y-3 max-w-2xl"
                   >
-                    {store.myApplications.map((app) => {
+                    {myApplications.map((app) => {
                       const statusLabel = app.status.charAt(0).toUpperCase() + app.status.slice(1);
                       return (
                         <motion.div key={app.id} variants={staggerItem} layout>
@@ -1402,14 +1418,14 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
                       type="submit"
                       className="w-full bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white shadow-md shadow-emerald-500/20 font-semibold"
                       disabled={
-                        store.creatingListing ||
+                        creatingListing ||
                         !createForm.title.trim() ||
                         !createForm.description.trim() ||
                         (createForm.rewardPerResponse ?? 0) <= 0 ||
                         (createForm.totalSlots ?? 0) <= 0
                       }
                     >
-                      {store.creatingListing ? (
+                      {creatingListing ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin mr-2" />
                           Publishing...
@@ -1450,13 +1466,13 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
             </Card>
           ) : (
             <>
-              {store.myListingsLoading && (
+              {myListingsLoading && (
                 <div className="space-y-3 max-w-3xl">
                   {renderApplicationSkeletons(4)}
                 </div>
               )}
 
-              {!store.myListingsLoading && store.myListings.length === 0 && (
+              {!myListingsLoading && myListings.length === 0 && (
                 <Card>
                   <CardContent className="p-12 text-center">
                     <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -1475,7 +1491,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
                 </Card>
               )}
 
-              {!store.myListingsLoading && store.myListings.length > 0 && (
+              {!myListingsLoading && myListings.length > 0 && (
                 <AnimatePresence mode="wait">
                   <motion.div
                     variants={staggerContainer}
@@ -1483,7 +1499,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
                     animate="animate"
                     className="space-y-3 max-w-3xl"
                   >
-                    {store.myListings.map((listing) => {
+                    {myListings.map((listing) => {
                       const isExpanded = expandedListingId === listing.id;
                       const fillPercent = listing.totalSlots > 0
                         ? Math.round((listing.filledSlots / listing.totalSlots) * 100)
@@ -1681,15 +1697,15 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
                 )}
 
                 {/* Qualification check result */}
-                {currentUser && store.qualificationChecks[selectedListing.id] && (
+                {currentUser && qualificationChecks[selectedListing.id] && (
                   <div
                     className={`p-3 rounded-lg text-sm ${
-                      store.qualificationChecks[selectedListing.id].qualified
+                      qualificationChecks[selectedListing.id].qualified
                         ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300'
                         : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
                     }`}
                   >
-                    {store.qualificationChecks[selectedListing.id].qualified ? (
+                    {qualificationChecks[selectedListing.id].qualified ? (
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4" />
                         <span className="font-medium">You qualify for this listing!</span>
@@ -1700,7 +1716,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
                           <XCircle className="w-4 h-4" />
                           <span className="font-medium">You don&apos;t qualify</span>
                         </div>
-                        {store.qualificationChecks[selectedListing.id].reasons.map((r, i) => (
+                        {qualificationChecks[selectedListing.id].reasons.map((r, i) => (
                           <p key={i} className="text-xs ml-6">{r}</p>
                         ))}
                       </div>
@@ -1731,7 +1747,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
                 {selectedListing.status !== 'closed' &&
                   selectedListing.status !== 'completed' &&
                   formatTimeRemaining(selectedListing.closesAt) !== 'Closed' &&
-                  store.qualificationChecks[selectedListing.id]?.qualified && (
+                  qualificationChecks[selectedListing.id]?.qualified && (
                     <Button
                       className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white"
                       onClick={() => {
@@ -1763,7 +1779,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
           <div className="space-y-4">
             <div className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 rounded-lg p-3 text-center">
               <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                ${store.listings.find((l) => l.id === applyListingId)?.rewardPerResponse.toFixed(2) ?? '0.00'}
+                ${listings.find((l) => l.id === applyListingId)?.rewardPerResponse.toFixed(2) ?? '0.00'}
               </span>
               <p className="text-xs text-emerald-600/70 dark:text-emerald-400/60">per response</p>
             </div>
@@ -1786,10 +1802,10 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
             </Button>
             <Button
               className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white"
-              disabled={store.applyingToListing || !coverMessage.trim()}
+              disabled={applyingToListing || !coverMessage.trim()}
               onClick={handleApply}
             >
-              {store.applyingToListing ? (
+              {applyingToListing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   Submitting...
@@ -1817,20 +1833,20 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
             </DialogTitle>
           </DialogHeader>
 
-          {store.listingApplicationsLoading ? (
+          {listingApplicationsLoading ? (
             <div className="space-y-3 py-4">
               {Array.from({ length: 3 }).map((_, i) => (
                 <Skeleton key={i} className="h-32 w-full rounded-lg" />
               ))}
             </div>
-          ) : store.listingApplications.length === 0 ? (
+          ) : listingApplications.length === 0 ? (
             <div className="text-center py-8">
               <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">No applications to review yet.</p>
             </div>
           ) : (
             <div className="space-y-3 py-2">
-              {store.listingApplications.map((app) => {
+              {listingApplications.map((app) => {
                 const statusLabel = app.status.charAt(0).toUpperCase() + app.status.slice(1);
                 return (
                   <motion.div
@@ -1915,7 +1931,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
                               <Button
                                 size="sm"
                                 className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white"
-                                disabled={store.reviewingApplication}
+                                disabled={reviewingApplication}
                                 onClick={() => handleReview(app.id, 'accept')}
                               >
                                 <UserCheck className="w-3.5 h-3.5 mr-1" />
@@ -1925,7 +1941,7 @@ export function PollsMarketplaceView({ onNavigate }: PollsMarketplaceViewProps) 
                                 size="sm"
                                 variant="outline"
                                 className="text-xs border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30"
-                                disabled={store.reviewingApplication}
+                                disabled={reviewingApplication}
                                 onClick={() => handleReview(app.id, 'decline')}
                               >
                                 <UserX className="w-3.5 h-3.5 mr-1" />
