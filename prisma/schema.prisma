@@ -79,6 +79,10 @@ model User {
   petitionSignatures PetitionSignature[] @relation("UserPetitionSignatures")
   paidPollListings     PaidPollListing[]    @relation("UserPaidPollListings")
   paidPollApplications PaidPollApplication[] @relation("UserPaidPollApplications")
+  focusGroupListings         FocusGroupListing[]
+  focusGroupApplications     FocusGroupApplication[]
+  surveyListings             SurveyListing[]
+  surveyApplications         SurveyApplication[]
 }
 
 // ─── Video Model ────────────────────────────────────────────────────
@@ -959,5 +963,127 @@ model PaidPollApplication {
 
   @@unique([listingId, userId])  // one application per user per listing
   @@index([userId, status])
+  @@index([listingId, status])
+}
+
+// ─── Focus Group Listing Model (Marketplace) ───────────────────────────
+model FocusGroupListing {
+  id                    String   @id @default(cuid())
+  creatorId             String
+  creatorUsername       String?
+  creatorAvatarUrl      String?
+  creatorDisplayName    String?
+  title                 String
+  description           String
+  companyName           String
+  industry              String
+  sessionFormat         String   @default("async_video") // live, async_video, async_text, hybrid
+  sessionDuration       Int      @default(60) // minutes
+  scheduledAt           DateTime?
+  rewardPerParticipant  Float    @default(0)
+  totalSlots            Int      @default(10)
+  filledSlots           Int      @default(0)
+  totalBudget           Float    @default(0)
+  minScore              Int?
+  verifiedOnly          Boolean  @default(false)
+  minPollResponses      Int?
+  location              String?
+  ageRange              String?
+  gender                String?
+  interests             String?  // JSON string of string array
+  status                String   @default("open") // open, paused, closed, completed
+  closesAt              DateTime?
+  applicationsCount     Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  creator               User                   @relation(fields: [creatorId], references: [id])
+  applications          FocusGroupApplication[]
+
+  @@index([status, createdAt])
+  @@index([creatorId])
+  @@index([rewardPerParticipant])
+}
+
+// ─── Focus Group Application Model ─────────────────────────────────────
+model FocusGroupApplication {
+  id                 String   @id @default(cuid())
+  listingId          String
+  applicantId        String
+  applicantUsername  String?
+  applicantAvatarUrl String?
+  applicantScore     Int?
+  applicantVerified  Boolean?
+  coverMessage       String
+  status             String   @default("pending") // pending, accepted, declined, completed
+  reviewedAt         DateTime?
+  createdAt          DateTime @default(now())
+
+  listing            FocusGroupListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  applicant          User               @relation(fields: [applicantId], references: [id])
+
+  @@unique([listingId, applicantId])
+  @@index([applicantId, status])
+  @@index([listingId, status])
+}
+
+// ─── Survey Listing Model (Marketplace) ────────────────────────────────
+model SurveyListing {
+  id                     String   @id @default(cuid())
+  creatorId              String
+  creatorUsername        String?
+  creatorAvatarUrl       String?
+  creatorDisplayName     String?
+  title                  String
+  description            String
+  organizationName       String
+  sector                 String
+  surveyType             String   @default("market_research") // market_research, product_feedback, ux_testing, academic, health, social, political, consumer
+  estimatedMinutes       Int      @default(10)
+  questionsCount         Int      @default(10)
+  rewardPerResponse      Float    @default(0)
+  totalSlots             Int      @default(50)
+  filledSlots            Int      @default(0)
+  totalBudget            Float    @default(0)
+  minScore               Int?
+  verifiedOnly           Boolean  @default(false)
+  minPollResponses       Int?
+  location               String?
+  ageRange               String?
+  gender                 String?
+  interests              String?  // JSON string of string array
+  status                 String   @default("open") // open, paused, closed, completed
+  closesAt               DateTime?
+  applicationsCount      Int      @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  creator                User                  @relation(fields: [creatorId], references: [id])
+  applications           SurveyApplication[]
+
+  @@index([status, createdAt])
+  @@index([creatorId])
+  @@index([rewardPerResponse])
+}
+
+// ─── Survey Application Model ──────────────────────────────────────────
+model SurveyApplication {
+  id                 String   @id @default(cuid())
+  listingId          String
+  applicantId        String
+  applicantUsername  String?
+  applicantAvatarUrl String?
+  applicantScore     Int?
+  applicantVerified  Boolean?
+  coverMessage       String
+  status             String   @default("pending") // pending, accepted, declined, completed
+  reviewedAt         DateTime?
+  createdAt          DateTime @default(now())
+
+  listing            SurveyListing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  applicant          User               @relation(fields: [applicantId], references: [id])
+
+  @@unique([listingId, applicantId])
+  @@index([applicantId, status])
   @@index([listingId, status])
 }

@@ -22,6 +22,9 @@ import {
   Vote,
   FileSignature,
   Banknote,
+  Radio,
+  UsersRound,
+  ClipboardList,
 } from 'lucide-react';
 
 interface HamburgerMenuProps {
@@ -52,6 +55,7 @@ const ROWS: NavItem[][] = [
     { icon: Rss, label: 'Feed', view: 'feed', iconColor: 'text-orange-500', iconBg: 'bg-orange-100 dark:bg-orange-950/60', dotColor: 'bg-orange-500', hoverBg: 'hover:bg-orange-50 dark:hover:bg-orange-950/20' },
     { icon: Vote, label: 'Plebiscite', view: 'plebiscite', iconColor: 'text-blue-600', iconBg: 'bg-blue-100 dark:bg-blue-950/60', dotColor: 'bg-blue-500', hoverBg: 'hover:bg-blue-50 dark:hover:bg-blue-950/20' },
     { icon: FileSignature, label: 'Petition', view: 'petition', iconColor: 'text-pink-500', iconBg: 'bg-pink-100 dark:bg-pink-950/60', dotColor: 'bg-pink-500', hoverBg: 'hover:bg-pink-50 dark:hover:bg-pink-950/20' },
+    { icon: Radio, label: 'Go Live', view: 'live', iconColor: 'text-rose-600', iconBg: 'bg-rose-100 dark:bg-rose-950/60', dotColor: 'bg-rose-600', hoverBg: 'hover:bg-rose-50 dark:hover:bg-rose-950/20' },
   ],
   // Row 2: Create & Connect
   [
@@ -65,6 +69,8 @@ const ROWS: NavItem[][] = [
     { icon: Users, label: 'Ranks', view: 'leaderboard', iconColor: 'text-yellow-500', iconBg: 'bg-yellow-100 dark:bg-yellow-950/60', dotColor: 'bg-yellow-500', hoverBg: 'hover:bg-yellow-50 dark:hover:bg-yellow-950/20' },
     { icon: TrendingUp, label: 'Rewards', view: 'rewards', iconColor: 'text-fuchsia-500', iconBg: 'bg-fuchsia-100 dark:bg-fuchsia-950/60', dotColor: 'bg-fuchsia-500', hoverBg: 'hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/20' },
     { icon: Banknote, label: 'Polls Market', view: 'polls-marketplace', iconColor: 'text-emerald-600', iconBg: 'bg-emerald-100 dark:bg-emerald-950/60', dotColor: 'bg-emerald-500', hoverBg: 'hover:bg-emerald-50 dark:hover:bg-emerald-950/20' },
+    { icon: UsersRound, label: 'Focus Groups', view: 'focus-groups', iconColor: 'text-violet-600', iconBg: 'bg-violet-100 dark:bg-violet-950/60', dotColor: 'bg-violet-600', hoverBg: 'hover:bg-violet-50 dark:hover:bg-violet-950/20' },
+    { icon: ClipboardList, label: 'Survey Market', view: 'survey-marketplace', iconColor: 'text-teal-600', iconBg: 'bg-teal-100 dark:bg-teal-950/60', dotColor: 'bg-teal-600', hoverBg: 'hover:bg-teal-50 dark:hover:bg-teal-950/20' },
     { icon: Wallet, label: 'Wallet', view: 'wallet', iconColor: 'text-lime-600', iconBg: 'bg-lime-100 dark:bg-lime-950/60', dotColor: 'bg-lime-500', hoverBg: 'hover:bg-lime-50 dark:hover:bg-lime-950/20' },
     { icon: LayoutDashboard, label: 'Dashboard', view: 'dashboard', iconColor: 'text-indigo-500', iconBg: 'bg-indigo-100 dark:bg-indigo-950/60', dotColor: 'bg-indigo-500', hoverBg: 'hover:bg-indigo-50 dark:hover:bg-indigo-950/20' },
   ],
