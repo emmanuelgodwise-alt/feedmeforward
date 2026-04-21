@@ -2112,6 +2112,29 @@ export default function Home() {
         {view === 'survey-marketplace' && (
           <SurveyMarketplaceView key="survey-marketplace" onNavigate={navigate} />
         )}
+        {view === 'live' && (
+          <LiveSessionsView
+            key="live"
+            onNavigate={navigate}
+            onSelectSession={(sessionId: string) => { setCurrentLiveSessionId(sessionId); navigate('live-session'); }}
+            onStartBroadcast={(sessionId: string) => { setCurrentLiveSessionId(sessionId); navigate('broadcaster'); }}
+          />
+        )}
+        {view === 'live-session' && currentLiveSessionId && (
+          <LiveStreamView
+            key={`live-session-${currentLiveSessionId}`}
+            sessionId={currentLiveSessionId}
+            onNavigate={navigate}
+            onGoBroadcast={(sessionId: string) => { setCurrentLiveSessionId(sessionId); navigate('broadcaster'); }}
+          />
+        )}
+        {view === 'broadcaster' && currentLiveSessionId && (
+          <BroadcasterView
+            key={`broadcaster-${currentLiveSessionId}`}
+            sessionId={currentLiveSessionId}
+            onNavigate={navigate}
+          />
+        )}
       </AnimatePresence>
     </main>
     </>

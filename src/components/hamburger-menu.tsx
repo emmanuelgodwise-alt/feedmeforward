@@ -25,6 +25,9 @@ import {
   Radio,
   UsersRound,
   ClipboardList,
+  Megaphone,
+  LayoutGrid,
+  MailPlus,
 } from 'lucide-react';
 
 interface HamburgerMenuProps {
@@ -74,16 +77,19 @@ const ROWS: NavItem[][] = [
     { icon: Wallet, label: 'Wallet', view: 'wallet', iconColor: 'text-lime-600', iconBg: 'bg-lime-100 dark:bg-lime-950/60', dotColor: 'bg-lime-500', hoverBg: 'hover:bg-lime-50 dark:hover:bg-lime-950/20' },
     { icon: LayoutDashboard, label: 'Dashboard', view: 'dashboard', iconColor: 'text-indigo-500', iconBg: 'bg-indigo-100 dark:bg-indigo-950/60', dotColor: 'bg-indigo-500', hoverBg: 'hover:bg-indigo-50 dark:hover:bg-indigo-950/20' },
   ],
-  // Row 4: Advanced
+  // Row 4: Tools & Settings
   [
     { icon: BarChart3, label: 'Insights', view: 'audience', iconColor: 'text-cyan-500', iconBg: 'bg-cyan-100 dark:bg-cyan-950/60', dotColor: 'bg-cyan-500', hoverBg: 'hover:bg-cyan-50 dark:hover:bg-cyan-950/20' },
     { icon: Target, label: 'Segments', view: 'segments', iconColor: 'text-rose-500', iconBg: 'bg-rose-100 dark:bg-rose-950/60', dotColor: 'bg-rose-500', hoverBg: 'hover:bg-rose-50 dark:hover:bg-rose-950/20' },
     { icon: ShieldCheck, label: 'Analytics Pro', view: 'analytics-pro', iconColor: 'text-purple-500', iconBg: 'bg-purple-100 dark:bg-purple-950/60', dotColor: 'bg-purple-500', hoverBg: 'hover:bg-purple-50 dark:hover:bg-purple-950/20' },
+    { icon: Megaphone, label: 'Creator Studio', view: 'creator-dashboard', iconColor: 'text-orange-600', iconBg: 'bg-orange-100 dark:bg-orange-950/60', dotColor: 'bg-orange-600', hoverBg: 'hover:bg-orange-50 dark:hover:bg-orange-950/20' },
+    { icon: LayoutGrid, label: 'Ad Manager', view: 'advertiser-dashboard', iconColor: 'text-emerald-500', iconBg: 'bg-emerald-100 dark:bg-emerald-950/60', dotColor: 'bg-emerald-500', hoverBg: 'hover:bg-emerald-50 dark:hover:bg-emerald-950/20' },
+    { icon: MailPlus, label: 'Invitations', view: 'invitations', iconColor: 'text-blue-500', iconBg: 'bg-blue-100 dark:bg-blue-950/60', dotColor: 'bg-blue-500', hoverBg: 'hover:bg-blue-50 dark:hover:bg-blue-950/20' },
     { icon: Contact, label: 'Import Friends', view: 'import-friends', iconColor: 'text-blue-400', iconBg: 'bg-blue-100 dark:bg-blue-950/60', dotColor: 'bg-blue-400', hoverBg: 'hover:bg-blue-50 dark:hover:bg-blue-950/20' },
   ],
 ];
 
-const ROW_LABELS = ['Engage', 'Create & Connect', 'Earn & Manage', 'Advanced'];
+const ROW_LABELS = ['Engage', 'Create & Connect', 'Earn & Manage', 'Tools & Settings'];
 
 export function HamburgerMenu({ onNavigate, activeView, isAuthenticated = true }: HamburgerMenuProps) {
   const [isOpen, setIsOpen] = useState(false);

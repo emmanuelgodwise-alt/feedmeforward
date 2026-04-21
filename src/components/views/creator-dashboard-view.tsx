@@ -32,6 +32,8 @@ import {
 import { useAuthStore } from '@/stores/auth-store';
 import { getScoreLevel, getScoreLevelBadge } from '@/types';
 import { PromoteVideoDialog } from '@/components/promote-video-dialog';
+import { BusinessProfileDialog } from '@/components/business-profile-dialog';
+import { SubscriptionTiersManager } from '@/components/subscription-tiers-manager';
 
 // ─── Types ──────────────────────────────────────────────────────────
 interface CreatorDashboardViewProps {
@@ -101,6 +103,8 @@ export function CreatorDashboardView({ onNavigate }: CreatorDashboardViewProps) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPromoteDialog, setShowPromoteDialog] = useState(false);
+  const [showBusinessProfile, setShowBusinessProfile] = useState(false);
+  const [showTiersManager, setShowTiersManager] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!currentUser) return;
@@ -776,10 +780,18 @@ export function CreatorDashboardView({ onNavigate }: CreatorDashboardViewProps) 
         <Button
           variant="outline"
           className="gap-2"
-          onClick={() => onNavigate('creator-dashboard')}
+          onClick={() => setShowBusinessProfile(true)}
         >
           <Building2 className="w-4 h-4" />
           Edit Business Profile
+        </Button>
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => setShowTiersManager(true)}
+        >
+          <CreditCard className="w-4 h-4" />
+          Subscription Tiers
         </Button>
       </motion.div>
 
@@ -788,6 +800,19 @@ export function CreatorDashboardView({ onNavigate }: CreatorDashboardViewProps) 
         open={showPromoteDialog}
         onOpenChange={setShowPromoteDialog}
         onSuccess={fetchData}
+      />
+
+      {/* ─── Business Profile Dialog ────────────────────────────── */}
+      <BusinessProfileDialog
+        open={showBusinessProfile}
+        onOpenChange={setShowBusinessProfile}
+        onSave={fetchData}
+      />
+
+      {/* ─── Subscription Tiers Manager ─────────────────────────── */}
+      <SubscriptionTiersManager
+        open={showTiersManager}
+        onOpenChange={setShowTiersManager}
       />
     </div>
   );

@@ -135,3 +135,26 @@ Added 4 new relation fields:
 
 ## 5. Lint Results
 - `bun run lint`: 0 errors, 1 warning (pre-existing in ad-campaign-dialog.tsx, unrelated)
+---
+Task ID: 1-5
+Agent: Main Agent
+Task: Project-wide audit and fix all built-but-inaccessible features (5 fixes)
+
+Work Log:
+- Audited ALL 32 view components, 130+ API routes, 14 stores, and all standalone components
+- Cross-referenced against all UI entry points (hamburger menu, in-view navigation, page.tsx rendering)
+- Identified 11 orphaned/inaccessible features across 5 categories
+- Fix #1: Added 3 render blocks to page.tsx for 'live', 'live-session', 'broadcaster' views (Live Streaming)
+- Fix #2: Wired StoriesBar, CreateStoryDialog, and StoryViewer into ExploreView
+- Fix #3: Wired BusinessProfileDialog and SubscriptionTiersManager into CreatorDashboard
+- Fix #4: Added Creator Studio, Ad Manager, Invitations to Hamburger Menu (Row 4: Tools & Settings)
+- Fix #5: Deleted orphaned quick-nav.tsx
+- Build verified: ✓ Compiled successfully in 13.3s, zero errors
+
+Stage Summary:
+- Live Streaming is now fully accessible from Hamburger Menu → Go Live
+- Stories feature is now integrated into the Explore View (Video Polls) page
+- Creator Dashboard now has working Business Profile and Subscription Tiers dialogs
+- Hamburger Menu now has 20 items across 4 rows (was 16)
+- quick-nav.tsx (replaced by hamburger) removed
+- All changes compile cleanly

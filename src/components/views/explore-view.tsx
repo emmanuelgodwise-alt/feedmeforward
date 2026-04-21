@@ -12,6 +12,9 @@ import { VideoCard } from '@/components/video-card';
 import { FilterBar } from '@/components/filter-bar';
 import { TrendingHashtags } from '@/components/trending-hashtags';
 import { TrendingVideos } from '@/components/trending-videos';
+import { StoriesBar } from '@/components/stories-bar';
+import { CreateStoryDialog } from '@/components/create-story-dialog';
+import { StoryViewer } from '@/components/story-viewer';
 import { getGradient, timeAgo } from '@/components/video-card';
 
 interface ExploreViewProps {
@@ -41,6 +44,13 @@ export function ExploreView({ onNavigate, setVideoId }: ExploreViewProps) {
   const { videos, isLoading, filters, setFilters, fetchVideos } = useVideoStore();
   const { currentUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'all' | 'targeted'>('all');
+  const [showCreateStory, setShowCreateStory] = useState(false);
+  const [storyGroups, setStoryGroups] = useState<Array<{
+    creator: { id: string; username: string; displayName: string | null; avatarUrl: string | null; isVerified: boolean };
+    stories: Array<{ id: string; type: string; text?: string | null; imageUrl?: string | null; videoUrl?: string | null; viewCount: number; createdAt: string; expiresAt: string; isViewed: boolean }>;
+    hasUnviewed: boolean;
+  }>>([]);
+  const [storyViewerIndex, setStoryViewerIndex] = useState<number | null>(null);
   const [targetedPolls, setTargetedPolls] = useState<TargetedPoll[]>([]);
   const [loadingTargeted, setLoadingTargeted] = useState(false);
 
@@ -142,6 +152,36 @@ export function ExploreView({ onNavigate, setVideoId }: ExploreViewProps) {
           onVideoClick={handleVideoClick}
         />
       </motion.div>
+
+      {/* Stories Bar */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="mb-4"
+      >
+        <StoriesBar
+          onStoryClick={(index: number) => setStoryViewerIndex(index)}
+          onCreateStory={() => setShowCreateStory(true)}
+          onStoriesFetched={(groups) => setStoryGroups(groups as typeof storyGroups)}
+        />
+      </motion.div>
+
+      {/* Story Viewer Overlay */}
+      {storyViewerIndex !== null && storyGroups.length > 0 && (
+        <StoryViewer
+          storyGroups={storyGroups as any}
+          initialGroupIndex={storyViewerIndex}
+          onClose={() => setStoryViewerIndex(null)}
+        />
+      )}
+
+      {/* Create Story Dialog */}
+      <CreateStoryDialog
+        open={showCreateStory}
+        onOpenChange={setShowCreateStory}
+        onCreated={() => { /* StoriesBar auto-refreshes */ }}
+      />
 
       {/* Divider */}
       <div className="border-b mb-6" />
