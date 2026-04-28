@@ -22,3 +22,27 @@ Stage Summary:
 - Supabase: PostgreSQL database with all 29+ tables pushed, API endpoints confirm DB connection is working
 - Cost: $0/month (Supabase free tier + Vercel hobby plan)
 - Note: Vercel URL retains original auto-generated slug after rename; project is now visible as "feedmeforward" in dashboard
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Add PWA install prompt — make FeedMeForward installable as a mobile/desktop app
+
+Work Log:
+- Generated 1024x1024 app icon from AI, created 512x512, 192x192, and 180x180 (apple-touch-icon) variants
+- Created /public/manifest.json with PWA metadata (name, icons, theme, standalone display)
+- Created /public/sw.js service worker with network-first API caching and cache-first static asset caching
+- Created PwaInstallPrompt component: auto-shows install banner on eligible browsers (Chrome Android), shows iOS-specific instructions on Safari
+- Created ServiceWorkerRegister component: registers SW on mount
+- Updated layout.tsx: added Viewport export with theme-color, manifest link, apple-touch-icon, appleWebApp meta tags
+- Verified build compiles successfully
+- Pushed to GitHub, deployed to Vercel production
+- Verified all PWA files accessible (manifest.json, sw.js, icon-192.png all return 200)
+- Verified HTML contains all required PWA meta tags (manifest, apple-touch-icon, theme-color, viewport)
+
+Stage Summary:
+- PWA fully live: manifest, service worker, install prompt all deployed
+- On Android/Chrome: "Install FeedMeForward" banner appears automatically at bottom of screen
+- On iOS/Safari: Instructions shown to "Tap Share → Add to Home Screen"
+- On desktop Chrome: Install icon appears in address bar
+- Files added: manifest.json, sw.js, icon-192.png, icon-512.png, apple-touch-icon.png, pwa-install-prompt.tsx, service-worker-register.tsx
