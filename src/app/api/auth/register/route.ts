@@ -112,9 +112,8 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: unknown) {
     console.error('Registration error:', error);
-    const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { success: false, error: `Registration failed: ${msg}` },
+      { success: false, error: 'An internal error occurred during registration' },
       { status: 500 }
     );
   }
