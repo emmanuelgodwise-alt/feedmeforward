@@ -16,7 +16,9 @@ Work Log:
 - Verified live site returns HTTP 200
 
 Stage Summary:
-- GitHub: https://github.com/emmanuelgodwise-alt/feedmeforward
-- Vercel: https://my-project-flax-rho.vercel.app
-- Supabase: Schema pushed with all 29+ models
+- GitHub: https://github.com/emmanuelgodwise-alt/feedmeforward (public, main branch)
+- Vercel: Project renamed from "my-project" to "feedmeforward" — Live at https://my-project-flax-rho.vercel.app
+- Vercel env vars: DATABASE_URL and DIRECT_URL set (encrypted, Production environment)
+- Supabase: PostgreSQL database with all 29+ tables pushed, API endpoints confirm DB connection is working
 - Cost: $0/month (Supabase free tier + Vercel hobby plan)
+- Note: Vercel URL retains original auto-generated slug after rename; project is now visible as "feedmeforward" in dashboard
