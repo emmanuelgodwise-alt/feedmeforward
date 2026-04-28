@@ -110,10 +110,11 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Registration error:', error);
+    const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { success: false, error: 'An internal error occurred during registration' },
+      { success: false, error: `Registration failed: ${msg}` },
       { status: 500 }
     );
   }
